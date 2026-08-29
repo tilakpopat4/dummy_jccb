@@ -15,23 +15,23 @@ const firebaseConfig = {
 
 // Default static branch list used for initial seed / offline fallback
 const DEFAULT_JCCB_BRANCHES = [
-    { branchCode: "99", branchName: "HEAD OFFICE", branchNameGuj: "હેડ ઓફિસ (મુખ્ય કચેરી)", isActive: true, isHeadOffice: true },
-    { branchCode: "01", branchName: "AZADCHOWK BRANCH", branchNameGuj: "આઝાદચોક શાખા", isActive: true },
-    { branchCode: "02", branchName: "JOSHIPARA BRANCH", branchNameGuj: "જોશીપરા શાખા", isActive: true },
-    { branchCode: "03", branchName: "DOLATPARA BRANCH", branchNameGuj: "દોલતપરા શાખા", isActive: true },
-    { branchCode: "04", branchName: "KODINAR BRANCH", branchNameGuj: "કોડીનાર શાખા", isActive: true },
-    { branchCode: "05", branchName: "KESHOD BRANCH", branchNameGuj: "કેશોદ શાખા", isActive: true },
-    { branchCode: "06", branchName: "VANTHALI BRANCH", branchNameGuj: "વંથલી શાખા", isActive: true },
-    { branchCode: "07", branchName: "MANAVADAR BRANCH", branchNameGuj: "માણાવદર શાખા", isActive: true },
-    { branchCode: "08", branchName: "GANDHINAGAR BRANCH", branchNameGuj: "ગાંધીનગર શાખા", isActive: true },
-    { branchCode: "09", branchName: "LIMBDI BRANCH", branchNameGuj: "લીંબડી શાખા", isActive: true },
-    { branchCode: "10", branchName: "MENDARDA BRANCH", branchNameGuj: "મેંદરડા શાખા", isActive: true },
-    { branchCode: "11", branchName: "VISAVADAR BRANCH", branchNameGuj: "વિસાવદર શાખા", isActive: true },
-    { branchCode: "12", branchName: "JAMNAGAR BRANCH", branchNameGuj: "જામનગર શાખા", isActive: true },
-    { branchCode: "13", branchName: "BUS STAND BRANCH", branchNameGuj: "બસ સ્ટેન્ડ શાખા", isActive: true },
-    { branchCode: "14", branchName: "LATHI BRANCH", branchNameGuj: "લાઠી શાખા", isActive: true },
-    { branchCode: "16", branchName: "AHMEDABAD BRANCH", branchNameGuj: "અમદાવાદ શાખા", isActive: true },
-    { branchCode: "17", branchName: "RAJKOT BRANCH", branchNameGuj: "રાજકોટ શાખા", isActive: true }
+    { branchCode: "99", branchName: "99 HEAD OFFICE", branchNameGuj: "૯૯ હેડ ઓફિસ (મુખ્ય કચેરી)", role: "admin", roleTitle: "Head Office Super Admin", isActive: true, isHeadOffice: true, password: "Rahul#80810" },
+    { branchCode: "01", branchName: "01 AZADCHOWK BRANCH", branchNameGuj: "૦૧ આઝાદચોક શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "02", branchName: "02 JOSHIPARA BRANCH", branchNameGuj: "૦૨ જોશીપરા શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "03", branchName: "03 DOLATPARA BRANCH", branchNameGuj: "૦૩ દોલતપરા શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "04", branchName: "04 KODINAR BRANCH", branchNameGuj: "૦૪ કોડીનાર શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "05", branchName: "05 KESHOD BRANCH", branchNameGuj: "૦૫ કેશોદ શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "06", branchName: "06 VANTHALI BRANCH", branchNameGuj: "૦૬ વંથલી શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "07", branchName: "07 MANAVADAR BRANCH", branchNameGuj: "૦૭ માણાવદર શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "08", branchName: "08 GANDHINAGAR BRANCH", branchNameGuj: "૦૮ ગાંધીનગર શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "09", branchName: "09 LIMBDI BRANCH", branchNameGuj: "૦૯ લીંબડી શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "10", branchName: "10 MENDARDA BRANCH", branchNameGuj: "૧૦ મેંદરડા શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "11", branchName: "11 VISAVADAR BRANCH", branchNameGuj: "૧૧ વિસાવદર શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "12", branchName: "12 JAMNAGAR BRANCH", branchNameGuj: "૧૨ જામનગર શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "13", branchName: "13 BUS STAND BRANCH", branchNameGuj: "૧૩ બસ સ્ટેન્ડ શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "14", branchName: "14 LATHI BRANCH", branchNameGuj: "૧૪ લાઠી શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "16", branchName: "16 AHMEDABAD BRANCH", branchNameGuj: "૧૬ અમદાવાદ શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" },
+    { branchCode: "17", branchName: "17 RAJKOT BRANCH", branchNameGuj: "૧૭ રાજકોટ શાખા", role: "branch_manager", roleTitle: "Branch Manager", isActive: true, isHeadOffice: false, password: "Admin@123" }
 ];
 
 const FirebaseService = {
