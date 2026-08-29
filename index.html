@@ -212,6 +212,14 @@
                     <span class="h-rate-label"><i class="fa-solid fa-coins text-gold"></i> Todays Gold Rate (22 Karat) = </span>
                     <span class="h-rate-value" id="header-gold-rate-value">₹ 72,000</span>
                 </div>
+                <!-- Cloud Sync Status & Manual Sync Trigger -->
+                <div class="header-sync-widget" id="header-sync-widget" style="display:flex; align-items:center; gap:8px; background:#f0fdf4; border:1px solid #86efac; padding:4px 12px; border-radius:20px; font-size:12px; color:#15803d; font-weight:600;">
+                    <span id="cloud-sync-dot" style="display:inline-block; width:8px; height:8px; background:#22c55e; border-radius:50%; box-shadow:0 0 6px rgba(34,197,94,0.6);"></span>
+                    <span id="cloud-sync-text">Cloud Live</span>
+                    <button type="button" id="btn-manual-cloud-sync" title="Click to force fetch live data from Cloud Firestore" style="background:#dcfce7; border:1px solid #86efac; color:#15803d; cursor:pointer; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:700;">
+                        <i class="fa-solid fa-arrows-rotate" id="cloud-sync-spin-icon"></i> Sync
+                    </button>
+                </div>
                 <div class="header-actions">
                     <div class="header-dev-badge">
                         <div class="header-dev-title"><i class="fa-solid fa-crown text-gold"></i> Designed By <span class="header-dev-highlight">Rahul Popat</span></div>
@@ -2357,7 +2365,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
-    <script src="firebase-config.js"></script>
-    <script src="app_gold.js"></script>
+    <script src="firebase-config.js?v=20260829_v4"></script>
+    <script src="app_gold.js?v=20260829_v4"></script>
 </body>
 </html>

@@ -478,24 +478,41 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
+        // Wire manual sync button in header
+        const btnManualSync = document.getElementById("btn-manual-cloud-sync");
+        if (btnManualSync) {
+            btnManualSync.addEventListener("click", (e) => {
+                e.preventDefault();
+                syncCloudData(true);
+            });
+        }
+
         // Trigger immediate sync on page startup
         syncCloudData();
 
         // Continuous 5-second resilient background cloud polling across all machines
-        setInterval(syncCloudData, 5000);
+        setInterval(() => syncCloudData(false), 5000);
     }
 });
 
 // Centralized Hybrid Cloud Synchronizer (Dual REST + SDK)
-async function syncCloudData() {
+async function syncCloudData(isManual = false) {
     if (!window.FirebaseService) return;
+    const spinIcon = document.getElementById("cloud-sync-spin-icon");
+    const syncText = document.getElementById("cloud-sync-text");
+    const syncDot = document.getElementById("cloud-sync-dot");
+
+    if (spinIcon) spinIcon.classList.add("fa-spin");
+    if (syncText && isManual) syncText.textContent = "Syncing...";
+
     try {
         // 1. Sync Daily Rates
         const fbRates = await window.FirebaseService.getDailyRates();
+        let activeCloudRate = null;
         if (fbRates && (parseFloat(fbRates.rate22K) > 0 || parseFloat(fbRates.rate24K) > 0)) {
-            const cloud22 = parseFloat(fbRates.rate22K || fbRates.rate24K);
-            if (!state.goldRates || parseFloat(state.goldRates["22K"]) !== cloud22) {
-                applyDailyGoldRate(cloud22, getTodayDateYMD(), {
+            activeCloudRate = parseFloat(fbRates.rate22K || fbRates.rate24K);
+            if (!state.goldRates || parseFloat(state.goldRates["22K"]) !== activeCloudRate) {
+                applyDailyGoldRate(activeCloudRate, getTodayDateYMD(), {
                     isLocked: fbRates.isLocked,
                     lockedAt: fbRates.lockedAt,
                     lockedBy: fbRates.lockedBy
@@ -506,6 +523,7 @@ async function syncCloudData() {
         // 2. Sync Loans
         const fbLoans = await window.FirebaseService.getLoans();
         let changed = false;
+        let cloudCount = Array.isArray(fbLoans) ? fbLoans.length : 0;
 
         if (Array.isArray(fbLoans) && fbLoans.length > 0) {
             if (!state.loans) state.loans = [];
@@ -542,8 +560,23 @@ async function syncCloudData() {
             renderRegisterTable();
             if (typeof renderReportsTable === "function") renderReportsTable();
         }
+
+        if (syncText) syncText.textContent = "Cloud Live";
+        if (syncDot) syncDot.style.background = "#22c55e";
+
+        if (isManual) {
+            const currentR = getActiveGoldRate22K();
+            showToast(`✅ Cloud Synced Successfully! 22K Rate: ₹${currentR.toLocaleString("en-IN")} | Active Loans: ${state.loans ? state.loans.length : 0}`);
+        }
     } catch (e) {
         console.warn("[CloudSync] Background sync check notice:", e);
+        if (syncText) syncText.textContent = "Offline/Retrying";
+        if (syncDot) syncDot.style.background = "#f59e0b";
+        if (isManual) {
+            showToast("⚠️ Cloud Sync Notice: Checking connection...");
+        }
+    } finally {
+        if (spinIcon) spinIcon.classList.remove("fa-spin");
     }
 }
 
