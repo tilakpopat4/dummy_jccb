@@ -496,21 +496,28 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
 
                     // 2. Sync Daily Rates from Cloud Firestore
-                    const fbRates = await window.FirebaseService.getDailyRates();
-                    if (fbRates && fbRates.rate22K > 0) {
-                        const todayStr = getTodayDateYMD();
-                        if (fbRates.date === todayStr) {
-                            applyDailyGoldRate(fbRates.rate22K, fbRates.date);
+                    try {
+                        const fbRates = await window.FirebaseService.getDailyRates();
+                        if (fbRates && (parseFloat(fbRates.rate22K) > 0 || parseFloat(fbRates.rate24K) > 0)) {
+                            const cloud22 = parseFloat(fbRates.rate22K || fbRates.rate24K);
+                            applyDailyGoldRate(cloud22, getTodayDateYMD(), {
+                                isLocked: fbRates.isLocked,
+                                lockedAt: fbRates.lockedAt,
+                                lockedUntil: fbRates.lockedUntil,
+                                lockedBy: fbRates.lockedBy
+                            });
                         }
+                    } catch (e) {
+                        console.warn("[Firebase] Error loading daily gold rates:", e);
                     }
 
-                    // Realtime listener for Daily Gold Rates & 24h Lock across all branches
+                    // Realtime listener for Daily Gold Rates across all branches
                     if (typeof window.FirebaseService.listenDailyRates === "function") {
                         window.FirebaseService.listenDailyRates((cloudRates) => {
-                            if (cloudRates && cloudRates.rate22K > 0) {
-                                const todayStr = getTodayDateYMD();
-                                if (cloudRates.date === todayStr) {
-                                    applyDailyGoldRate(cloudRates.rate22K, cloudRates.date, {
+                            if (cloudRates && (parseFloat(cloudRates.rate22K) > 0 || parseFloat(cloudRates.rate24K) > 0)) {
+                                const cloud22 = parseFloat(cloudRates.rate22K || cloudRates.rate24K);
+                                if (!state.goldRates || parseFloat(state.goldRates["22K"]) !== cloud22) {
+                                    applyDailyGoldRate(cloud22, getTodayDateYMD(), {
                                         isLocked: cloudRates.isLocked,
                                         lockedAt: cloudRates.lockedAt,
                                         lockedUntil: cloudRates.lockedUntil,
@@ -1108,129 +1115,93 @@ function initNavigation() {
     });
 }
 
-// ==================== DAILY GOLD RATE LOGIC & MIDNIGHT VALIDITY ====================
-function getTodayDateYMD() {
-    const d = new Date();
+// ==================== DAILY GOLD RATE LOGIC & PERSISTENCE ENGINE ====================
+function getTodayDateYMD(d = new Date()) {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
 }
 
+// Single authoritative source of truth for the active 22K gold rate
+function getActiveGoldRate22K() {
+    if (state.goldRates && parseFloat(state.goldRates["22K"]) > 0) {
+        return parseFloat(state.goldRates["22K"]);
+    }
+    if (state.goldRates && parseFloat(state.goldRates["24K"]) > 0) {
+        return parseFloat(state.goldRates["24K"]);
+    }
+    if (state.rateHistory && state.rateHistory.length > 0) {
+        const sorted = [...state.rateHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+        if (sorted[0] && (parseFloat(sorted[0].rate22K) > 0 || parseFloat(sorted[0].rate24K) > 0)) {
+            return parseFloat(sorted[0].rate22K || sorted[0].rate24K);
+        }
+    }
+    return 72000;
+}
+
+// 24K rate computed mathematically from 22K
+function getActiveGoldRate24K() {
+    return Math.round(getActiveGoldRate22K() * (24 / 22));
+}
+
+// Validates and carries forward the gold rate across days without EVER resetting to 0 or fluctuating
 function checkDailyGoldRateValidity() {
     const todayStr = getTodayDateYMD();
     if (!state.rateHistory) state.rateHistory = [];
     if (!state.goldRates) state.goldRates = { "24K": 0, "22K": 0, rateDate: "", lastUpdated: "" };
 
-    const currentRateDate = state.goldRates.rateDate || (state.goldRates.lastUpdated ? state.goldRates.lastUpdated.split("T")[0] : "");
+    const activeRate22 = getActiveGoldRate22K();
+    const activeRate24 = Math.round(activeRate22 * (24 / 22));
 
-    // If active rate is from an earlier day and is > 0, archive it to Daily Gold Rate Master
-    if (currentRateDate && currentRateDate !== todayStr && (state.goldRates["22K"] > 0 || state.goldRates["24K"] > 0)) {
-        const rate22 = parseFloat(state.goldRates["22K"]) || parseFloat(state.goldRates["24K"]) || 0;
-        const rate24 = Math.round(rate22 * (24 / 22));
-        const exists = state.rateHistory.some(r => r.date === currentRateDate);
-        if (!exists) {
-            state.rateHistory.unshift({
-                date: currentRateDate,
-                rate22K: rate22,
-                rate24K: rate24
-            });
-        }
+    state.goldRates["22K"] = activeRate22;
+    state.goldRates["24K"] = activeRate24;
+    state.goldRates.rateDate = todayStr;
 
-        // Check if today already has a recorded rate in history
-        const todayRecord = state.rateHistory.find(r => r.date === todayStr);
-        if (todayRecord && (todayRecord.rate22K > 0 || todayRecord.rate24K > 0)) {
-            const t22 = parseFloat(todayRecord.rate22K) || parseFloat(todayRecord.rate24K);
-            state.goldRates["22K"] = t22;
-            state.goldRates["24K"] = Math.round(t22 * (24 / 22));
-            state.goldRates.rateDate = todayStr;
-            state.goldRates.lastUpdated = new Date().toISOString();
-        } else {
-            // New day (after 12:00 midnight): Rate reset to 0; prompts user across all branches
-            state.goldRates["24K"] = 0;
-            state.goldRates["22K"] = 0;
-            state.goldRates.rateDate = "";
-        }
-        saveState();
-        if (typeof renderDashboard === "function") renderDashboard();
-        if (typeof renderGoldRateMaster === "function") renderGoldRateMaster();
-    } else if (!currentRateDate && (state.goldRates["22K"] > 0 || state.goldRates["24K"] > 0)) {
-        state.goldRates.rateDate = todayStr;
-        saveState();
+    // Ensure today has an entry in rateHistory so history is continuous
+    const todayRecord = state.rateHistory.find(r => r.date === todayStr);
+    if (!todayRecord) {
+        state.rateHistory.unshift({
+            date: todayStr,
+            rate22K: activeRate22,
+            rate24K: activeRate24,
+            updatedBy: state.goldRates.lockedBy || "HEAD OFFICE"
+        });
+    } else {
+        todayRecord.rate22K = activeRate22;
+        todayRecord.rate24K = activeRate24;
     }
+
+    saveState();
     updateHeaderGoldRate();
 }
 
 function updateHeaderGoldRate() {
     const headerRateVal = document.getElementById("header-gold-rate-value");
     if (!headerRateVal) return;
-
-    const todayStr = getTodayDateYMD();
-    let rate22 = 0;
-    
-    // Check if today has an active rate in state.goldRates
-    if (state.goldRates && (state.goldRates["22K"] > 0 || state.goldRates["24K"] > 0)) {
-        if (state.goldRates.rateDate === todayStr || !state.goldRates.rateDate) {
-            rate22 = parseFloat(state.goldRates["22K"] || state.goldRates["24K"]);
-        }
-    }
-    
-    // Check rate history for today or most recent
-    if (!rate22 && state.rateHistory && state.rateHistory.length > 0) {
-        const todayHist = state.rateHistory.find(r => r.date === todayStr);
-        if (todayHist && (todayHist.rate22K > 0 || todayHist.rate24K > 0)) {
-            rate22 = parseFloat(todayHist.rate22K || todayHist.rate24K);
-        } else {
-            rate22 = parseFloat(state.rateHistory[0].rate22K || state.rateHistory[0].rate24K || 72000);
-        }
-    }
-
-    if (!rate22 || rate22 <= 0) rate22 = 72000;
-
-    headerRateVal.textContent = `₹ ${rate22.toLocaleString("en-IN")}`;
+    const activeRate22 = getActiveGoldRate22K();
+    headerRateVal.textContent = `₹ ${activeRate22.toLocaleString("en-IN")}`;
 }
 
-// ==================== 24-HOUR GOLD RATE LOCK ENGINE ====================
+// ==================== GOLD RATE LOCK & HEAD OFFICE PERMISSIONS ====================
 function isDailyGoldRateLocked() {
+    // For Branch sessions, gold rate is ALWAYS locked and read-only
+    if (!isHeadOfficeSession()) return true;
     if (!state.goldRates) return false;
-    if (!state.goldRates.isLocked) return false;
-    if (state.goldRates.lockedUntil) {
-        const until = new Date(state.goldRates.lockedUntil).getTime();
-        if (Date.now() > until) {
-            // Lock period expired
-            state.goldRates.isLocked = false;
-            state.goldRates.lockedUntil = null;
-            state.goldRates.lockedAt = null;
-            saveState();
-            return false;
-        }
-    }
-    return true;
+    return !!state.goldRates.isLocked;
 }
 
 function getLockRemainingInfo() {
+    const isHO = isHeadOfficeSession();
+    if (!isHO) {
+        return { isLocked: true, text: "🔒 Head Office Locked (ફક્ત હેડ ઓફિસ દ્વારા જ બદલી શકાય)" };
+    }
     if (!isDailyGoldRateLocked()) {
         return { isLocked: false, text: "🔓 Unlocked (ભાવ સુધારી શકાય છે)" };
     }
-    const until = new Date(state.goldRates.lockedUntil);
-    const msLeft = until.getTime() - Date.now();
-    const hoursLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60)));
-    const minsLeft = Math.max(0, Math.floor((msLeft % (1000 * 60 * 60)) / (1000 * 60)));
-    
-    // Format expiration date and time in 12-hour IST format
-    const dateStr = formatDateDMY(getTodayDateYMD(until));
-    let hrs = until.getHours();
-    const ampm = hrs >= 12 ? 'PM' : 'AM';
-    hrs = hrs % 12 || 12;
-    const timeStr = `${String(hrs).padStart(2, '0')}:${String(until.getMinutes()).padStart(2, '0')} ${ampm}`;
-
     return {
         isLocked: true,
-        lockedUntil: until,
-        hoursLeft: hoursLeft,
-        minsLeft: minsLeft,
-        formattedTime: `${dateStr} ${timeStr}`,
-        text: `🔒 ૨૪ કલાક માટે લૉક (માન્ય: ${dateStr} ${timeStr} - ${hoursLeft} કલાક ${minsLeft} મિનિટ બાકી)`
+        text: `🔒 લૉક કરેલ છે (ભાવ સ્થિર છે)`
     };
 }
 
@@ -1240,19 +1211,16 @@ function lockGoldRateFor24Hours() {
         return false;
     }
 
-    const rate22 = (state.goldRates && state.goldRates["22K"]) || 0;
+    const rate22 = getActiveGoldRate22K();
     if (rate22 <= 0) {
         alert("ભાવ લૉક કરતાં પહેલાં આજનો ૨૨ કેરેટ સોનાનો ભાવ દાખલ કરવો જરૂરી છે.");
         return false;
     }
 
     const now = new Date();
-    const lockUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-
     if (!state.goldRates) state.goldRates = { "24K": 0, "22K": 0, rateDate: "" };
     state.goldRates.isLocked = true;
     state.goldRates.lockedAt = now.toISOString();
-    state.goldRates.lockedUntil = lockUntil.toISOString();
     state.goldRates.lockedBy = state.currentSession ? state.currentSession.name : "HEAD OFFICE";
 
     saveState();
@@ -1265,7 +1233,6 @@ function lockGoldRateFor24Hours() {
             date: state.goldRates.rateDate || getTodayDateYMD(),
             isLocked: true,
             lockedAt: state.goldRates.lockedAt,
-            lockedUntil: state.goldRates.lockedUntil,
             lockedBy: state.goldRates.lockedBy
         }).catch(e => console.warn("[Firebase] Lock rate sync error:", e));
     }
@@ -1273,7 +1240,7 @@ function lockGoldRateFor24Hours() {
     updateBranchContextUI();
     renderDashboard();
     renderGoldRateMaster();
-    showToast("૨૨ કેરેટ સોનાનો ભાવ આગામી ૨૪ કલાક માટે સફળતાપૂર્વક લૉક કરવામાં આવ્યો છે.");
+    showToast("૨૨ કેરેટ સોનાનો ભાવ સફળતાપૂર્વક લૉક કરવામાં આવ્યો છે.");
     return true;
 }
 
@@ -1289,7 +1256,6 @@ function unlockGoldRate() {
 
     if (!state.goldRates) state.goldRates = { "24K": 0, "22K": 0, rateDate: "" };
     state.goldRates.isLocked = false;
-    state.goldRates.lockedUntil = null;
     state.goldRates.lockedAt = null;
 
     saveState();
@@ -1301,8 +1267,7 @@ function unlockGoldRate() {
             rate24K: state.goldRates["24K"],
             date: state.goldRates.rateDate || getTodayDateYMD(),
             isLocked: false,
-            lockedAt: null,
-            lockedUntil: null
+            lockedAt: null
         }).catch(e => console.warn("[Firebase] Unlock rate sync error:", e));
     }
 
@@ -1329,32 +1294,31 @@ function applyDailyGoldRate(val, targetDate = null, lockData = null) {
     state.rateHistory.unshift({
         date: date,
         rate22K: rate22,
-        rate24K: rate24
+        rate24K: rate24,
+        updatedBy: (lockData && lockData.lockedBy) || (state.currentSession ? state.currentSession.name : "HEAD OFFICE")
     });
 
-    if (date === todayStr) {
-        state.goldRates["22K"] = rate22;
-        state.goldRates["24K"] = rate24;
-        state.goldRates.rateDate = todayStr;
-        state.goldRates.lastUpdated = new Date().toISOString();
+    if (!state.goldRates) state.goldRates = {};
+    state.goldRates["22K"] = rate22;
+    state.goldRates["24K"] = rate24;
+    state.goldRates.rateDate = todayStr;
+    state.goldRates.lastUpdated = new Date().toISOString();
 
-        if (lockData) {
-            state.goldRates.isLocked = !!lockData.isLocked;
-            state.goldRates.lockedAt = lockData.lockedAt || null;
-            state.goldRates.lockedUntil = lockData.lockedUntil || null;
-            state.goldRates.lockedBy = lockData.lockedBy || null;
-        }
-
-        // Synchronize rate input fields across all views
-        const valRateInput = document.getElementById("val-gold-rate-input");
-        if (valRateInput) valRateInput.value = rate22;
-
-        const inlineRateInput = document.getElementById("inline-gold-rate");
-        if (inlineRateInput) inlineRateInput.value = "";
-
-        const dashRateInput = document.getElementById("dashboard-gold-rate");
-        if (dashRateInput) dashRateInput.value = rate22;
+    if (lockData) {
+        state.goldRates.isLocked = !!lockData.isLocked;
+        state.goldRates.lockedAt = lockData.lockedAt || null;
+        state.goldRates.lockedBy = lockData.lockedBy || null;
     }
+
+    // Synchronize rate input fields across all views
+    const valRateInput = document.getElementById("val-gold-rate-input");
+    if (valRateInput) valRateInput.value = rate22;
+
+    const inlineRateInput = document.getElementById("inline-gold-rate");
+    if (inlineRateInput) inlineRateInput.value = "";
+
+    const dashRateInput = document.getElementById("dashboard-gold-rate");
+    if (dashRateInput) dashRateInput.value = rate22;
 
     saveState();
     updateHeaderGoldRate();
@@ -1369,13 +1333,6 @@ function applyDailyGoldRate(val, targetDate = null, lockData = null) {
 function setDailyGoldRate(val, targetDate = null) {
     if (!isHeadOfficeSession()) {
         alert("દૈનિક સોનાનો ભાવ ફક્ત હેડ ઓફિસ (Head Office) દ્વારા જ દાખલ અથવા સુધારી શકાય છે. શાખા માટે આ ફીલ્ડ લોક છે.");
-        return false;
-    }
-
-    // If rate is currently locked for 24h, require unlock first
-    if (isDailyGoldRateLocked()) {
-        const lockInfo = getLockRemainingInfo();
-        alert(`સોનાનો ભાવ હાલ ૨૪ કલાક માટે લૉક કરેલ છે (માન્ય: ${lockInfo.formattedTime || ''}). નવો ભાવ સેટ કરવા માટે પહેલા 'Unlock Rate' બટન પર ક્લિક કરીને અનલૉક કરો.`);
         return false;
     }
 
@@ -1399,9 +1356,9 @@ function setDailyGoldRate(val, targetDate = null) {
             date: date,
             rate22K: rate22,
             rate24K: rate24,
-            isLocked: false,
-            lockedAt: null,
-            lockedUntil: null
+            isLocked: true,
+            lockedAt: new Date().toISOString(),
+            lockedBy: state.currentSession ? state.currentSession.name : "HEAD OFFICE"
         }).catch(e => console.warn("[Firebase] Daily rate cloud sync error:", e));
     }
 
@@ -1456,8 +1413,8 @@ function initDashboard() {
         });
     }
 
-    // Auto-check gold rate validity every 10 seconds for midnight 12:00 transition
-    setInterval(checkDailyGoldRateValidity, 10000);
+    // Auto-check gold rate validity periodically to maintain continuous history
+    setInterval(checkDailyGoldRateValidity, 60000);
 }
 
 function renderDashboard() {
@@ -1486,37 +1443,21 @@ function renderDashboard() {
     if (statWeight) statWeight.textContent = totalWeight.toFixed(3) + " g";
     
     const todayStr = getTodayDateYMD();
-    const isRateSetToday = state.goldRates && (state.goldRates["22K"] > 0 || state.goldRates["24K"] > 0) && state.goldRates.rateDate === todayStr;
-    
-    // Latest known 22K rate from state or history
-    let latestRate22 = 72000;
-    if (state.goldRates && (state.goldRates["22K"] > 0 || state.goldRates["24K"] > 0)) {
-        latestRate22 = parseFloat(state.goldRates["22K"]) || parseFloat(state.goldRates["24K"]);
-    } else if (state.rateHistory && state.rateHistory.length > 0) {
-        latestRate22 = parseFloat(state.rateHistory[0].rate22K || state.rateHistory[0].rate24K || 72000);
-    }
-
-    const activeRate22 = isRateSetToday ? (parseFloat(state.goldRates["22K"]) || parseFloat(state.goldRates["24K"])) : latestRate22;
+    const activeRate22 = getActiveGoldRate22K();
 
     if (statRate) {
-        statRate.textContent = isRateSetToday 
-            ? ("₹ " + activeRate22.toLocaleString("en-IN") + " (22K)") 
-            : ("₹ " + latestRate22.toLocaleString("en-IN") + " (Previous Rate)");
+        statRate.textContent = `₹ ${activeRate22.toLocaleString("en-IN")} (22K)`;
     }
     if (rateInput) {
-        rateInput.value = isRateSetToday ? activeRate22 : (latestRate22 || "");
+        rateInput.value = activeRate22;
     }
 
     updateHeaderGoldRate();
 
-    // Hide rate warning if set for today
+    // Hide rate warning since rate is always maintained continuously
     const rateAlert = document.getElementById("rate-missing-alert");
     if (rateAlert) {
-        if (isRateSetToday) {
-            rateAlert.classList.add("hidden");
-        } else {
-            rateAlert.classList.remove("hidden");
-        }
+        rateAlert.classList.add("hidden");
     }
 
     // Populate Today's Recent Entries table on Dashboard
@@ -1895,42 +1836,9 @@ function updateOrnamentsTotals() {
     let totalValuation = 0;
     const names = [];
 
-    // 1. Check Rate per 10g Input in Section 4
+    // 1. Resolve Active 22K Gold Rate
     const valRateInput = document.getElementById("val-gold-rate-input");
-    let goldRate22K = (valRateInput && parseFloat(valRateInput.value) > 0) ? parseFloat(valRateInput.value) : 0;
-
-    // 2. Check today's active rate from dashboard / state
-    if (!goldRate22K) {
-        const todayStr = getTodayDateYMD();
-        const isRateActiveToday = state.goldRates && state.goldRates.rateDate === todayStr && (state.goldRates["22K"] > 0 || state.goldRates["24K"] > 0);
-        if (isRateActiveToday) {
-            goldRate22K = parseFloat(state.goldRates["22K"] || state.goldRates["24K"]);
-        }
-    }
-
-    // 3. Fallback: check inline gold rate input on loan entry form
-    const inlineRateInput = document.getElementById("inline-gold-rate");
-    if (!goldRate22K && inlineRateInput && parseFloat(inlineRateInput.value) > 0) {
-        goldRate22K = parseFloat(inlineRateInput.value);
-    }
-
-    // 4. Fallback: check state.rateHistory for today's rate or most recent rate
-    if (!goldRate22K && state.rateHistory && state.rateHistory.length > 0) {
-        const todayHist = state.rateHistory.find(r => r.date === getTodayDateYMD());
-        if (todayHist && (todayHist.rate22K > 0 || todayHist.rate24K > 0)) {
-            goldRate22K = parseFloat(todayHist.rate22K || todayHist.rate24K);
-        } else {
-            const sortedHist = [...state.rateHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
-            if (sortedHist.length > 0 && (sortedHist[0].rate22K > 0 || sortedHist[0].rate24K > 0)) {
-                goldRate22K = parseFloat(sortedHist[0].rate22K || sortedHist[0].rate24K);
-            }
-        }
-    }
-
-    // 5. Fallback default ₹72,000 / 10g (22K)
-    if (!goldRate22K || goldRate22K <= 0) {
-        goldRate22K = 72000;
-    }
+    let goldRate22K = (valRateInput && parseFloat(valRateInput.value) > 0) ? parseFloat(valRateInput.value) : getActiveGoldRate22K();
 
     if (valRateInput && (!valRateInput.value || parseFloat(valRateInput.value) <= 0)) {
         valRateInput.value = goldRate22K;
@@ -2086,7 +1994,7 @@ function calculateAllCharges() {
     const schemeSelectVal = document.getElementById("loan-category-select") ? document.getElementById("loan-category-select").value : "auto";
 
     const valRateInput = document.getElementById("val-gold-rate-input");
-    const goldRatePer10g = (valRateInput && parseFloat(valRateInput.value) > 0) ? parseFloat(valRateInput.value) : (state.goldRates && state.goldRates["24K"] ? parseFloat(state.goldRates["24K"]) : 72000);
+    const goldRatePer10g = (valRateInput && parseFloat(valRateInput.value) > 0) ? parseFloat(valRateInput.value) : getActiveGoldRate22K();
     const totalFineGold = parseFloat(document.getElementById("total-fine-gold-gm") ? document.getElementById("total-fine-gold-gm").textContent || 0 : 0);
     const marketValue = totalFineGold > 0 ? Math.round(totalFineGold * (goldRatePer10g / 10)) : (goldWeight > 0 ? Math.round(goldWeight * (goldRatePer10g / 10)) : 0);
     const eligibleAmt75 = Math.round(marketValue * 0.75);
@@ -2361,10 +2269,7 @@ function submitLoanEntry() {
         const packetNo = (packetNoInput && packetNoInput.value.trim()) ? packetNoInput.value.trim() : generateNextPacketNo(branchCode);
 
         const valRateInput = document.getElementById("val-gold-rate-input");
-        let goldRate22K = (valRateInput && parseFloat(valRateInput.value) > 0) ? parseFloat(valRateInput.value) : 0;
-        if (!goldRate22K) {
-            goldRate22K = (state.goldRates && (state.goldRates["22K"] > 0 || state.goldRates["24K"] > 0)) ? parseFloat(state.goldRates["22K"] || state.goldRates["24K"]) : 72000;
-        }
+        const goldRate22K = (valRateInput && parseFloat(valRateInput.value) > 0) ? parseFloat(valRateInput.value) : getActiveGoldRate22K();
         const goldRate24K = Math.round(goldRate22K * (24 / 22));
         const marketValue = Math.round(goldWeight * (goldRate22K / 10));
 
@@ -2494,8 +2399,9 @@ function submitLoanEntry() {
             customChargesTotal: customChargesTotal,
             totalDeductions: parseFloat(document.getElementById("charge-total") ? document.getElementById("charge-total").value || 0 : 0),
             ornamentsTable: getOrnamentsTableJSON(),
-            goldRate24K: parseFloat(document.getElementById("val-gold-rate-input") ? document.getElementById("val-gold-rate-input").value || 0 : (state.goldRates ? state.goldRates["24K"] : 72000)),
-            goldRate22K: Math.round(parseFloat(document.getElementById("val-gold-rate-input") ? document.getElementById("val-gold-rate-input").value || 0 : (state.goldRates ? state.goldRates["24K"] : 72000)) * (22 / 24)),
+            goldRate24K: goldRate24K,
+            goldRate22K: goldRate22K,
+            goldRate: goldRate22K,
             customerPhoto: document.getElementById("cust-photo-preview") && document.getElementById("cust-photo-preview").querySelector("img") ? document.getElementById("cust-photo-preview").querySelector("img").src : "",
             ornamentPhoto: document.getElementById("gold-photo-preview") && document.getElementById("gold-photo-preview").querySelector("img") ? document.getElementById("gold-photo-preview").querySelector("img").src : "",
             grievanceOfficer: document.getElementById("grievance-officer") ? document.getElementById("grievance-officer").value.trim() : "Amrutlal Valjibhai Chavda",
@@ -2624,8 +2530,7 @@ function resetLoanEntryForm() {
 
     const valRateInput = document.getElementById("val-gold-rate-input");
     if (valRateInput) {
-        const todayStr = getTodayDateYMD();
-        valRateInput.value = (state.goldRates && state.goldRates.rateDate === todayStr && state.goldRates["24K"] > 0) ? state.goldRates["24K"] : (state.goldRates && state.goldRates["24K"] ? state.goldRates["24K"] : 72000);
+        valRateInput.value = getActiveGoldRate22K();
     }
 
     updateBranchContextUI();
@@ -3054,7 +2959,7 @@ function editLoanRecord(id) {
 
     const valRateInput = document.getElementById("val-gold-rate-input");
     if (valRateInput) {
-        valRateInput.value = loan.goldRate24K || loan.goldRate || (state.goldRates && state.goldRates["24K"]) || 72000;
+        valRateInput.value = loan.goldRate22K || loan.goldRate || (loan.goldRate24K ? Math.round(loan.goldRate24K * (22 / 24)) : getActiveGoldRate22K());
     }
 
     // Populate Ornaments Table
@@ -4510,11 +4415,7 @@ function initGoldRateMaster() {
     }
 
     if (valInput) {
-        const todayStr = getTodayDateYMD();
-        const activeRate22 = (state.goldRates && state.goldRates.rateDate === todayStr && (state.goldRates["22K"] > 0 || state.goldRates["24K"] > 0))
-            ? (state.goldRates["22K"] || state.goldRates["24K"])
-            : (state.rateHistory && state.rateHistory.length > 0 ? (state.rateHistory[0].rate22K || state.rateHistory[0].rate24K) : 72000);
-        valInput.value = activeRate22 || "";
+        valInput.value = getActiveGoldRate22K();
     }
 
     if (form) {
