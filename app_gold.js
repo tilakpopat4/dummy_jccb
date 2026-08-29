@@ -433,236 +433,119 @@ document.addEventListener("DOMContentLoaded", () => {
     initReports();
     updateHeaderGoldRate();
 
-    // Initialize Firebase Realtime Cloud Backend
+    // Initialize Firebase Realtime Cloud Backend & Background Auto-Sync
     if (window.FirebaseService) {
-        window.FirebaseService.init().then(async (connected) => {
-            if (connected) {
-                console.log("[Firebase] Central Cloud Database Connected.");
-                try {
-                    // Sync Branches from Cloud Firestore
-                    const fbBranches = await window.FirebaseService.getBranches();
-                    if (Array.isArray(fbBranches) && fbBranches.length > 0) {
-                        fbBranches.forEach(fb => {
-                            const bCode = fb.branchCode || fb.code;
-                            const bName = fb.branchName || fb.name;
-                            const idx = state.branches.findIndex(b => b.code === bCode);
-                            if (idx !== -1) {
-                                state.branches[idx] = { ...state.branches[idx], ...fb, code: bCode, name: bName };
+        window.FirebaseService.init().then(() => {
+            console.log("[Firebase] Central Cloud Database Initialized.");
+            // Listen for realtime gold rate changes
+            if (typeof window.FirebaseService.listenDailyRates === "function") {
+                window.FirebaseService.listenDailyRates((cloudRates) => {
+                    if (cloudRates && (parseFloat(cloudRates.rate22K) > 0 || parseFloat(cloudRates.rate24K) > 0)) {
+                        const cloud22 = parseFloat(cloudRates.rate22K || cloudRates.rate24K);
+                        applyDailyGoldRate(cloud22, getTodayDateYMD(), {
+                            isLocked: cloudRates.isLocked,
+                            lockedAt: cloudRates.lockedAt,
+                            lockedBy: cloudRates.lockedBy
+                        });
+                    }
+                });
+            }
+            // Listen for realtime loan records
+            if (typeof window.FirebaseService.listenLoans === "function") {
+                window.FirebaseService.listenLoans(null, (cloudLoans) => {
+                    if (Array.isArray(cloudLoans) && cloudLoans.length > 0) {
+                        if (!state.loans) state.loans = [];
+                        let changed = false;
+                        cloudLoans.forEach(cl => {
+                            const lId = cl.id || cl.loanId;
+                            const lIdx = state.loans.findIndex(x => x.id === lId || x.loanId === lId);
+                            if (lIdx === -1) {
+                                state.loans.unshift(cl);
+                                changed = true;
                             } else {
-                                state.branches.push({ code: bCode, name: bName, password: fb.password || "Admin@123", isHO: (bCode === "99") });
+                                state.loans[lIdx] = { ...state.loans[lIdx], ...cl, id: lId, loanId: lId };
+                                changed = true;
                             }
                         });
-                        populateLoginBranches();
-                        renderBranchMaster();
-                        updateBranchContextUI();
-                    }
-
-                    // 2. Sync Daily Rates from Cloud Firestore
-                    try {
-                        const fbRates = await window.FirebaseService.getDailyRates();
-                        if (fbRates && (parseFloat(fbRates.rate22K) > 0 || parseFloat(fbRates.rate24K) > 0)) {
-                            const cloud22 = parseFloat(fbRates.rate22K || fbRates.rate24K);
-                            applyDailyGoldRate(cloud22, getTodayDateYMD(), {
-                                isLocked: fbRates.isLocked,
-                                lockedAt: fbRates.lockedAt,
-                                lockedUntil: fbRates.lockedUntil,
-                                lockedBy: fbRates.lockedBy
-                            });
-                        }
-                    } catch (e) {
-                        console.warn("[Firebase] Error loading daily gold rates:", e);
-                    }
-
-                    // Realtime listener for Daily Gold Rates across all branches
-                    if (typeof window.FirebaseService.listenDailyRates === "function") {
-                        window.FirebaseService.listenDailyRates((cloudRates) => {
-                            if (cloudRates && (parseFloat(cloudRates.rate22K) > 0 || parseFloat(cloudRates.rate24K) > 0)) {
-                                const cloud22 = parseFloat(cloudRates.rate22K || cloudRates.rate24K);
-                                applyDailyGoldRate(cloud22, getTodayDateYMD(), {
-                                    isLocked: cloudRates.isLocked,
-                                    lockedAt: cloudRates.lockedAt,
-                                    lockedUntil: cloudRates.lockedUntil,
-                                    lockedBy: cloudRates.lockedBy
-                                });
-                            }
-                        });
-                    }
-
-                    // 3. Sync and Listen Customers in Realtime across all PCs
-                    if (typeof window.FirebaseService.getCustomers === "function") {
-                        const fbCusts = await window.FirebaseService.getCustomers();
-                        if (Array.isArray(fbCusts) && fbCusts.length > 0) {
-                            if (!state.customers) state.customers = [];
-                            fbCusts.forEach(fc => {
-                                const cNo = fc.customerNo || fc.id;
-                                const idx = state.customers.findIndex(c => c.customerNo === cNo || c.id === cNo);
-                                if (idx !== -1) {
-                                    state.customers[idx] = { ...state.customers[idx], ...fc };
-                                } else {
-                                    state.customers.push(fc);
-                                }
-                            });
-                            saveState();
-                            renderCustomerMasterList();
-                        }
-                    }
-
-                    if (typeof window.FirebaseService.listenCustomers === "function") {
-                        window.FirebaseService.listenCustomers((cloudCusts) => {
-                            if (Array.isArray(cloudCusts) && cloudCusts.length > 0) {
-                                if (!state.customers) state.customers = [];
-                                cloudCusts.forEach(fc => {
-                                    const cNo = fc.customerNo || fc.id;
-                                    const idx = state.customers.findIndex(c => c.customerNo === cNo || c.id === cNo);
-                                    if (idx !== -1) {
-                                        state.customers[idx] = { ...state.customers[idx], ...fc };
-                                    } else {
-                                        state.customers.push(fc);
-                                    }
-                                });
-                                saveState();
-                                renderCustomerMasterList();
-                            }
-                        });
-                    }
-
-                    // 4. Sync and Listen Branch Seeds & Settings across all PCs
-                    if (typeof window.FirebaseService.getSettings === "function") {
-                        const fbSettings = await window.FirebaseService.getSettings();
-                        if (fbSettings && fbSettings.branchSeeds) {
-                            state.settings = { ...state.settings, ...fbSettings };
-                            saveState();
-                        }
-                    }
-                    if (typeof window.FirebaseService.listenSettings === "function") {
-                        window.FirebaseService.listenSettings((cloudSettings) => {
-                            if (cloudSettings && cloudSettings.branchSeeds) {
-                                state.settings = { ...state.settings, ...cloudSettings };
-                                saveState();
-                            }
-                        });
-                    }
-
-                    // 5. Initial Loan Sync from Cloud Firestore on startup
-                    try {
-                        const fbLoans = await window.FirebaseService.getLoans();
-                        if (Array.isArray(fbLoans) && fbLoans.length > 0) {
-                            if (!state.loans) state.loans = [];
-                            
-                            fbLoans.forEach(cl => {
-                                const lId = cl.id || cl.loanId;
-                                const lIdx = state.loans.findIndex(x => x.id === lId || x.loanId === lId);
-                                if (lIdx === -1) {
-                                    state.loans.unshift(cl);
-                                } else {
-                                    state.loans[lIdx] = { ...state.loans[lIdx], ...cl, id: lId, loanId: lId };
-                                }
-                            });
-
-                            // Backfill any local offline loans into Firestore
-                            state.loans.forEach(localLoan => {
-                                const lId = localLoan.id || localLoan.loanId;
-                                const inCloud = fbLoans.some(cl => (cl.id === lId || cl.loanId === lId));
-                                if (!inCloud && lId) {
-                                    window.FirebaseService.saveLoan(localLoan).catch(e => console.warn("[Firebase] Backfill loan error:", e));
-                                }
-                            });
-
+                        if (changed) {
                             saveState();
                             renderDashboard();
                             renderRegisterTable();
                             if (typeof renderReportsTable === "function") renderReportsTable();
-                        } else if (Array.isArray(state.loans) && state.loans.length > 0) {
-                            // First time cloud sync: upload existing local loans to cloud
-                            state.loans.forEach(localLoan => {
-                                window.FirebaseService.saveLoan(localLoan).catch(e => console.warn("[Firebase] Initial loan cloud upload error:", e));
-                            });
                         }
-                    } catch (loadLoanErr) {
-                        console.warn("[Firebase] Initial getLoans error:", loadLoanErr);
                     }
-
-                    // 6. Listen for realtime branch & Head Office loan updates across all PCs
-                    if (typeof window.FirebaseService.listenLoans === "function") {
-                        window.FirebaseService.listenLoans(null, (cloudLoans) => {
-                            if (Array.isArray(cloudLoans) && cloudLoans.length > 0) {
-                                if (!state.loans) state.loans = [];
-                                let changed = false;
-
-                                cloudLoans.forEach(cl => {
-                                    const lId = cl.id || cl.loanId;
-                                    const lIdx = state.loans.findIndex(x => x.id === lId || x.loanId === lId);
-                                    if (lIdx === -1) {
-                                        state.loans.unshift(cl);
-                                        changed = true;
-                                    } else {
-                                        state.loans[lIdx] = { ...state.loans[lIdx], ...cl, id: lId, loanId: lId };
-                                        changed = true;
-                                    }
-                                });
-
-                                if (changed) {
-                                    saveState();
-                                    renderDashboard();
-                                    renderRegisterTable();
-                                    if (typeof renderReportsTable === "function") renderReportsTable();
-                                }
-                            }
-                        });
-                    }
-
-                    // 7. Resilient Periodic Background Cloud Polling (Syncs every 10 seconds across all branches & Head Office)
-                    setInterval(async () => {
-                        try {
-                            if (window.FirebaseService && window.FirebaseService.isInitialized) {
-                                // 1. Check Daily Rates
-                                const liveRates = await window.FirebaseService.getDailyRates();
-                                if (liveRates && (parseFloat(liveRates.rate22K) > 0 || parseFloat(liveRates.rate24K) > 0)) {
-                                    const r22 = parseFloat(liveRates.rate22K || liveRates.rate24K);
-                                    if (parseFloat(state.goldRates["22K"]) !== r22) {
-                                        applyDailyGoldRate(r22, getTodayDateYMD(), {
-                                            isLocked: liveRates.isLocked,
-                                            lockedAt: liveRates.lockedAt,
-                                            lockedBy: liveRates.lockedBy
-                                        });
-                                    }
-                                }
-
-                                // 2. Check Live Loans
-                                const liveLoans = await window.FirebaseService.getLoans();
-                                if (Array.isArray(liveLoans) && liveLoans.length > 0) {
-                                    if (!state.loans) state.loans = [];
-                                    let hasNew = false;
-                                    liveLoans.forEach(cl => {
-                                        const lId = cl.id || cl.loanId;
-                                        const lIdx = state.loans.findIndex(x => x.id === lId || x.loanId === lId);
-                                        if (lIdx === -1) {
-                                            state.loans.unshift(cl);
-                                            hasNew = true;
-                                        } else if (cl.updatedAt && cl.updatedAt !== state.loans[lIdx].updatedAt) {
-                                            state.loans[lIdx] = { ...state.loans[lIdx], ...cl, id: lId, loanId: lId };
-                                            hasNew = true;
-                                        }
-                                    });
-                                    if (hasNew) {
-                                        saveState();
-                                        renderDashboard();
-                                        renderRegisterTable();
-                                        if (typeof renderReportsTable === "function") renderReportsTable();
-                                    }
-                                }
-                            }
-                        } catch (pollErr) {
-                            // Silent catch for background poll
-                        }
-                    }, 10000);
-                } catch (syncErr) {
-                    console.warn("[Firebase] Initial Cloud Sync Notice:", syncErr);
-                }
+                });
             }
         });
+
+        // Trigger immediate sync on page startup
+        syncCloudData();
+
+        // Continuous 5-second resilient background cloud polling across all machines
+        setInterval(syncCloudData, 5000);
     }
 });
+
+// Centralized Hybrid Cloud Synchronizer (Dual REST + SDK)
+async function syncCloudData() {
+    if (!window.FirebaseService) return;
+    try {
+        // 1. Sync Daily Rates
+        const fbRates = await window.FirebaseService.getDailyRates();
+        if (fbRates && (parseFloat(fbRates.rate22K) > 0 || parseFloat(fbRates.rate24K) > 0)) {
+            const cloud22 = parseFloat(fbRates.rate22K || fbRates.rate24K);
+            if (!state.goldRates || parseFloat(state.goldRates["22K"]) !== cloud22) {
+                applyDailyGoldRate(cloud22, getTodayDateYMD(), {
+                    isLocked: fbRates.isLocked,
+                    lockedAt: fbRates.lockedAt,
+                    lockedBy: fbRates.lockedBy
+                });
+            }
+        }
+
+        // 2. Sync Loans
+        const fbLoans = await window.FirebaseService.getLoans();
+        let changed = false;
+
+        if (Array.isArray(fbLoans) && fbLoans.length > 0) {
+            if (!state.loans) state.loans = [];
+            fbLoans.forEach(cl => {
+                const lId = cl.id || cl.loanId;
+                const lIdx = state.loans.findIndex(x => x.id === lId || x.loanId === lId);
+                if (lIdx === -1) {
+                    state.loans.unshift(cl);
+                    changed = true;
+                } else if (cl.updatedAt && cl.updatedAt !== state.loans[lIdx].updatedAt) {
+                    state.loans[lIdx] = { ...state.loans[lIdx], ...cl, id: lId, loanId: lId };
+                    changed = true;
+                }
+            });
+
+            // Auto upload any local offline loans into Cloud
+            state.loans.forEach(localLoan => {
+                const lId = localLoan.id || localLoan.loanId;
+                const inCloud = fbLoans.some(cl => (cl.id === lId || cl.loanId === lId));
+                if (!inCloud && lId) {
+                    window.FirebaseService.saveLoan(localLoan).catch(() => {});
+                }
+            });
+        } else if (Array.isArray(state.loans) && state.loans.length > 0) {
+            // First time cloud sync: upload existing local loans to cloud
+            state.loans.forEach(localLoan => {
+                window.FirebaseService.saveLoan(localLoan).catch(() => {});
+            });
+        }
+
+        if (changed) {
+            saveState();
+            renderDashboard();
+            renderRegisterTable();
+            if (typeof renderReportsTable === "function") renderReportsTable();
+        }
+    } catch (e) {
+        console.warn("[CloudSync] Background sync check notice:", e);
+    }
+}
 
 // ==================== GLOBAL UPPERCASE & ENGLISH ENFORCER ====================
 function initGlobalUppercaseEnforcer() {
