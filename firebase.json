@@ -10,6 +10,16 @@
       "firestore.rules",
       "firestore.indexes.json",
       "storage.rules",
+      "*.bat",
+      "*.cmd",
+      "*.ps1",
+      "*.md",
+      "*.docx",
+      "*.xlsx",
+      "app.js",
+      "app_clean.js",
+      "app_new.js",
+      "app_v2.js",
       "**/.*",
       "**/node_modules/**"
     ]
