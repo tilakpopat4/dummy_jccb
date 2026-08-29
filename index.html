@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Junagadh Commercial Co-operative Bank Ltd. - Gold Loan Portal</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Style Sheet -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="jccb-logo.png">
+    <link rel="shortcut icon" type="image/png" href="jccb-logo.png">
+    <!-- Cropper.js for image cropping -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <!-- Google Identity Services (OAuth2 for Google Drive) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- ==================== SECURITY ==================== -->
+    <script>
+        // Disable Right Click
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        // Disable Keyboard Shortcuts for Inspect Element, View Source, etc.
+        document.addEventListener('keydown', function(e) {
+            // F12
+            if(e.key === 'F12' || e.keyCode === 123) {
+                e.preventDefault();
+                return false;
+            }
+            // Ctrl+Shift+I, J, C
+            if(e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c')) {
+                e.preventDefault();
+                return false;
+            }
+            // Ctrl+U (View Source) or Ctrl+S (Save Page)
+            if(e.ctrlKey && (e.key === 'U' || e.key === 'u' || e.key === 'S' || e.key === 's')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
+</head>
+<body>
+
+    <!-- ==================== SYNC OVERLAY ==================== -->
+    <div id="sync-overlay" class="sync-overlay hidden">
+        <div class="sync-spinner">
+            <i class="fa-solid fa-cloud-arrow-up fa-bounce"></i>
+            <p>Syncing with Database...</p>
+        </div>
+    </div>
+    <!-- ==================== LOGIN SCREEN ==================== -->
+    <div id="login-container" class="login-wrapper">
+        <div class="login-background-glows">
+            <div class="glow glow-1"></div>
+            <div class="glow glow-2"></div>
+        </div>
+        <div class="login-card glassmorphism">
+            <div class="login-header">
+                <div class="bank-logo-container">
+                    <img src="jccb-logo.png" alt="JCCB Logo" class="bank-login-logo">
+                </div>
+                <h2>The Junagadh Commercial Co-operative Bank Ltd.</h2>
+                <p class="subtitle">Head Office: Junagadh</p>
+                <div class="gold-badge">Gold Loan Portal</div>
+            </div>
+            
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-branch"><i class="fa-solid fa-code-branch"></i> Select Branch</label>
+                    <select id="login-branch" required>
+                        <option value="99">99 HEAD OFFICE</option>
+                        <option value="01">01 AZADCHOWK BRANCH</option>
+                        <option value="02">02 JOSHIPARA BRANCH</option>
+                        <option value="03">03 DOLATPARA BRANCH</option>
+                        <option value="04">04 KODINAR BRANCH</option>
+                        <option value="05">05 KESHOD BRANCH</option>
+                        <option value="06">06 VANTHALI BRANCH</option>
+                        <option value="07">07 MANAVADAR BRANCH</option>
+                        <option value="08">08 GANDHINAGAR BRANCH</option>
+                        <option value="09">09 LIMBDI BRANCH</option>
+                        <option value="10">10 MENDARDA BRANCH</option>
+                        <option value="11">11 VISAVADAR BRANCH</option>
+                        <option value="12">12 JAMNAGAR BRANCH</option>
+                        <option value="13">13 BUS STAND BRANCH</option>
+                        <option value="14">14 LATHI BRANCH</option>
+                        <option value="16">16 AHMEDABAD BRANCH</option>
+                        <option value="17">17 RAJKOT BRANCH</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="login-password"><i class="fa-solid fa-lock"></i> Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+                        <button type="button" id="toggle-password-btn" class="icon-button">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="login-error" class="error-alert hidden">
+                    <i class="fa-solid fa-circle-exclamation"></i> Incorrect Password!
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fa-solid fa-right-to-bracket"></i> Login
+                </button>
+            </form>
+            <div class="login-footer">
+                <p style="font-size:11.5px; color:#94a3b8; margin:0 0 12px 0;">Note: Head Office password is unique. Branches use the common password.</p>
+                <div class="login-dev-credit">
+                    <div class="login-dev-tag"><i class="fa-solid fa-gem text-gold"></i> SYSTEM DESIGNER & DEVELOPER</div>
+                    <div class="login-dev-name">Designed By Rahul Popat</div>
+                    <div class="login-dev-contact"><i class="fa-solid fa-phone-volume"></i> Contact : <a href="tel:+919898180810">+91 9898180810</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MAIN DASHBOARD SYSTEM ==================== -->
+    <div id="app-container" class="app-layout hidden">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo-block">
+                    <img src="jccb-logo.png" alt="JCCB Logo" class="sidebar-logo-img">
+                    <span class="logo-text">JCCB GOLD</span>
+                </div>
+                <div class="branch-indicator">
+                    <span class="indicator-dot"></span>
+                    <span id="current-user-branch">HEAD OFFICE</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-tab="dashboard-view" id="dashboard-nav">
+                    <i class="fa-solid fa-chart-line"></i> Dashboard
+                </button>
+                <button class="nav-item" data-tab="entry-view" id="entry-nav">
+                    <i class="fa-solid fa-file-invoice-dollar"></i> Loan Entry
+                </button>
+                <button class="nav-item" data-tab="register-view" id="register-nav">
+                    <i class="fa-solid fa-list-check"></i> Loan Register
+                </button>
+                <button class="nav-item" data-tab="daily-vouchers-view" id="daily-vouchers-nav">
+                    <i class="fa-solid fa-print"></i> Daily Vouchers
+                </button>
+                <button class="nav-item" data-tab="reports-view" id="reports-nav">
+                    <i class="fa-solid fa-chart-pie"></i> Reports Center
+                </button>
+                <button class="nav-item hidden" id="pending-reminder-nav" style="border: 1px solid rgba(255, 152, 0, 0.3); background: rgba(255, 152, 0, 0.05); color: #ffb74d;">
+                    <i class="fa-solid fa-triangle-exclamation" style="color: #ff9800;"></i> Pending Cust Nos
+                </button>
+                
+                <div class="nav-divider" id="masters-nav-divider">Masters</div>
+                <button class="nav-item" data-tab="gold-rate-master-view" id="gold-rate-master-nav">
+                    <i class="fa-solid fa-scale-balanced"></i> Daily Gold Rate
+                </button>
+                <button class="nav-item" data-tab="branch-master-view" id="branch-master-nav">
+                    <i class="fa-solid fa-code-branch"></i> Branch Master
+                </button>
+                <button class="nav-item" data-tab="valuer-master-view" id="valuer-master-nav">
+                    <i class="fa-solid fa-user-tie"></i> Valuer Master
+                </button>
+                <button class="nav-item" data-tab="customer-master-view" id="customer-master-nav">
+                    <i class="fa-solid fa-users"></i> Customer Master
+                </button>
+                <button class="nav-item" data-tab="product-master-view" id="product-master-nav">
+                    <i class="fa-solid fa-tags"></i> Product Master
+                </button>
+                <button class="nav-item" data-tab="rules-master-view" id="rules-master-nav">
+                    <i class="fa-solid fa-book-bookmark"></i> Rules Master
+                </button>
+                
+                <div class="nav-divider" id="config-nav-divider">Configuration</div>
+                <button class="nav-item" data-tab="settings-view" id="settings-nav">
+                    <i class="fa-solid fa-sliders"></i> Account Settings
+                </button>
+                <button class="nav-item" data-tab="backup-restore-view" id="backup-restore-nav">
+                    <i class="fa-solid fa-database"></i> Backup & Restore
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button id="logout-btn" class="btn btn-danger-outline btn-block">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-logo-area">
+                    <img src="jccb-logo.png" alt="JCCB Logo" class="header-bank-logo">
+                    <div class="header-title-area">
+                        <h1>The Junagadh Commercial Co-operative Bank Ltd.</h1>
+                        <p class="subtitle">Gold Loan Entry & Accounting Portal</p>
+                    </div>
+                </div>
+                <!-- CENTER: Prominent Today's Gold Rate (22 Karat) Display -->
+                <div class="header-gold-rate-badge" id="header-gold-rate-badge">
+                    <span class="h-rate-label"><i class="fa-solid fa-coins text-gold"></i> Todays Gold Rate (22 Karat) = </span>
+                    <span class="h-rate-value" id="header-gold-rate-value">₹ 72,000</span>
+                </div>
+                <div class="header-actions">
+                    <div class="header-dev-badge">
+                        <div class="header-dev-title"><i class="fa-solid fa-crown text-gold"></i> Designed By <span class="header-dev-highlight">Rahul Popat</span></div>
+                        <div class="header-dev-contact"><i class="fa-solid fa-phone"></i> Contact : <a href="tel:+919898180810">+91 9898180810</a></div>
+                    </div>
+                    <div class="date-time-widget">
+                        <i class="fa-regular fa-calendar-days"></i>
+                        <span id="header-date">08-06-2026</span>
+                        <span class="time-sep">|</span>
+                        <i class="fa-regular fa-clock"></i>
+                        <span id="header-time">11:00 AM</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Inner Views (Tabs) -->
+            <div class="content-body">
+                
+                <!-- 1. DASHBOARD VIEW -->
+                <section id="dashboard-view" class="tab-content">
+                    <div class="welcome-banner">
+                        <div class="welcome-banner-row">
+                            <!-- 1. LEFT: Welcome Greeting & Info -->
+                            <div class="welcome-left-col">
+                                <div class="welcome-badge"><i class="fa-solid fa-gem text-gold"></i> સોના ધિરાણ (Gold Loan)</div>
+                                <h2>Welcome, <span id="welcome-branch-name">HEAD OFFICE</span></h2>
+                                <p>Manage daily gold loan transactions, vault records & accounting logs efficiently.</p>
+                            </div>
+
+                            <!-- 2. CENTER: Real Gold Ornaments + Currency Cash Bundles Showcase -->
+                            <div class="welcome-center-col">
+                                <div class="gold-real-photo-card">
+                                    <img src="gold-loan-banner.jpg" alt="Gold Loan & Cash Exchange" class="gold-real-img" onerror="this.onerror=null; this.src='file:///C:/Users/RJP079/.gemini/antigravity/brain/70f169fc-a023-4db1-afc5-f37bc19d9d1d/.user_uploaded/media_1787821047156.jpg';">
+                                </div>
+                            </div>
+
+                            <!-- 3. RIGHT: 22 Karat Daily Gold Rate Widget -->
+                            <div class="welcome-right-col">
+                                <div class="gold-rate-dashboard-card">
+                                    <div class="card-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+                                    <div class="rate-details">
+                                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                                            <label for="dashboard-gold-rate" style="margin:0;">22 Karat Gold Rate (Rate/10g)</label>
+                                            <span id="dashboard-gold-rate-lock-badge" class="badge hidden" style="background:#fee2e2; color:#b91c1c; font-size:10.5px; padding:2px 6px; border:1px solid #fca5a5;">
+                                                <i class="fa-solid fa-lock"></i> HO Locked
+                                            </span>
+                                        </div>
+                                        <div class="rate-input-group" style="margin-top:4px;">
+                                            <span class="currency-symbol">₹</span>
+                                            <input type="number" id="dashboard-gold-rate" placeholder="e.g. 72000" min="1000">
+                                            <button id="save-gold-rate-btn" class="btn btn-gold">
+                                                <i class="fa-solid fa-floppy-disk"></i> Save
+                                            </button>
+                                        </div>
+                                        <span class="rate-note" id="dashboard-rate-note">* Set by Head Office (Locked for the day across all branches)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Statistics Cards Grid -->
+                    <div class="stats-grid">
+                        <div class="stat-card gold-grad-card">
+                            <div class="stat-icon"><i class="fa-solid fa-sack-dollar"></i></div>
+                            <div class="stat-info">
+                                <h3>Total Loan Outstanding</h3>
+                                <div class="stat-value" id="stat-total-amount">₹0.00</div>
+                                <p class="stat-change"><span id="stat-branch-only-loans">All Branches Combined</span></p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon blue-icon"><i class="fa-solid fa-address-book"></i></div>
+                            <div class="stat-info">
+                                <h3>Total Loan Accounts</h3>
+                                <div class="stat-value" id="stat-total-accounts">0</div>
+                                <p class="stat-sub">Active gold loan ledgers</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon yellow-icon"><i class="fa-solid fa-weight-hanging"></i></div>
+                            <div class="stat-info">
+                                <h3>Total Vault Gold Weight</h3>
+                                <div class="stat-value" id="stat-total-weight">0.000 g</div>
+                                <p class="stat-sub">Vault weight in grams</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green-icon"><i class="fa-solid fa-user-shield"></i></div>
+                            <div class="stat-info">
+                                <h3>Active Valuers</h3>
+                                <div class="stat-value" id="stat-total-valuers">0</div>
+                                <p class="stat-sub">Registered gold soni valuers</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Entries & Shortcuts -->
+                    <div class="dashboard-details-grid">
+                        <div class="details-card">
+                            <div class="details-card-header">
+                                <h3><i class="fa-solid fa-history"></i> Today's Gold Loan Entries</h3>
+                                <button class="btn btn-link view-all-register-btn">View Register <i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table" id="dashboard-recent-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Account No</th>
+                                            <th>Borrower Name</th>
+                                            <th>Product Code</th>
+                                            <th>Loan Amount</th>
+                                            <th>Packet No</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">No loans created today.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="details-card">
+                            <h3><i class="fa-solid fa-bolt"></i> Quick Actions</h3>
+                            <div class="shortcuts-list">
+                                <button class="shortcut-btn" data-go-tab="entry-view">
+                                    <i class="fa-solid fa-plus-circle"></i>
+                                    <span>New Loan Entry</span>
+                                </button>
+                                <button class="shortcut-btn" data-go-tab="valuer-master-view">
+                                    <i class="fa-solid fa-user-plus"></i>
+                                    <span>Add Valuer</span>
+                                </button>
+                                <button class="shortcut-btn" data-go-tab="daily-vouchers-view">
+                                    <i class="fa-solid fa-print"></i>
+                                    <span>Daily Vouchers</span>
+                                </button>
+                                <button class="shortcut-btn" data-go-tab="settings-view">
+                                    <i class="fa-solid fa-cog"></i>
+                                    <span>Settings</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. GOLD LOAN ENTRY VIEW -->
+                <section id="entry-view" class="tab-content hidden">
+                    <div class="view-header">
+                        <h2><i class="fa-solid fa-file-medical"></i> Gold Loan Entry Sheet</h2>
+                        <p>Input new gold loan ledger details and calculate deductions</p>
+                    </div>
+
+                    <form id="gold-loan-form" class="gold-loan-form-container">
+                        <!-- TOP DECK: 3-Column Compact Grid (Basic, Customer, Loan Scheme) -->
+                        <div class="form-deck-top">
+                            <!-- 1. Basic Details -->
+                            <div class="form-section-card deck-card section-card-basic">
+                                <h3 class="section-title"><i class="fa-solid fa-circle-info"></i> 1. Basic Details</h3>
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="loan-branch">Branch / શાખા</label>
+                                        <select id="loan-branch" required style="font-weight:600;"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="unique-proposal-no">Proposal Number</label>
+                                        <input type="text" id="unique-proposal-no" placeholder="Proposal No" readonly class="auto-calc-field" required>
+                                    </div>
+                                </div>
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="loan-date">Loan Date</label>
+                                        <input type="date" id="loan-date" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Loan Type (Status)</label>
+                                        <div class="radio-group">
+                                            <label class="radio-label">
+                                                <input type="radio" name="loan-status" value="New" checked> New
+                                            </label>
+                                            <label class="radio-label">
+                                                <input type="radio" name="loan-status" value="Old"> Old/Renew
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="is-member">Member Status</label>
+                                        <select id="is-member" required style="cursor:pointer; font-weight:600;">
+                                            <option value="No">No (સભાસદ નથી)</option>
+                                            <option value="Yes">Yes (સભાસદ છે)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="member-no-group" style="display:none;">
+                                        <label for="member-no">Member ID / સભાસદ નં.</label>
+                                        <input type="text" id="member-no" placeholder="Member ID">
+                                    </div>
+                                </div>
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="packet-no">Gold Packet No</label>
+                                        <input type="number" id="packet-no" placeholder="Auto" readonly class="auto-calc-field" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="valuer-select">Soni Valuer</label>
+                                        <select id="valuer-select" required>
+                                            <option value="">-- Select Valuer --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Customer Profile Details -->
+                            <div class="form-section-card deck-card section-card-customer">
+                                <h3 class="section-title"><i class="fa-solid fa-user-shield"></i> 2. Customer Profile Details</h3>
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="cust-no">Customer No</label>
+                                        <input type="text" id="cust-no" placeholder="Customer No">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cust-name">Customer Name</label>
+                                        <input type="text" id="cust-name" placeholder="Full Name" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cust-address">Address</label>
+                                    <textarea id="cust-address" placeholder="Full Address" rows="1" required style="resize: vertical;"></textarea>
+                                </div>
+                                <div class="form-row three-col">
+                                    <div class="form-group">
+                                        <label for="cust-savings-ac">Savings A/c No</label>
+                                        <input type="text" id="cust-savings-ac" placeholder="Savings A/c" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cust-dob">Birth Date</label>
+                                        <input type="date" id="cust-dob" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cust-age">Age</label>
+                                        <input type="number" id="cust-age" placeholder="Age" readonly class="auto-calc-field" required min="1" max="120">
+                                    </div>
+                                </div>
+                                <div class="form-row three-col">
+                                    <div class="form-group">
+                                        <label for="cust-occupation">Occupation</label>
+                                        <input type="text" id="cust-occupation" placeholder="Occupation" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cust-religion">Religion</label>
+                                        <input type="text" id="cust-religion" placeholder="Religion" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cust-caste">Caste</label>
+                                        <input type="text" id="cust-caste" placeholder="Caste" required>
+                                    </div>
+                                </div>
+                                <div class="form-row three-col">
+                                    <div class="form-group">
+                                        <label for="cust-mobile">Mobile No</label>
+                                        <input type="tel" id="cust-mobile" placeholder="10 Digits" required pattern="[0-9]{10}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cust-nominee-name">Nominee Name</label>
+                                        <input type="text" id="cust-nominee-name" placeholder="Nominee Name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cust-nominee-relation">Relation</label>
+                                        <input type="text" id="cust-nominee-relation" placeholder="Relation" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Loan Details -->
+                            <div class="form-section-card deck-card section-card-loan">
+                                <h3 class="section-title"><i class="fa-solid fa-coins"></i> 3. Loan Details</h3>
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="loan-amount">Sanction Amount (₹)</label>
+                                        <input type="number" id="loan-amount" placeholder="e.g. 150000" min="100" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="loan-purpose">Loan Purpose / હેતુ</label>
+                                        <input type="text" id="loan-purpose" placeholder="e.g. Personal Use" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="loan-amount-words">Amount in Words (શબ્દોમાં રકમ)</label>
+                                    <input type="text" id="loan-amount-words" class="highlight-input auto-calc-field" readonly placeholder="Auto in Words" style="font-weight: 700; font-size: 12px; color: #0f172a;">
+                                </div>
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="loan-category-display">Product Code / પ્રકાર</label>
+                                        <div id="product-code-container" style="display:flex; gap:6px;">
+                                            <input type="text" id="loan-category-display" class="highlight-input auto-calc-field" readonly placeholder="Auto Scheme" style="flex:1;">
+                                            <select id="loan-category-select" class="highlight-input" style="width: auto; min-width: 160px; font-weight:600; cursor:pointer; display:none;">
+                                                <option value="3527">GNA-3527 (Installment)</option>
+                                                <option value="3553">GOD-3553 (Overdraft)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="loan-ac-no">Loan Account No</label>
+                                        <input type="text" id="loan-ac-no" class="highlight-input auto-calc-field" readonly placeholder="Auto-generated">
+                                    </div>
+                                </div>
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="interest-rate-display">Interest Rate (Fix %)</label>
+                                        <input type="text" id="interest-rate-display" readonly class="auto-calc-field" placeholder="Auto Rate">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="gold-weight">Gold Weight (Grams)</label>
+                                        <input type="number" id="gold-weight" readonly class="auto-calc-field" placeholder="From Valuation" step="0.001" min="0.001" required>
+                                    </div>
+                                </div>
+
+                                <!-- Dynamic Installment Fields (Only visible when loan type is 3527) -->
+                                <div id="installment-fields-container" style="display: none; margin-top: 6px; border: 1.5px solid var(--gold-light); padding: 8px; border-radius: 6px; background-color: rgba(212, 175, 55, 0.05);">
+                                    <div class="form-row two-col">
+                                        <div class="form-group" style="margin-bottom:0;">
+                                            <label for="loan-emi-amount">Installment Rs. (હપ્તો ₹)</label>
+                                            <input type="number" id="loan-emi-amount" placeholder="EMI Amount" min="0" step="1">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom:0;">
+                                            <label for="loan-installments">No. of EMIs (હપ્તા)</label>
+                                            <input type="number" id="loan-installments" placeholder="36" value="36" min="1">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <input type="hidden" id="ornaments-desc">
+                            </div>
+                        </div>
+
+                        <!-- BOTTOM SPLIT: 2-Column Split (Left: 4. Valuation Report & 6. Photos | Right: 5. Deductions & Actions) -->
+                        <div class="form-split-bottom">
+                            <!-- Left: 4. Ornaments Valuation Report & 6. Customer & Gold Photos -->
+                            <div class="split-col-left">
+                                <div class="form-section-card section-card-valuation">
+                                    <h3 class="section-title"><i class="fa-solid fa-gem"></i> 4. Ornaments Valuation Report (દાગીના વેલ્યુએશન)</h3>
+                                    <input type="hidden" id="val-gold-rate-input">
+
+                                    <div class="table-responsive ornaments-table-wrap">
+                                        <table class="ornaments-entry-table" id="ornaments-items-table">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 35px;" rowspan="2">ક્રમ</th>
+                                                    <th style="min-width: 150px;" rowspan="2">દાગીનાની વિગત</th>
+                                                    <th style="width: 50px;" rowspan="2">નંગ</th>
+                                                    <th colspan="2">ગ્રોસ વજન</th>
+                                                    <th colspan="2">નેટ વજન</th>
+                                                    <th style="width: 90px;" rowspan="2">કેરેટ</th>
+                                                    <th style="width: 95px;" rowspan="2">ફાઇન ગોલ્ડ (g)</th>
+                                                    <th style="width: 110px;" rowspan="2">કિંમત (₹)</th>
+                                                    <th style="width: 35px;" rowspan="2">ક્રિયા</th>
+                                                </tr>
+                                                <tr>
+                                                    <th style="width: 65px;">ગ્રામ</th>
+                                                    <th style="width: 60px;">મી.ગ્રા.</th>
+                                                    <th style="width: 65px;">ગ્રામ</th>
+                                                    <th style="width: 60px;">મી.ગ્રા.</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="ornaments-table-tbody">
+                                                <!-- Dynamically rendered rows (up to 10) -->
+                                            </tbody>
+                                            <tfoot>
+                                                <tr class="add-row-action-tr">
+                                                    <td colspan="11" style="background: #ffffff; padding: 6px 10px; text-align: left; border-top: 1.5px solid #000000; border-bottom: 1.5px solid #000000;">
+                                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                            <button type="button" id="btn-add-ornament-row" class="btn btn-sm btn-green-add-row">
+                                                                <i class="fa-solid fa-plus" style="font-size: 13px;"></i> + Add Raw
+                                                            </button>
+                                                            <span style="font-size: 11px; font-weight: 700; color: #475569;">
+                                                                <i class="fa-solid fa-circle-info" style="color: #ca8a04;"></i> વધુમાં વધુ ૧૦ દાગીના ઉમેરી શકો છો (Max 10 Items)
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr class="orn-total-row">
+                                                    <td colspan="2" style="text-align: center;">કુલ (Total)</td>
+                                                    <td id="total-orn-pcs" class="auto-calc-field" style="text-align: center;">0</td>
+                                                    <td id="total-gross-gm" class="auto-calc-field" style="text-align: right;">0.000</td>
+                                                    <td id="total-gross-mg" class="auto-calc-field" style="text-align: right;">0</td>
+                                                    <td id="total-net-gm" class="auto-calc-field" style="text-align: right;">0.000</td>
+                                                    <td id="total-net-mg" class="auto-calc-field" style="text-align: right;">0</td>
+                                                    <td style="text-align: center;">-</td>
+                                                    <td id="total-fine-gold-gm" class="auto-calc-field font-bold green-text" style="text-align: right;">0.000</td>
+                                                    <td id="total-orn-val" class="auto-calc-field font-bold gold-val-text" style="text-align: right;">₹0</td>
+                                                    <td style="text-align: center;">-</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+
+                                    <!-- Sequential Valuation Metrics Grid -->
+                                    <div class="val-metrics-grid">
+                                        <div class="val-metric-card" id="val-rate-card">
+                                            <span class="val-metric-label"><i class="fa-solid fa-tags"></i> Market Rate:</span>
+                                            <strong id="val-rate-display" class="val-metric-value">₹0</strong>
+                                        </div>
+                                        <div class="val-metric-card" id="val-market-card">
+                                            <span class="val-metric-label"><i class="fa-solid fa-coins"></i> Market Value:</span>
+                                            <strong id="val-market-val-display" class="val-metric-value gold-color">₹0</strong>
+                                        </div>
+                                        <div class="val-metric-card" id="val-eligible-card">
+                                            <span class="val-metric-label"><i class="fa-solid fa-circle-check"></i> Eligible (75%):</span>
+                                            <strong id="val-eligible-display" class="val-metric-value green-color">₹0</strong>
+                                        </div>
+                                        <div class="val-metric-card" id="val-ltv-card">
+                                            <span class="val-metric-label"><i class="fa-solid fa-chart-pie"></i> LTV%:</span>
+                                            <strong id="val-ltv-display" class="val-metric-value">0%</strong>
+                                        </div>
+                                        <div class="val-metric-card" id="val-margin-card">
+                                            <span class="val-metric-label"><i class="fa-solid fa-shield-halved"></i> Margin%:</span>
+                                            <strong id="val-margin-display" class="val-metric-value">100%</strong>
+                                        </div>
+                                    </div>
+                                    <div id="ltv-warning-badge" class="ltv-warning-alert hidden">
+                                        <i class="fa-solid fa-triangle-exclamation"></i> સાવચેતી: બેંક માર્જીન ૨૫% કરતાં ઓછું છે! (Bank Margin is below 25% - High Risk LTV)
+                                    </div>
+
+                                    <div class="form-group" style="margin-top: 8px; margin-bottom: 0;">
+                                        <label for="grievance-officer">Grievance Redressal Officer (ફરિયાદ નિવારણ અધિકારી)</label>
+                                        <input type="text" id="grievance-officer" value="Amrutlal Valjibhai Chavda" required>
+                                    </div>
+                                </div>
+
+                                <!-- 6. Customer & Gold Photos (Positioned Under 4. Ornaments Valuation Report) -->
+                                <div class="form-section-card section-card-photos">
+                                    <h3 class="section-title"><i class="fa-solid fa-camera"></i> 6. Customer & Gold Photos</h3>
+                                    <div class="photos-side-grid">
+                                        <!-- Customer Photo Box -->
+                                        <div class="photo-box-wrap">
+                                            <div class="photo-box-header">
+                                                <label for="cust-photo-upload"><i class="fa-solid fa-user"></i> Customer Photo (ગ્રાહકનો ફોટો)</label>
+                                            </div>
+                                            <input type="file" id="cust-photo-upload" accept="image/*" class="photo-file-input" style="display:none;">
+                                            <button type="button" id="btn-trigger-cust-upload" class="btn-choose-photo" onclick="document.getElementById('cust-photo-upload').click()">
+                                                <i class="fa-solid fa-cloud-arrow-up"></i> કસ્ટમર ફોટો અપલોડ કરો (Upload)
+                                            </button>
+                                            <div id="cust-photo-preview" class="photo-preview-display" title="Customer Photo Preview">
+                                                <div class="photo-placeholder-content">
+                                                    <i class="fa-regular fa-image"></i>
+                                                    <span>કોઈ ફોટો પસંદ કરેલ નથી<br>(No Photo Selected)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Gold Ornament Photo Box -->
+                                        <div class="photo-box-wrap">
+                                            <div class="photo-box-header">
+                                                <label for="gold-photo-upload"><i class="fa-solid fa-gem"></i> Gold Photo (દાગીનાનો ફોટો)</label>
+                                            </div>
+                                            <input type="file" id="gold-photo-upload" accept="image/*" class="photo-file-input" style="display:none;">
+                                            <button type="button" id="btn-trigger-gold-upload" class="btn-choose-photo" onclick="document.getElementById('gold-photo-upload').click()">
+                                                <i class="fa-solid fa-cloud-arrow-up"></i> દાગીનાનો ફોટો અપલોડ કરો (Upload)
+                                            </button>
+                                            <div id="gold-photo-preview" class="photo-preview-display" title="Gold Photo Preview">
+                                                <div class="photo-placeholder-content">
+                                                    <i class="fa-regular fa-image"></i>
+                                                    <span>કોઈ ફોટો પસંદ કરેલ નથી<br>(No Photo Selected)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: 5. Deductions & Big Save Record Action Buttons -->
+                            <div class="split-col-right">
+                                <!-- 5. Deductions & Charges -->
+                                <div class="form-section-card section-card-deductions">
+                                    <h3 class="section-title"><i class="fa-solid fa-calculator"></i> 5. Deductions & Charges</h3>
+                                    
+                                    <div class="charges-compact-grid">
+                                        <div class="form-group">
+                                            <label for="charge-share-a">Share A</label>
+                                            <input type="number" id="charge-share-a" readonly class="auto-calc-field">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="charge-share-b">Share B</label>
+                                            <input type="number" id="charge-share-b" readonly class="auto-calc-field">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="charge-member-fee">Member Fee</label>
+                                            <input type="number" id="charge-member-fee" readonly class="auto-calc-field">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="charge-valuation">Valuation</label>
+                                            <input type="number" id="charge-valuation" readonly class="auto-calc-field">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="charge-stamp">Stamp Duty</label>
+                                            <input type="number" id="charge-stamp" readonly class="auto-calc-field">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="charge-service">Service Chg</label>
+                                            <input type="number" id="charge-service" readonly class="auto-calc-field">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="charge-document">Doc Charge</label>
+                                            <input type="number" id="charge-document" readonly class="auto-calc-field">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="charge-insurance">Insurance</label>
+                                            <input type="number" id="charge-insurance" readonly class="auto-calc-field">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="charge-cgst">CGST (9%)</label>
+                                            <input type="number" id="charge-cgst" readonly class="auto-calc-field">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="charge-sgst">SGST (9%)</label>
+                                            <input type="number" id="charge-sgst" readonly class="auto-calc-field">
+                                        </div>
+                                        <!-- Dynamic Custom Charges -->
+                                        <div id="dynamic-custom-charges-loan-grid" style="grid-column: 1 / -1; display:contents;"></div>
+                                        <div class="form-group">
+                                            <label for="charge-adjustment">Manual (+/-)</label>
+                                            <input type="number" id="charge-adjustment" value="0">
+                                        </div>
+                                        <div class="form-group highlight-box">
+                                            <label for="charge-total" class="bold-text">Total Ded.</label>
+                                            <input type="number" id="charge-total" class="bold-text font-lg auto-calc-field" readonly>
+                                        </div>
+                                    </div>
+
+                                    <div class="net-disbursal-card compact-net-card">
+                                        <div class="net-item">
+                                            <span class="net-label">Sanctioned</span>
+                                            <span class="net-val" id="summary-sanctioned-amt">₹0.00</span>
+                                        </div>
+                                        <div class="net-item-operator">-</div>
+                                        <div class="net-item">
+                                            <span class="net-label">Deductions</span>
+                                            <span class="net-val text-red" id="summary-deductions-amt">₹0.00</span>
+                                        </div>
+                                        <div class="net-item-operator">=</div>
+                                        <div class="net-item highlight-net">
+                                            <span class="net-label-main">Net Payable</span>
+                                            <span class="net-val-main" id="summary-net-disbursal">₹0.00</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons Card on the Right Side -->
+                                <div class="form-section-card right-actions-card">
+                                    <button type="submit" id="btn-save-loan-record" class="btn btn-gold-success right-save-big-btn">
+                                        <i class="fa-solid fa-save"></i> Save Record & Generate Voucher
+                                    </button>
+                                    <button type="button" id="reset-loan-form-btn" class="btn btn-secondary right-reset-btn">
+                                        <i class="fa-solid fa-arrows-rotate"></i> Reset Form
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- 3. LOAN REGISTER / DATA GRID VIEW -->
+                <section id="register-view" class="tab-content hidden">
+                    <div class="view-header">
+                        <h2><i class="fa-solid fa-list-check"></i> Gold Loan Register</h2>
+                        <p>Search, filter, and export branch ledger logs</p>
+                    </div>
+
+                    <!-- Search Filter Card -->
+                    <div class="filter-card card">
+                        <div class="filter-grid">
+                            <div class="form-group">
+                                <label for="filter-search">Search Text (Name / Account / Packet)</label>
+                                <input type="text" id="filter-search" placeholder="Type query here...">
+                            </div>
+                            <div class="form-group">
+                                <label for="filter-branch">Branch Office Filter</label>
+                                <select id="filter-branch">
+                                    <option value="">-- All Branches --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="filter-date-from">Date From</label>
+                                <input type="date" id="filter-date-from">
+                            </div>
+                            <div class="form-group">
+                                <label for="filter-date-to">Date To</label>
+                                <input type="date" id="filter-date-to">
+                            </div>
+                            <div class="form-group">
+                                <label for="filter-product">Scheme Code</label>
+                                <select id="filter-product">
+                                    <option value="">-- All Schemes --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="filter-actions">
+                            <button id="clear-filters-btn" class="btn btn-secondary-sm">
+                                <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+                            </button>
+                            <button id="export-csv-btn" class="btn btn-success-sm">
+                                <i class="fa-solid fa-file-excel"></i> Export Ledger to CSV (Excel)
+                            </button>
+                            <button id="delete-all-loans-btn" class="btn btn-danger-sm" style="display: none; background-color: var(--danger); border-color: var(--danger); font-weight: 600;">
+                                <i class="fa-solid fa-trash-can"></i> બધી લોન ડીલીટ કરો (Delete All Loans)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Data Grid Card -->
+                    <div class="card margin-top">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped" id="loans-register-table" style="min-width: 1280px; width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr>
+                                        <th style="white-space:nowrap; width: 95px;">Date</th>
+                                        <th style="white-space:nowrap; width: 65px; text-align: center;">Branch</th>
+                                        <th style="white-space:nowrap; width: 140px;">Account No</th>
+                                        <th style="white-space:nowrap; width: 90px; text-align: center;">Packet No</th>
+                                        <th style="min-width: 160px;">Borrower Name</th>
+                                        <th style="white-space:nowrap; width: 90px; text-align: center;">Product</th>
+                                        <th style="text-align:right; white-space:nowrap; width: 110px;">Loan Amt (₹)</th>
+                                        <th style="text-align:right; white-space:nowrap; width: 95px;">Weight</th>
+                                        <th style="text-align:right; white-space:nowrap; width: 105px;">Deductions (₹)</th>
+                                        <th style="text-align:right; white-space:nowrap; width: 110px;">Net Paid (₹)</th>
+                                        <th style="text-align:center; min-width: 280px; width: 280px; white-space:nowrap;">Print Documents</th>
+                                        <th style="text-align:center; min-width: 100px; width: 100px; white-space:nowrap;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="register-tbody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="register-empty-msg" class="empty-state text-center hidden">
+                            <i class="fa-regular fa-folder-open font-xl"></i>
+                            <p>No gold loans found matching these filter settings.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- NEW TAB: DAILY VOUCHERS VIEW -->
+                <section id="daily-vouchers-view" class="tab-content hidden">
+                    <div class="view-header">
+                        <h2><i class="fa-solid fa-print"></i> Daily Cash Credit Vouchers (દૈનિક ખર્ચ કેશ ક્રેડિટ વાઉચર્સ)</h2>
+                        <p>Generate & Print date-wise aggregated GL expense vouchers (3-in-1 A4 layout)</p>
+                    </div>
+
+                    <div class="filter-card card">
+                        <div class="filter-grid" style="grid-template-columns: 1.2fr 1.5fr 2fr; gap: 15px; align-items: flex-end;">
+                            <div class="form-group">
+                                <label for="voucher-date-select"><i class="fa-solid fa-calendar-day"></i> Voucher Date / તારીખ</label>
+                                <input type="date" id="voucher-date-select" required style="height: 42px;">
+                            </div>
+                            <div class="form-group">
+                                <label for="voucher-branch-select"><i class="fa-solid fa-code-branch"></i> Branch / શાખા</label>
+                                <select id="voucher-branch-select" style="padding: 0 12px; border-radius: 6px; border: 1px solid #ccc; font-weight: 600; width: 100%; height: 42px; background-color: #ffffff; color: #333;">
+                                    <option value="">-- All Branches --</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="display: flex; gap: 10px;">
+                                <button id="load-vouchers-btn" class="btn btn-primary" style="height: 42px; flex: 1;">
+                                    <i class="fa-solid fa-arrows-rotate"></i> Load Summary
+                                </button>
+                                <button id="print-vouchers-btn" class="btn btn-gold-success" style="height: 42px; flex: 1.3; font-weight:700;">
+                                    <i class="fa-solid fa-print"></i> Print Vouchers (3-in-1 A4)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card margin-top">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3 style="margin:0;"><i class="fa-solid fa-receipt"></i> Accounting Credits Summary (GL વાઇઝ ખર્ચ સારાંશ)</h3>
+                            <span id="daily-loans-count-badge" class="badge badge-gold" style="font-size:12px; padding:6px 12px;">0 Loans Found</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped" id="daily-vouchers-summary-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 130px;">GL Code</th>
+                                        <th>GL Name / Account Header</th>
+                                        <th style="width: 120px; text-align: center;">No. of Accounts</th>
+                                        <th style="width: 160px; text-align: right;">Aggregated Sum (₹)</th>
+                                        <th>Sum in Words (અંકે રકમ શબ્દોમાં)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="daily-vouchers-tbody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                                <tfoot id="daily-vouchers-tfoot">
+                                    <!-- Rendered dynamically -->
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ==================== COMPREHENSIVE REPORTS & MIS CENTER ==================== -->
+                <section id="reports-view" class="tab-content hidden">
+                    <div class="view-header">
+                        <h2><i class="fa-solid fa-chart-pie"></i> Gold Loan Reports & Analysis</h2>
+                        <p>Generate, filter, analyze, export to Excel, and print/PDF multi-dimensional gold loan reports</p>
+                    </div>
+
+                    <!-- Filter Control Card -->
+                    <div class="filter-card card" style="background:#ffffff; border:1.5px solid #cbd5e1; box-shadow:var(--shadow-sm); padding:16px 20px;">
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: flex-end;">
+                            <div class="form-group" style="margin:0;">
+                                <label for="report-filter-date-from" style="font-weight:700; font-size:12px; color:#334155;"><i class="fa-solid fa-calendar-day"></i> From Date (તારીખ થી)</label>
+                                <input type="date" id="report-filter-date-from" style="height:38px; font-size:13px;">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label for="report-filter-date-to" style="font-weight:700; font-size:12px; color:#334155;"><i class="fa-solid fa-calendar-day"></i> To Date (તારીખ સુધી)</label>
+                                <input type="date" id="report-filter-date-to" style="height:38px; font-size:13px;">
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label for="report-filter-branch" style="font-weight:700; font-size:12px; color:#334155;"><i class="fa-solid fa-code-branch"></i> Branch (શાખા)</label>
+                                <select id="report-filter-branch" style="height:38px; font-size:13px; font-weight:600;">
+                                    <option value="">-- All Branches --</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label for="report-filter-product" style="font-weight:700; font-size:12px; color:#334155;"><i class="fa-solid fa-tags"></i> Scheme (લોન પ્રકાર)</label>
+                                <select id="report-filter-product" style="height:38px; font-size:13px; font-weight:600;">
+                                    <option value="">-- All Schemes --</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label for="report-filter-valuer" style="font-weight:700; font-size:12px; color:#334155;"><i class="fa-solid fa-user-tie"></i> Valuer (વેલ્યુઅર સોની)</label>
+                                <select id="report-filter-valuer" style="height:38px; font-size:13px; font-weight:600;">
+                                    <option value="">-- All Valuers --</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label for="report-filter-search" style="font-weight:700; font-size:12px; color:#334155;"><i class="fa-solid fa-magnifying-glass"></i> Search (શોધો)</label>
+                                <input type="text" id="report-filter-search" placeholder="Name, A/c, Packet..." style="height:38px; font-size:13px;">
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons Bar -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:14px; padding-top:12px; border-top:1px solid #e2e8f0;">
+                            <div style="display:flex; gap:8px;">
+                                <button id="report-btn-generate" onclick="renderReportsTable()" class="btn btn-primary" style="height:36px; padding:0 16px; font-size:13px; cursor:pointer;">
+                                    <i class="fa-solid fa-filter"></i> Apply Filters (રીપોર્ટ મેળવો)
+                                </button>
+                                <button id="report-btn-reset" class="btn btn-secondary" style="height:36px; padding:0 14px; font-size:13px; cursor:pointer;">
+                                    <i class="fa-solid fa-rotate-left"></i> Reset
+                                </button>
+                            </div>
+                            <div style="display:flex; gap:10px;">
+                                <button id="report-btn-excel" onclick="exportReportToExcel()" class="btn btn-success" style="background:#16a34a; color:#fff; font-weight:700; height:36px; padding:0 16px; font-size:13px; cursor:pointer;">
+                                    <i class="fa-solid fa-file-excel"></i> Export Excel (.xlsx)
+                                </button>
+                                <button id="report-btn-print-pdf" onclick="printReportPDF()" class="btn btn-gold-success" style="height:36px; padding:0 16px; font-size:13px; font-weight:700; cursor:pointer;">
+                                    <i class="fa-solid fa-print"></i> Print / PDF Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live KPI Metrics Summary Grid -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-top:15px; margin-bottom:15px;">
+                        <div class="stat-card" style="padding:12px 14px; border-left:4px solid #0284c7; background:#ffffff;">
+                            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Total Loans (કુલ લોન)</div>
+                            <div id="rep-kpi-count" style="font-size:20px; font-weight:900; color:#0f172a; margin-top:2px;">0</div>
+                            <div style="font-size:10.5px; color:#64748b;">Loans in Filter</div>
+                        </div>
+                        <div class="stat-card" style="padding:12px 14px; border-left:4px solid #d4af37; background:#ffffff;">
+                            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Sanctioned (મંજૂર રકમ)</div>
+                            <div id="rep-kpi-sanctioned" style="font-size:19px; font-weight:900; color:#b45309; margin-top:2px;">₹ 0</div>
+                            <div style="font-size:10.5px; color:#64748b;">Total Approved</div>
+                        </div>
+                        <div class="stat-card" style="padding:12px 14px; border-left:4px solid #f59e0b; background:#ffffff;">
+                            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Net Gold Wt (ચોખ્ખું સોનું)</div>
+                            <div id="rep-kpi-weight" style="font-size:19px; font-weight:900; color:#d97706; margin-top:2px;">0.000 g</div>
+                            <div style="font-size:10.5px; color:#64748b;">Total Net Weight</div>
+                        </div>
+                        <div class="stat-card" style="padding:12px 14px; border-left:4px solid #6366f1; background:#ffffff;">
+                            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Valuation (બજાર કિંમત)</div>
+                            <div id="rep-kpi-valuation" style="font-size:19px; font-weight:900; color:#4338ca; margin-top:2px;">₹ 0</div>
+                            <div style="font-size:10.5px; color:#64748b;">Market Valuation</div>
+                        </div>
+                        <div class="stat-card" style="padding:12px 14px; border-left:4px solid #ef4444; background:#ffffff;">
+                            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Deductions (કુલ કપાત)</div>
+                            <div id="rep-kpi-deductions" style="font-size:19px; font-weight:900; color:#b91c1c; margin-top:2px;">₹ 0</div>
+                            <div style="font-size:10.5px; color:#64748b;">Charges Collected</div>
+                        </div>
+                        <div class="stat-card" style="padding:12px 14px; border-left:4px solid #10b981; background:#ffffff;">
+                            <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase;">Net Disbursed (ચોખ્ખી ચૂકવેલ)</div>
+                            <div id="rep-kpi-net" style="font-size:19px; font-weight:900; color:#15803d; margin-top:2px;">₹ 0</div>
+                            <div style="font-size:10.5px; color:#64748b;">Disbursed to Borrowers</div>
+                        </div>
+                    </div>
+
+                    <!-- Itemized Report Table -->
+                    <div class="card" style="padding:16px 20px; background:#ffffff; border:1.5px solid #cbd5e1;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h3 style="margin:0; font-size:15px; color:#0f172a;">
+                                <i class="fa-solid fa-table-list text-gold"></i> Detailed Gold Loan Records (<span id="report-records-count">0</span>)
+                            </h3>
+                            <span id="report-filter-summary-badge" class="badge badge-primary" style="font-size:11.5px; padding:4px 10px;">All Time Records</span>
+                        </div>
+                        <div class="table-responsive" style="max-height: 520px; overflow-y: auto;">
+                            <table class="table table-hover table-striped" id="reports-main-table" style="font-size:12px; width:100%; border-collapse:collapse;">
+                                <thead style="position:sticky; top:0; background:#0f1c3f; color:#ffffff; z-index:5;">
+                                    <tr>
+                                        <th style="width:40px; text-align:center;">#</th>
+                                        <th style="width:85px;">Date</th>
+                                        <th style="width:65px; text-align:center;">Branch</th>
+                                        <th style="width:130px;">Account No</th>
+                                        <th style="width:90px;">Packet No</th>
+                                        <th>Borrower Name</th>
+                                        <th style="width:80px; text-align:center;">Scheme</th>
+                                        <th>Ornaments Breakdown (દાગીના વિગત)</th>
+                                        <th style="width:80px; text-align:right;">Gross (g)</th>
+                                        <th style="width:80px; text-align:right;">Net (g)</th>
+                                        <th style="width:105px; text-align:right;">Market Val (₹)</th>
+                                        <th style="width:105px; text-align:right;">Loan Amt (₹)</th>
+                                        <th style="width:90px; text-align:right;">Deductions (₹)</th>
+                                        <th style="width:105px; text-align:right;">Net Paid (₹)</th>
+                                        <th>Valuer Name</th>
+                                        <th style="width:110px; text-align:center;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reports-tbody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                                <tfoot id="reports-tfoot" style="position:sticky; bottom:0; background:#f1f5f9; font-weight:800; border-top:2px solid #000; z-index:4;">
+                                    <!-- Grand totals populated dynamically -->
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div id="reports-empty-msg" class="empty-state text-center hidden" style="padding:30px;">
+                            <i class="fa-regular fa-folder-open font-xl" style="font-size:36px; color:#94a3b8;"></i>
+                            <p style="margin-top:10px; color:#64748b;">No loan records found matching the selected filter criteria.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- DAILY GOLD RATE MASTER VIEW -->
+                <section id="gold-rate-master-view" class="tab-content hidden">
+                    <div class="view-header">
+                        <h2><i class="fa-solid fa-scale-balanced"></i> Daily Gold Rate Master (દૈનિક ૨૨ કેરેટ સોનાના ભાવ)</h2>
+                        <p>Set, update, search, and view historical 22K gold market rates per 10g</p>
+                    </div>
+
+                    <div class="master-layout-grid">
+                        <div class="master-form-card card">
+                            <h3 id="gold-rate-form-title"><i class="fa-solid fa-plus-circle"></i> Set / Update 22K Gold Rate</h3>
+                            <p class="helper-text-block">Head Office can set or update 22K gold market rate for any specific date.</p>
+                            <form id="gold-rate-master-form" style="margin-top: 15px;">
+                                <div class="form-group">
+                                    <label for="m-gold-rate-date">Date (તારીખ)</label>
+                                    <input type="date" id="m-gold-rate-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="m-gold-rate-val">22K Gold Market Rate / 10g (૨૨ કેરેટ સોનાનો ભાવ રૂ. પ્રતિ ૧૦ ગ્રામ)</label>
+                                    <div class="rate-input-group" style="display:flex; align-items:center;">
+                                        <span class="currency-symbol" style="padding: 10px 14px; background: #e2e8f0; border: 1.5px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; font-weight: bold;">₹</span>
+                                        <input type="number" id="m-gold-rate-val" placeholder="e.g. 72000" min="1000" required style="border-radius: 0 6px 6px 0;">
+                                    </div>
+                                </div>
+                                <button type="submit" id="btn-save-gold-rate-master" class="btn btn-gold btn-block" style="margin-top: 15px;">
+                                    <i class="fa-solid fa-floppy-disk"></i> Save / Update 22K Gold Rate
+                                </button>
+                            </form>
+                        </div>
+                        <div class="master-list-card card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3><i class="fa-solid fa-list"></i> Daily Gold Rate History (22K)</h3>
+                                <input type="text" id="search-gold-rate-input" placeholder="Search by date (YYYY-MM-DD or DD/MM/YYYY)..." style="width: 260px; padding: 6px 12px; font-size: 12px;">
+                            </div>
+                            <div class="table-responsive max-height-list">
+                                <table class="table compact-table" id="gold-rate-history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date (તારીખ)</th>
+                                            <th>22K Rate / 10g (૨૨ કેરેટ ભાવ રૂ./૧૦ ગ્રા)</th>
+                                            <th>22K Rate / 1g (રૂ./૧ ગ્રા)</th>
+                                            <th style="text-align:center;">Activity (નોંધાયેલ લોન)</th>
+                                            <th style="text-align:center;">Action (ક્રિયા)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="gold-rate-list-tbody">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. BRANCH MASTER VIEW -->
+                <section id="branch-master-view" class="tab-content hidden">
+                    <div class="view-header">
+                        <h2><i class="fa-solid fa-code-branch"></i> Branch Master (શાખા માસ્ટર)</h2>
+                        <p>Create, update bank branches and customize branch login passwords</p>
+                    </div>
+
+                    <div class="master-layout-grid">
+                        <div class="master-form-card card">
+                            <h3 id="branch-form-title"><i class="fa-solid fa-code-branch"></i> Add New Branch Office</h3>
+                            <form id="branch-master-form">
+                                <input type="hidden" id="edit-branch-code">
+                                <div class="form-group">
+                                    <label for="branch-code">Branch Code / શાખા કોડ</label>
+                                    <input type="text" id="branch-code" placeholder="e.g. 18" required maxlength="5">
+                                </div>
+                                <div class="form-group">
+                                    <label for="branch-name">Branch Title / શાખાનું નામ</label>
+                                    <input type="text" id="branch-name" placeholder="e.g. SURAT BRANCH" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="branch-password">Branch Login Password / પાસવર્ડ</label>
+                                    <div style="display:flex; gap:8px;">
+                                        <input type="text" id="branch-password" placeholder="e.g. Admin@123" value="Admin@123" required style="flex:1;">
+                                        <button type="button" class="btn btn-secondary-sm" id="btn-default-branch-pass" title="Reset to default password" style="white-space:nowrap;">Default</button>
+                                    </div>
+                                    <small style="color:var(--text-secondary); font-size:11px; display:block; margin-top:4px;">
+                                        Default: <code>Admin@123</code> | Head Office: <code>Rahul#80810</code>
+                                    </small>
+                                </div>
+                                <div style="display:flex; gap:10px; margin-top:15px;">
+                                    <button type="submit" class="btn btn-primary" id="branch-save-btn" style="flex:1;">
+                                        <i class="fa-solid fa-plus"></i> Save Branch
+                                    </button>
+                                    <button type="button" class="btn btn-secondary hidden" id="branch-cancel-edit-btn">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="master-list-card card">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                                <h3 style="margin:0;">Active Bank Branches (<span id="branch-total-count">0</span>)</h3>
+                                <input type="text" id="search-branch-input" placeholder="Search branch..." style="width:200px; padding:6px 10px; font-size:12px; border-radius:4px; border:1px solid #cbd5e1;">
+                            </div>
+                            <div class="table-responsive max-height-list">
+                                <table class="table compact-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:65px;">Code</th>
+                                            <th>Branch Title</th>
+                                            <th>Login Passcode</th>
+                                            <th style="width:95px; text-align:center;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="branch-list-tbody">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. VALUER MASTER VIEW -->
+                <section id="valuer-master-view" class="tab-content hidden">
+                    <div class="view-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+                        <div>
+                            <h2><i class="fa-solid fa-user-tie"></i> Gold Ornaments Valuer Master (વેલ્યુઅર માસ્ટર)</h2>
+                            <p>Register, update, and manage certified gold soni inspectors</p>
+                        </div>
+                        <div id="valuer-head-office-actions" style="display:flex; gap:10px; align-items:center;">
+                            <input type="file" id="valuer-excel-file-input" accept=".xlsx, .xls, .csv" style="display:none;">
+                            <button type="button" class="btn btn-gold" id="btn-trigger-valuer-excel-upload">
+                                <i class="fa-solid fa-file-excel"></i> Upload Excel / CSV
+                            </button>
+                            <button type="button" class="btn btn-secondary-sm" id="btn-download-valuer-template" title="Download Sample Excel Template">
+                                <i class="fa-solid fa-download"></i> Sample Template
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="master-layout-grid">
+                        <div class="master-form-card card" id="valuer-form-container">
+                            <h3 id="valuer-form-title"><i class="fa-solid fa-user-plus"></i> Register New Valuer</h3>
+                            <div id="valuer-branch-notice" class="hidden" style="background:#fffbeb; color:#92400e; padding:10px; border-radius:6px; font-size:12px; margin-bottom:12px; border:1px solid #fde68a;">
+                                <i class="fa-solid fa-circle-info"></i> <strong>Read-Only Mode:</strong> Only Head Office (Code: 99) can add, modify, or upload Valuers.
+                            </div>
+                            <form id="valuer-master-form">
+                                <input type="hidden" id="edit-valuer-id">
+                                <div class="form-group">
+                                    <label for="valuer-name">Valuer Full Name / વેલ્યુઅરનું પૂરું નામ</label>
+                                    <input type="text" id="valuer-name" placeholder="e.g. Soni Ramjibhai Pragjibhai" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="valuer-mobile">Mobile Number (10 digit) / મોબાઇલ</label>
+                                    <input type="tel" id="valuer-mobile" placeholder="9876543210" required pattern="[0-9]{10}">
+                                </div>
+                                <div class="form-group">
+                                    <label for="valuer-address">Address / સરનામું</label>
+                                    <input type="text" id="valuer-address" placeholder="Zaveri Bazar, Junagadh" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="valuer-savings-ac">Savings Bank Account No / સેવીંગ ખાતા નં.</label>
+                                    <input type="text" id="valuer-savings-ac" placeholder="Enter Savings A/c No" required>
+                                </div>
+                                <div style="display:flex; gap:10px; margin-top:15px;">
+                                    <button type="submit" class="btn btn-primary" id="valuer-save-btn" style="flex:1;">
+                                        <i class="fa-solid fa-user-plus"></i> Register Valuer
+                                    </button>
+                                    <button type="button" class="btn btn-secondary hidden" id="valuer-cancel-edit-btn">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="master-list-card card">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                                <h3 style="margin:0;">Authorized Gold Inspectors (<span id="valuer-total-count">0</span>)</h3>
+                                <div style="position:relative; width:220px;">
+                                    <input type="text" id="search-valuer-input" placeholder="Search valuer..." style="padding:6px 10px; font-size:12px; width:100%; border-radius:4px; border:1px solid #cbd5e1;">
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table compact-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Valuer Name</th>
+                                            <th>Mobile</th>
+                                            <th>Address</th>
+                                            <th>Savings A/c</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="valuer-list-tbody">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. CUSTOMER MASTER VIEW -->
+                <section id="customer-master-view" class="tab-content hidden">
+                    <div class="view-header">
+                        <h2><i class="fa-solid fa-users"></i> Customer Profile Directory (ગ્રાહક માસ્ટર)</h2>
+                        <p>Manage permanent customer profiles, member status, and KYC records</p>
+                    </div>
+
+                    <div class="master-layout-grid">
+                        <div class="master-form-card card">
+                            <h3 id="customer-form-title"><i class="fa-solid fa-user-plus"></i> New Customer Profile</h3>
+                            <form id="customer-master-form">
+                                <input type="hidden" id="edit-customer-id">
+                                
+                                <div class="form-row two-col" style="margin-bottom:12px;">
+                                    <div class="form-group">
+                                        <label for="m-cust-no">Customer No / ગ્રાહક નં.</label>
+                                        <input type="text" id="m-cust-no" placeholder="e.g. CUST-1001" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="m-cust-is-member">Bank Member? (સભાસદ છે?)</label>
+                                        <select id="m-cust-is-member">
+                                            <option value="no">No (ના)</option>
+                                            <option value="yes">Yes (હા)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" id="m-cust-member-no-group" style="display:none; margin-bottom:12px;">
+                                    <label for="m-cust-member-no">Member Number / સભાસદ નં.</label>
+                                    <input type="text" id="m-cust-member-no" placeholder="e.g. MEM-4050">
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="m-cust-name">Customer Name / ગ્રાહકનું પૂરું નામ</label>
+                                    <input type="text" id="m-cust-name" placeholder="Full Name" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="m-cust-address">Address / રહેઠાણનું સરનામું</label>
+                                    <input type="text" id="m-cust-address" placeholder="Residential Address" required>
+                                </div>
+
+                                <div class="form-row three-col">
+                                    <div class="form-group">
+                                        <label for="m-cust-savings-ac">Savings A/c No / સેવીંગ ખાતા નં.</label>
+                                        <input type="text" id="m-cust-savings-ac" placeholder="Account No" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="m-cust-dob">Birth Date / જન્મ તારીખ</label>
+                                        <input type="date" id="m-cust-dob" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="m-cust-age">Age / ઉંમર (વર્ષ)</label>
+                                        <input type="number" id="m-cust-age" placeholder="Auto" readonly class="auto-calc-field" required min="1" max="120">
+                                    </div>
+                                </div>
+
+                                <div class="form-row three-col">
+                                    <div class="form-group">
+                                        <label for="m-cust-occupation">Occupation / ધંધો</label>
+                                        <input type="text" id="m-cust-occupation" placeholder="ધંધો" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="m-cust-religion">Religion / ધર્મ</label>
+                                        <input type="text" id="m-cust-religion" placeholder="ધર્મ" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="m-cust-caste">Caste / જ્ઞાતિ</label>
+                                        <input type="text" id="m-cust-caste" placeholder="જ્ઞાતિ" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="m-cust-mobile">Mobile Number / મોબાઇલ નં.</label>
+                                    <input type="tel" id="m-cust-mobile" placeholder="10 Digit Number" required pattern="[0-9]{10}">
+                                </div>
+
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="m-cust-nominee-name">Nominee Name / વારસદારનું નામ</label>
+                                        <input type="text" id="m-cust-nominee-name" placeholder="Nominee Name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="m-cust-nominee-relation">Nominee Relation / સંબંધ</label>
+                                        <input type="text" id="m-cust-nominee-relation" placeholder="Relation" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="m-cust-photo-upload">Customer Photograph / ગ્રાહકનો ફોટો</label>
+                                    <div class="upload-preview-container">
+                                        <input type="file" id="m-cust-photo-upload" accept="image/*" class="photo-file-input">
+                                        <div id="m-cust-photo-preview" class="photo-preview-placeholder">
+                                            <i class="fa-regular fa-image"></i>
+                                            <span>No Photo Selected</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; gap:10px; margin-top:15px;">
+                                    <button type="submit" id="customer-save-btn" class="btn btn-primary" style="flex:1;">
+                                        <i class="fa-solid fa-user-plus"></i> Save Customer Profile
+                                    </button>
+                                    <button type="button" id="customer-cancel-edit-btn" class="btn btn-secondary hidden">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="master-list-card card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap:wrap; gap:10px;">
+                                <h3 style="margin:0;">Registered Customers (<span id="customer-total-count">0</span>)</h3>
+                                <input type="text" id="customer-dir-search" placeholder="Search by name, cust no, mobile..." style="width: 250px; padding: 6px 12px; font-size: 12px; border-radius:4px; border:1px solid #cbd5e1;">
+                            </div>
+                            <div class="table-responsive max-height-list">
+                                <table class="table compact-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px; text-align:center;">Photo</th>
+                                            <th>Cust No</th>
+                                            <th>Borrower Name</th>
+                                            <th>Mobile</th>
+                                            <th>Savings A/c</th>
+                                            <th>Member?</th>
+                                            <th>Nominee</th>
+                                            <th style="width:90px; text-align:center;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="customer-list-tbody">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. PRODUCT MASTER VIEW -->
+                <section id="product-master-view" class="tab-content hidden">
+                    <div class="view-header">
+                        <h2><i class="fa-solid fa-tags"></i> Product Master</h2>
+                        <p>Configure gold loan schemes, limits, and interest parameters</p>
+                    </div>
+
+                    <div class="master-layout-grid">
+                        <div class="master-form-card card">
+                            <h3>Add/Edit Loan Product</h3>
+                            <form id="product-master-form">
+                                <input type="hidden" id="edit-product-id">
+                                <div class="form-group">
+                                    <label for="prod-code">Product Code (Scheme Header)</label>
+                                    <input type="text" id="prod-code" placeholder="e.g. GW-3725" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="prod-min-amt">Minimum Amount (₹)</label>
+                                    <input type="number" id="prod-min-amt" value="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="prod-max-amt">Maximum Amount (₹)</label>
+                                    <input type="number" id="prod-max-amt" placeholder="e.g. 100000" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="prod-interest-rate">Interest Rate (Fix %)</label>
+                                    <input type="number" id="prod-interest-rate" placeholder="e.g. 11.50" step="0.01" min="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="prod-desc">Description Title</label>
+                                    <input type="text" id="prod-desc" placeholder="e.g. Gold Loan Scheme under 50K" required>
+                                </div>
+                                <button type="submit" id="product-save-btn" class="btn btn-primary btn-block">
+                                    <i class="fa-solid fa-save"></i> Save Product
+                                </button>
+                                <button type="button" id="product-cancel-edit-btn" class="btn btn-secondary-sm btn-block hidden">
+                                    Cancel Edit
+                                </button>
+                            </form>
+                        </div>
+                        <div class="master-list-card card">
+                            <h3>Configured Gold Loan Schemes</h3>
+                            <div class="table-responsive">
+                                <table class="table compact-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px; text-align:center;">Product ID</th>
+                                            <th>Product Code</th>
+                                            <th>Min Amount</th>
+                                            <th>Max Amount</th>
+                                            <th>Interest Rate</th>
+                                            <th>Description</th>
+                                            <th style="width: 80px; text-align:center;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="product-list-tbody">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6.5. RULES MASTER VIEW -->
+                <section id="rules-master-view" class="tab-content hidden">
+                    <!-- Master Header -->
+                    <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:2px solid var(--border-color); padding-bottom:12px; margin-bottom:18px;">
+                        <div>
+                            <h2 style="margin:0; font-size:22px; color:var(--primary);"><i class="fa-solid fa-book-bookmark text-gold"></i> Banking & Deduction Rules Master (નિયમ માસ્ટર)</h2>
+                            <p style="margin:4px 0 0 0; color:var(--text-secondary); font-size:13px;">Head Office Central Control for Gold Loan deductions, statutory duties & dynamic custom charges</p>
+                        </div>
+                        <div id="rules-action-buttons" style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-gold" id="btn-open-custom-rule-modal" style="box-shadow:var(--shadow-sm);">
+                                <i class="fa-solid fa-plus-circle"></i> + નવો ચાર્જ / નિયમ ઉમેરો (Add New Charge)
+                            </button>
+                            <button type="button" class="btn btn-secondary-sm" id="btn-reset-rules" title="Reset all rules to default bank standards">
+                                <i class="fa-solid fa-rotate-left"></i> Reset Defaults
+                            </button>
+                            <button type="button" class="btn btn-primary" id="btn-save-rules">
+                                <i class="fa-solid fa-floppy-disk"></i> Save Rules Configuration
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- HO Only Banner Notice -->
+                    <div id="rules-branch-notice" class="hidden" style="background:#fffbeb; color:#92400e; padding:12px 16px; border-radius:8px; font-size:13px; margin-bottom:18px; border:1.5px solid #fde68a; display:flex; align-items:center; gap:10px;">
+                        <i class="fa-solid fa-lock" style="font-size:18px;"></i>
+                        <div>
+                            <strong>Read-Only Mode (ફક્ત વાંચવા માટે):</strong> Only Head Office (Code: 99) has administrative authority to modify Banking Rules and Deduction parameters.
+                        </div>
+                    </div>
+
+                    <!-- Rules View Sub-Navigation Pills -->
+                    <div class="rules-subtabs" style="display:flex; gap:10px; margin-bottom:18px; border-bottom:1.5px solid var(--border-color); padding-bottom:10px;">
+                        <button type="button" class="btn btn-sm btn-primary active-subtab" id="subtab-btn-standard" style="border-radius:20px; padding:7px 18px; font-weight:600;">
+                            <i class="fa-solid fa-sliders"></i> સ્ટાન્ડર્ડ બેંકિંગ ચાર્જીસ (Standard Charges & Slabs)
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary" id="subtab-btn-custom" style="border-radius:20px; padding:7px 18px; font-weight:600;">
+                            <i class="fa-solid fa-layer-group"></i> કસ્ટમ વધારાના નિયમો / ચાર્જીસ (Custom Dynamic Charges) <span class="badge badge-gold" id="custom-charges-count-badge" style="margin-left:6px;">0</span>
+                        </button>
+                    </div>
+
+                    <!-- SUBTAB 1: STANDARD BANKING RULES FORM -->
+                    <div id="subtab-content-standard">
+                        <form id="rules-master-form">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 18px;">
+                                
+                                <!-- 1. Membership & Share Rules -->
+                                <div class="card" style="border-top:3.5px solid var(--primary); box-shadow:var(--shadow-sm);">
+                                    <h3 style="color:var(--primary); margin-top:0; border-bottom:1.5px solid var(--border-color); padding-bottom:8px; font-size:15px;">
+                                        <i class="fa-solid fa-id-card text-gold"></i> 1. Membership & Share Rules (મેમ્બરશીપ અને શેર)
+                                    </h3>
+                                    <p style="font-size:11.5px; color:var(--text-secondary); margin-bottom:12px;">
+                                        જો ગ્રાહક મેમ્બર હોય તો શેર તથા ફી <strong>₹ ૦</strong> રહેશે. મેમ્બર ન હોય ત્યારે નીચે મુજબ ચાર્જ લાગશે:
+                                    </p>
+                                    <div class="form-group" style="margin-bottom:10px;">
+                                        <label for="rule-mem-limit">Non-Member Slab Limit (મહત્તમ રકમ ₹)</label>
+                                        <input type="number" id="rule-mem-limit" value="99999" required min="0">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom:10px;">
+                                        <label for="rule-share-b">Share Group B (રકમ ₹ ૯૯,૯૯૯ સુધી) (₹)</label>
+                                        <input type="number" id="rule-share-b" value="50" required min="0">
+                                    </div>
+                                    <div class="form-row two-col">
+                                        <div class="form-group">
+                                            <label for="rule-share-a">Share Group A (> ૯૯,૯૯૯) (₹)</label>
+                                            <input type="number" id="rule-share-a" value="500" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-member-fee">Member Fee (> ૯૯,૯૯૯) (₹)</label>
+                                            <input type="number" id="rule-member-fee" value="25" required min="0">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Valuation Fee Slabs -->
+                                <div class="card" style="border-top:3.5px solid var(--gold); box-shadow:var(--shadow-sm);">
+                                    <h3 style="color:var(--primary); margin-top:0; border-bottom:1.5px solid var(--border-color); padding-bottom:8px; font-size:15px;">
+                                        <i class="fa-solid fa-gem text-gold"></i> 2. Gold Valuation Fee (વેલ્યુએશન ચાર્જ સ્લેબ)
+                                    </h3>
+                                    <div class="form-row three-col" style="margin-bottom:10px;">
+                                        <div class="form-group">
+                                            <label for="rule-val-slab1">≤ ₹ 25,000 (₹)</label>
+                                            <input type="number" id="rule-val-slab1" value="100" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-val-slab2">25k to 50k (₹)</label>
+                                            <input type="number" id="rule-val-slab2" value="150" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-val-slab3">50k to 1L (₹)</label>
+                                            <input type="number" id="rule-val-slab3" value="250" required min="0">
+                                        </div>
+                                    </div>
+                                    <div class="form-row two-col" style="margin-bottom:10px;">
+                                        <div class="form-group">
+                                            <label for="rule-val-slab4-cap">1L to 5L Cap (₹)</label>
+                                            <input type="number" id="rule-val-slab4-cap" value="1000" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-val-slab5-cap">5L to 10L Cap (₹)</label>
+                                            <input type="number" id="rule-val-slab5-cap" value="1500" required min="0">
+                                        </div>
+                                    </div>
+                                    <div class="form-row two-col">
+                                        <div class="form-group">
+                                            <label for="rule-val-rate">Valuation Rate (1L+) (%)</label>
+                                            <input type="number" id="rule-val-rate" value="0.25" step="0.01" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-val-slab6-cap">> 10L Cap (₹)</label>
+                                            <input type="number" id="rule-val-slab6-cap" value="2000" required min="0">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 3. Documentation & Insurance Charges -->
+                                <div class="card" style="border-top:3.5px solid #0284c7; box-shadow:var(--shadow-sm);">
+                                    <h3 style="color:var(--primary); margin-top:0; border-bottom:1.5px solid var(--border-color); padding-bottom:8px; font-size:15px;">
+                                        <i class="fa-solid fa-file-shield text-gold"></i> 3. Doc & Insurance (દસ્તાવેજ અને વીમો)
+                                    </h3>
+                                    <div class="form-row three-col" style="margin-bottom:10px;">
+                                        <div class="form-group">
+                                            <label for="rule-doc-slab1">Doc (≤ 1L) (₹)</label>
+                                            <input type="number" id="rule-doc-slab1" value="50" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-doc-slab2">Doc (1L-2L) (₹)</label>
+                                            <input type="number" id="rule-doc-slab2" value="100" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-doc-slab3">Doc (> 2L) (₹)</label>
+                                            <input type="number" id="rule-doc-slab3" value="200" required min="0">
+                                        </div>
+                                    </div>
+                                    <div class="form-row two-col">
+                                        <div class="form-group">
+                                            <label for="rule-ins-slab1">Insurance (≤ 2L) (₹)</label>
+                                            <input type="number" id="rule-ins-slab1" value="50" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-ins-slab2">Insurance (> 2L) (₹)</label>
+                                            <input type="number" id="rule-ins-slab2" value="100" required min="0">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 4. Service Charges & GST -->
+                                <div class="card" style="border-top:3.5px solid #10b981; box-shadow:var(--shadow-sm);">
+                                    <h3 style="color:var(--primary); margin-top:0; border-bottom:1.5px solid var(--border-color); padding-bottom:8px; font-size:15px;">
+                                        <i class="fa-solid fa-percent text-gold"></i> 4. Service Charges & GST (સર્વિસ ચાર્જ અને GST)
+                                    </h3>
+                                    <div class="form-row two-col" style="margin-bottom:10px;">
+                                        <div class="form-group">
+                                            <label for="rule-srv-slab1-rate">Srv (≤ 2L) Rate (%)</label>
+                                            <input type="number" id="rule-srv-slab1-rate" value="0.25" step="0.01" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-srv-slab1-cap">Srv (≤ 2L) Cap (₹)</label>
+                                            <input type="number" id="rule-srv-slab1-cap" value="500" required min="0">
+                                        </div>
+                                    </div>
+                                    <div class="form-row two-col" style="margin-bottom:10px;">
+                                        <div class="form-group">
+                                            <label for="rule-srv-slab2-rate">Srv (> 2L) Rate (%)</label>
+                                            <input type="number" id="rule-srv-slab2-rate" value="0.50" step="0.01" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-srv-slab2-cap">Srv (> 2L) Cap (₹)</label>
+                                            <input type="number" id="rule-srv-slab2-cap" value="5000" required min="0">
+                                        </div>
+                                    </div>
+                                    <div class="form-row two-col">
+                                        <div class="form-group">
+                                            <label for="rule-cgst-rate">CGST (on Srv+Doc) (%)</label>
+                                            <input type="number" id="rule-cgst-rate" value="9" step="0.1" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-sgst-rate">SGST (on Srv+Doc) (%)</label>
+                                            <input type="number" id="rule-sgst-rate" value="9" step="0.1" required min="0">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 5. Stamp Duty Calculation -->
+                                <div class="card" style="grid-column: 1 / -1; border-top:3.5px solid #8b5cf6; box-shadow:var(--shadow-sm);">
+                                    <h3 style="color:var(--primary); margin-top:0; border-bottom:1.5px solid var(--border-color); padding-bottom:8px; font-size:15px;">
+                                        <i class="fa-solid fa-stamp text-gold"></i> 5. Stamp Duty Calculation Rules (સ્ટેમ્પ ડ્યુટી ગણતરી)
+                                    </h3>
+                                    <div class="form-row three-col" style="margin-bottom:10px;">
+                                        <div class="form-group">
+                                            <label for="rule-stamp-exempt">Exempt Limit (≤ 49,999 શૂન્ય ₹)</label>
+                                            <input type="number" id="rule-stamp-exempt" value="49999" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-stamp-limit">Slab Threshold Limit (₹)</label>
+                                            <input type="number" id="rule-stamp-limit" value="119999" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-stamp-rate">Stamp Duty Rate (%)</label>
+                                            <input type="number" id="rule-stamp-rate" value="0.25" step="0.01" required min="0">
+                                        </div>
+                                    </div>
+                                    <div class="form-row three-col">
+                                        <div class="form-group">
+                                            <label for="rule-stamp-round">Rounding Multiple (રાઉન્ડ અપ ₹)</label>
+                                            <input type="number" id="rule-stamp-round" value="10" required min="1">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-stamp-above-fee">Fixed Fee (≥ 1.20L) (₹)</label>
+                                            <input type="number" id="rule-stamp-above-fee" value="300" required min="0">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="rule-stamp-3553-fee">Scheme 3553 Extra Fee (₹)</label>
+                                            <input type="number" id="rule-stamp-3553-fee" value="300" required min="0">
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- SUBTAB 2: CUSTOM DYNAMIC CHARGES & RULES -->
+                    <div id="subtab-content-custom" class="hidden">
+                        <div class="card" style="box-shadow:var(--shadow-sm);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1.5px solid var(--border-color); padding-bottom:10px; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                                <div>
+                                    <h3 style="margin:0; color:var(--primary); font-size:16px;"><i class="fa-solid fa-layer-group text-gold"></i> Dynamic Additional Charges Directory (કસ્ટમ વધારાના ચાર્જીસ)</h3>
+                                    <p style="margin:3px 0 0 0; font-size:12px; color:var(--text-secondary);">અહીં ઉમેરેલ કોઈપણ નવો ચાર્જ લોન એન્ટ્રી ફોર્મ, પાઉંચી અને કેએફએસમાં આપોઆપ લાગુ થશે.</p>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-gold" id="btn-add-custom-charge-trigger">
+                                    <i class="fa-solid fa-plus"></i> નવો ચાર્જ ઉમેરો (Add New Charge)
+                                </button>
+                            </div>
+
+                            <div class="table-responsive" style="border:1.5px solid #000; border-radius:6px;">
+                                <table class="table" style="margin:0; font-size:12px;">
+                                    <thead style="background:#0f1c3f; color:white;">
+                                        <tr>
+                                            <th style="width:40px; text-align:center;">#</th>
+                                            <th>ચાર્જનું નામ (Charge Name)</th>
+                                            <th>કોડ (Code)</th>
+                                            <th>ગણતરી પ્રકાર (Type)</th>
+                                            <th>દર / રકમ (Rate/Amt)</th>
+                                            <th>લાગુ પડવાની શરત (Condition)</th>
+                                            <th style="text-align:center;">GST 18%</th>
+                                            <th style="text-align:center;">Status</th>
+                                            <th style="text-align:center; width:90px;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="custom-charges-tbody">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- MODAL: ADD / EDIT CUSTOM RULE OR CHARGE -->
+                <div id="modal-custom-rule" class="modal-overlay hidden" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+                    <div class="modal-card" style="background:#ffffff; width:92%; max-width:540px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.3); border:2px solid var(--gold); overflow:hidden;">
+                        <div style="background:#0f1c3f; color:#ffffff; padding:14px 20px; display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="margin:0; font-size:16px; color:#ffd700;" id="modal-custom-rule-title">
+                                <i class="fa-solid fa-circle-plus"></i> નવો ચાર્જ / નિયમ ઉમેરો (Add New Charge Head)
+                            </h3>
+                            <button type="button" id="btn-close-custom-rule-modal" style="background:none; border:none; color:#ffffff; font-size:18px; cursor:pointer;">&times;</button>
+                        </div>
+                        <form id="custom-rule-form" style="padding:20px;">
+                            <input type="hidden" id="custom-rule-id">
+                            
+                            <div class="form-row two-col" style="margin-bottom:12px;">
+                                <div class="form-group">
+                                    <label for="custom-rule-name-en">Charge Name (English)</label>
+                                    <input type="text" id="custom-rule-name-en" placeholder="e.g. CIBIL Verification" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="custom-rule-name-gu">ચાર્જનું નામ (ગુજરાતી)</label>
+                                    <input type="text" id="custom-rule-name-gu" placeholder="દા.ત. સિબિલ ચકાસણી ચાર્જ" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row two-col" style="margin-bottom:12px;">
+                                <div class="form-group">
+                                    <label for="custom-rule-code">Charge Code</label>
+                                    <input type="text" id="custom-rule-code" placeholder="e.g. CIBIL-101" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="custom-rule-calc-type">ગણતરી પ્રકાર (Type)</label>
+                                    <select id="custom-rule-calc-type" style="font-weight:600;">
+                                        <option value="fixed">Fixed Amount (ફિક્સ રકમ ₹)</option>
+                                        <option value="percent">Percentage of Loan (લોન રકમના %)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row two-col" style="margin-bottom:12px;">
+                                <div class="form-group">
+                                    <label for="custom-rule-value">દર અથવા રકમ (Rate % or ₹)</label>
+                                    <input type="number" id="custom-rule-value" placeholder="e.g. 50 or 0.25" step="0.01" required min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="custom-rule-max-cap">મહત્તમ મર્યાદા (Max Cap ₹ - Optional)</label>
+                                    <input type="number" id="custom-rule-max-cap" placeholder="e.g. 1000 (if percent)" min="0">
+                                </div>
+                            </div>
+
+                            <div class="form-row two-col" style="margin-bottom:12px;">
+                                <div class="form-group">
+                                    <label for="custom-rule-applicability">કોને લાગુ પડશે? (Applicability)</label>
+                                    <select id="custom-rule-applicability">
+                                        <option value="all">તમામ લોન (All Loans)</option>
+                                        <option value="non_member">ફક્ત નોન-મેમ્બર (Non-Member Only)</option>
+                                        <option value="member">ફક્ત મેમ્બર (Member Only)</option>
+                                        <option value="scheme_3527">ફક્ત સ્કીમ 3527 (Scheme 3527 Only)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="custom-rule-gst-applicable">GST (18%) લાગુ છે?</label>
+                                    <select id="custom-rule-gst-applicable">
+                                        <option value="yes">હા (Yes - CGST 9% + SGST 9%)</option>
+                                        <option value="no">ના (No GST)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom:18px;">
+                                <label for="custom-rule-active">સ્ટેટસ (Status)</label>
+                                <select id="custom-rule-active">
+                                    <option value="true">Active (ચાલુ)</option>
+                                    <option value="false">Inactive (બંધ)</option>
+                                </select>
+                            </div>
+
+                            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                                <button type="button" class="btn btn-secondary-sm" id="btn-cancel-custom-rule">Cancel</button>
+                                <button type="submit" class="btn btn-gold" id="btn-save-custom-rule">
+                                    <i class="fa-solid fa-save"></i> Save Charge Rule
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 7. SETTINGS VIEW -->
+                <section id="settings-view" class="tab-content hidden">
+                    <div class="view-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:2px solid var(--border-color); padding-bottom:12px; margin-bottom:18px;">
+                        <div>
+                            <h2 style="margin:0; font-size:22px; color:var(--primary);"><i class="fa-solid fa-sliders text-gold"></i> Account & Serial Seeds Settings (એકાઉન્ટ સેટીંગ)</h2>
+                            <p style="margin:4px 0 0 0; color:var(--text-secondary); font-size:13px;">દરેક શાખાનાં લોન પ્રકાર મુજબ છેલ્લા ખાતા નંબર, પેકેટ નંબર અને પ્રપોઝલ નંબર કન્ફિગરેશન</p>
+                        </div>
+                    </div>
+
+                    <!-- Branch Selector for Settings -->
+                    <div class="card" id="settings-branch-select-group" style="margin-bottom: 20px; border-left: 4px solid var(--gold);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+                            <div>
+                                <h3 style="margin:0; font-size:16px; color:var(--primary);"><i class="fa-solid fa-building-columns text-gold"></i> શાખા પસંદ કરો (Target Branch)</h3>
+                                <p class="helper-text-block" style="margin:4px 0 0 0;">જે શાખાના છેલ્લા ખાતા નંબર અને પેકેટ નંબર સેટ કરવા હોય તે શાખા પસંદ કરો:</p>
+                            </div>
+                            <div style="min-width:280px;">
+                                <select id="settings-branch-select" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1.5px solid var(--border-color); background-color: var(--card-bg); color: var(--text-main); font-weight: 700; font-size: 14px;"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form id="settings-branch-master-form">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px;">
+                            
+                            <!-- 1. Product Wise Last Account Numbers -->
+                            <div class="card" style="border-top:3.5px solid var(--primary); box-shadow:var(--shadow-sm);">
+                                <h3 style="color:var(--primary); margin-top:0; border-bottom:1.5px solid var(--border-color); padding-bottom:8px; font-size:15px;">
+                                    <i class="fa-solid fa-hashtag text-gold"></i> ૧. પ્રોડક્ટ કોડ મુજબ છેલ્લા ખાતા નંબર (Last Account Numbers)
+                                </h3>
+                                <p style="font-size:11.5px; color:var(--text-secondary); margin-bottom:12px;">
+                                    પસંદ કરેલ શાખા માટે દરેક સ્કીમમાં જે છેલ્લો ખાતા નંબર હોય તે અહીં દાખલ કરો. નવી લોન એન્ટ્રી વખતે આપોઆપ તેનાં પછીનો સીરીયલ નંબર આવશે.
+                                </p>
+                                
+                                <div id="account-seeds-container" style="display:flex; flex-direction:column; gap:12px;">
+                                    <!-- Rendered dynamically for 3725, 3524, 3527, 3553, etc. -->
+                                </div>
+                            </div>
+
+                            <!-- 2. Packet Serial & Proposal Serial Seeds -->
+                            <div class="card" style="border-top:3.5px solid var(--gold); box-shadow:var(--shadow-sm); display:flex; flex-direction:column; justify-content:space-between;">
+                                <div>
+                                    <h3 style="color:var(--primary); margin-top:0; border-bottom:1.5px solid var(--border-color); padding-bottom:8px; font-size:15px;">
+                                        <i class="fa-solid fa-box-archive text-gold"></i> ૨. પેકેટ નંબર & પ્રપોઝલ નંબર (Packet & Proposal Seeds)
+                                    </h3>
+                                    <p style="font-size:11.5px; color:var(--text-secondary); margin-bottom:12px;">
+                                        પસંદ કરેલ શાખાનો છેલ્લો પેકેટ નંબર અને છેલ્લો Unique Proposal Number અહીં સેટ કરો.
+                                    </p>
+
+                                    <div class="form-group" style="margin-bottom:14px;">
+                                        <label for="branch-last-packet-no"><strong>શાખાનો છેલ્લો પેકેટ નંબર (Last Packet No):</strong></label>
+                                        <input type="number" id="branch-last-packet-no" placeholder="દા.ત. 100" min="0" style="font-weight:700;">
+                                        <small class="helper-text" id="sample-next-packet-hint" style="color:var(--text-secondary); margin-top:3px; display:block;">આવનાર નવો પેકેટ નંબર: <strong>101</strong></small>
+                                    </div>
+
+                                    <div class="form-group" style="margin-bottom:14px;">
+                                        <label for="branch-last-proposal-no"><strong>શાખાનો છેલ્લો પ્રપોઝલ નંબર (Last Proposal Serial No):</strong></label>
+                                        <input type="number" id="branch-last-proposal-no" placeholder="દા.ત. 0" min="0" style="font-weight:700;">
+                                        <small class="helper-text" id="sample-next-proposal-hint" style="color:var(--text-secondary); margin-top:3px; display:block;">આવનાર નવો પ્રપોઝલ નંબર: <strong>GL-P-001-0001</strong></small>
+                                    </div>
+                                </div>
+
+                                <div style="margin-top:20px;">
+                                    <button type="submit" id="btn-save-branch-settings" class="btn btn-gold btn-block" style="padding:12px; font-size:15px; font-weight:700;">
+                                        <i class="fa-solid fa-floppy-disk"></i> આ શાખાના સેટીંગ સેવ કરો (Save Branch Settings)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Factory Reset Card -->
+                    <div class="card margin-top" style="border-top:3px solid var(--danger); margin-top:25px;">
+                        <h3 class="text-red"><i class="fa-solid fa-triangle-exclamation"></i> Factory Reset Portal (સિસ્ટમ રીસેટ)</h3>
+                        <p class="helper-text-block">ચેતવણી: રીસેટ કરવાથી સિસ્ટમનો તમામ ડેટા, લોન એન્ટ્રીઓ અને કસ્ટમ કન્ફિગરેશન ડીલીટ થઈ જશે.</p>
+                        <button id="reset-system-data-btn" class="btn btn-danger margin-top">
+                            <i class="fa-solid fa-trash-can"></i> Delete All Stored Data
+                        </button>
+                    </div>
+                </section>
+
+                <!-- BACKUP & RESTORE VIEW -->
+                <section id="backup-restore-view" class="tab-content hidden">
+                    <div class="view-header" style="border-bottom:2px solid var(--border-color); padding-bottom:12px; margin-bottom:18px;">
+                        <h2 style="color:var(--primary); font-size:22px;"><i class="fa-solid fa-database text-gold"></i> Master Database Backup & Restore Center (સંપૂર્ણ બેકઅપ અને રીસ્ટોર કેન્દ્ર)</h2>
+                        <p style="color:var(--text-secondary); font-size:13px; margin-top:4px;">100% Reliable, Multi-Sheet Excel Engine for complete portal migration, offline safety & instant system recovery</p>
+                    </div>
+
+                    <!-- System Statistics Pill Banner -->
+                    <div class="card" style="margin-bottom:20px; background:linear-gradient(135deg, #0f1c3f 0%, #1e3a8a 100%); color:#ffffff; padding:15px 20px; border-radius:10px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                            <div>
+                                <h3 style="margin:0; font-size:16px; color:#ffd700;"><i class="fa-solid fa-server"></i> Current Live Database Inventory</h3>
+                                <p style="margin:2px 0 0 0; font-size:12px; opacity:0.85;">All transactions, registered profiles, product slabs, and banking rules are ready for instant backup</p>
+                            </div>
+                            <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:12px;">
+                                <span class="badge" style="background:rgba(255,255,255,0.15); color:#ffffff; padding:5px 10px; border-radius:15px;"><i class="fa-solid fa-file-invoice-dollar text-gold"></i> Loans: <strong id="bkp-stat-loans">0</strong></span>
+                                <span class="badge" style="background:rgba(255,255,255,0.15); color:#ffffff; padding:5px 10px; border-radius:15px;"><i class="fa-solid fa-user-tie text-gold"></i> Valuers: <strong id="bkp-stat-valuers">15</strong></span>
+                                <span class="badge" style="background:rgba(255,255,255,0.15); color:#ffffff; padding:5px 10px; border-radius:15px;"><i class="fa-solid fa-tags text-gold"></i> Schemes: <strong id="bkp-stat-products">5</strong></span>
+                                <span class="badge" style="background:rgba(255,255,255,0.15); color:#ffffff; padding:5px 10px; border-radius:15px;"><i class="fa-solid fa-code-branch text-gold"></i> Branches: <strong id="bkp-stat-branches">17</strong></span>
+                                <span class="badge" style="background:rgba(255,255,255,0.15); color:#ffffff; padding:5px 10px; border-radius:15px;"><i class="fa-solid fa-book-bookmark text-gold"></i> Rules: <strong id="bkp-stat-rules">Configured</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GOOGLE DRIVE CLOUD AUTO-BACKUP & 12:00 AM SCHEDULER -->
+                    <div class="card" style="margin-bottom:24px; border:2px solid #4285F4; box-shadow:var(--shadow-md); border-radius:12px; background:#f8faff; overflow:hidden;">
+                        <div style="background:linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%); color:#ffffff; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div style="width:36px; height:36px; border-radius:8px; background:#ffffff; display:flex; align-items:center; justify-content:center; color:#1a73e8; font-size:20px;">
+                                    <i class="fa-brands fa-google-drive"></i>
+                                </div>
+                                <div>
+                                    <h3 style="margin:0; font-size:16px; color:#ffffff; letter-spacing:0.3px;">
+                                        Google Drive Cloud Automated Backup (ઓટોમેટીક ડ્રાઈવ બેકઅપ - 12:00 AM)
+                                    </h3>
+                                    <div style="font-size:11.5px; opacity:0.9;">રોજ રાત્રે ૧૨:૦૦ વાગ્યે તમામ ફોર્મેટ (.jccb, .json, .xlsx) નું Google Drive પર ઓટોમેટિક સિંક</div>
+                                </div>
+                            </div>
+                            <div id="gdrive-status-badge">
+                                <span class="badge" style="background:rgba(255,255,255,0.2); color:#ffffff; font-size:12px; padding:5px 12px;"><i class="fa-solid fa-circle-notch"></i> Checking Drive Status...</span>
+                            </div>
+                        </div>
+
+                        <div style="padding:18px 20px;">
+                            <!-- Connection & Client ID Settings Row -->
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:18px; margin-bottom:18px;">
+                                <!-- Left: Google Account Connection -->
+                                <div style="background:#ffffff; border:1px solid #dbeafe; border-radius:8px; padding:14px;">
+                                    <h4 style="margin:0 0 8px 0; color:#1e40af; font-size:14px;"><i class="fa-solid fa-link text-gold"></i> ૧. Google Drive એકાઉન્ટ કનેક્શન:</h4>
+                                    <p style="font-size:12px; color:var(--text-secondary); margin:0 0 10px 0; line-height:1.4;">
+                                        તમારા Google Account સાથે ૧-ક્લિકમાં લિંક કરો. બેકઅપ ફાઈલો તમારી ડ્રાઈવમાં <strong>"JCCB_GoldLoan_Daily_Backups"</strong> નામના ફોલ્ડરમાં સુરક્ષિત સેવ થશે.
+                                    </p>
+                                    
+                                    <div id="gdrive-disconnected-box">
+                                        <div class="form-group" style="margin-bottom:10px;">
+                                            <label for="gdrive-client-id" style="font-size:11.5px; font-weight:700; color:#334155;">Google Cloud OAuth Client ID (Optional / Custom):</label>
+                                            <input type="text" id="gdrive-client-id" placeholder="Enter Google Client ID (or leave blank for standard)" style="font-size:12px; height:34px; width:100%;">
+                                            <small style="font-size:10.5px; color:#64748b; margin-top:3px; display:block;">
+                                                <i class="fa-solid fa-circle-info"></i> ગૂગલ ક્લાઉડ કન્સોલનો OAuth 2.0 Web Client ID દાખલ કરી શકો છો.
+                                            </small>
+                                        </div>
+                                        <button type="button" id="btn-gdrive-connect" class="btn" style="background:#4285F4; color:#ffffff; font-weight:700; font-size:13px; padding:10px 16px; border-radius:6px; border:none; cursor:pointer; width:100%; box-shadow:0 3px 8px rgba(66,133,244,0.3);">
+                                            <i class="fa-brands fa-google"></i> Connect with Google Drive (ડ્રાઈવ કનેક્ટ કરો)
+                                        </button>
+                                    </div>
+
+                                    <div id="gdrive-connected-box" class="hidden">
+                                        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:6px; padding:10px 12px; margin-bottom:10px;">
+                                            <div style="font-weight:700; color:#065f46; font-size:12.5px; display:flex; align-items:center; gap:6px;">
+                                                <i class="fa-solid fa-circle-check text-success"></i> Connected: <span id="gdrive-user-email">user@gmail.com</span>
+                                            </div>
+                                            <div style="font-size:11.5px; color:#047857; margin-top:2px;">
+                                                📁 Target Folder: <strong>JCCB_GoldLoan_Daily_Backups</strong>
+                                            </div>
+                                        </div>
+                                        <div style="display:flex; gap:8px;">
+                                            <button type="button" id="btn-gdrive-sync-now" class="btn" style="background:#16a34a; color:#ffffff; font-weight:700; font-size:12.5px; padding:8px 14px; border-radius:6px; border:none; cursor:pointer; flex:1;">
+                                                <i class="fa-solid fa-cloud-arrow-up"></i> Sync Now (હમણાં સિંક કરો)
+                                            </button>
+                                            <button type="button" id="btn-gdrive-disconnect" class="btn btn-secondary-sm" style="font-size:12px;">
+                                                <i class="fa-solid fa-unlink"></i> Disconnect
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right: Automation Schedule Configuration -->
+                                <div style="background:#ffffff; border:1px solid #dbeafe; border-radius:8px; padding:14px;">
+                                    <h4 style="margin:0 0 8px 0; color:#1e40af; font-size:14px;"><i class="fa-solid fa-clock-rotate-left text-gold"></i> ૨. ઓટોમેશન શેડ્યુલ & ફોર્મેટ્સ:</h4>
+                                    
+                                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                                        <div class="form-group">
+                                            <label style="font-size:11.5px; font-weight:700;">ઓટો-બેકઅપ સ્ટેટસ:</label>
+                                            <select id="gdrive-auto-status" style="font-size:12px; font-weight:700; height:34px;">
+                                                <option value="enabled">Active (રોજ ચાલુ)</option>
+                                                <option value="disabled">Paused (બંધ)</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label style="font-size:11.5px; font-weight:700;">સમય (Schedule Time):</label>
+                                            <input type="time" id="gdrive-schedule-time" value="00:00" style="font-size:12px; font-weight:800; height:34px;">
+                                        </div>
+                                    </div>
+
+                                    <div style="margin-bottom:10px;">
+                                        <label style="font-size:11.5px; font-weight:700; display:block; margin-bottom:4px;">ગુગલ ડ્રાઈવમાં સેવ થનાર ફોર્મેટ્સ:</label>
+                                        <div style="display:flex; gap:12px; flex-wrap:wrap; font-size:11.5px; font-weight:600;">
+                                            <label><input type="checkbox" id="gdrive-fmt-jccb" checked> .jccb (વૉલ્ટ)</label>
+                                            <label><input type="checkbox" id="gdrive-fmt-json" checked> .json (ડેટા)</label>
+                                            <label><input type="checkbox" id="gdrive-fmt-xlsx" checked> .xlsx (એક્સેલ)</label>
+                                        </div>
+                                    </div>
+
+                                    <div style="margin-bottom:6px;">
+                                        <label style="font-size:11.5px; font-weight:600; cursor:pointer;">
+                                            <input type="checkbox" id="gdrive-sync-on-logout" checked>
+                                            દિવસના અંતે લૉગઆઉટ કરતી વખતે પણ ઓટોમેટિક ડ્રાઈવમાં સિંક કરો
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Live Sync Log Banner -->
+                            <div style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:6px; padding:8px 14px; font-size:11.5px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                                <div>
+                                    <i class="fa-solid fa-server text-primary"></i> <strong>છેલ્લું ડ્રાઈવ સિંક સ્ટેટસ:</strong> 
+                                    <span id="gdrive-last-sync-status" style="color:#475569; margin-left:4px;">No sync performed yet.</span>
+                                </div>
+                                <div id="gdrive-next-sync-hint" style="font-weight:700; color:#1e40af;">
+                                    આગામી ઓટો-બેકઅપ: આજે રાત્રે ૧૨:૦૦ વાગ્યે
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OPTION 1: SECURE ENTERPRISE DATA VAULT (.jccb / .json) - HIGHLY SECURE & PRECISE -->
+                    <div style="margin-bottom:24px;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                            <span class="badge badge-gold" style="font-size:11.5px; padding:4px 10px; font-weight:800;"><i class="fa-solid fa-shield-halved"></i> ૧૦૦% સચોટ & સુરક્ષિત (RECOMMENDED)</span>
+                            <h3 style="margin:0; font-size:17px; color:var(--primary); font-weight:800;">
+                                Option 1: Secure Enterprise Vault Backup & Restore (.jccb / .json)
+                            </h3>
+                        </div>
+                        <p style="font-size:12.5px; color:var(--text-secondary); margin:0 0 14px 0;">
+                            આ ફોર્મેટ ડિજિટલ સિગ્નેચર & ચેકસમ સુરક્ષા ધરાવે છે. જેમાં તમામ ડેટા, ફોટોઝ, કસ્ટમ રૂલ્સ અને બ્રાન્ચ સેટીંગ્સ ૦% ડેટા લોસ સાથે સંગ્રહિત થાય છે:
+                        </p>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 22px;">
+                            <!-- 1A: Download Secure Vault Backup -->
+                            <div class="card" style="border-top:4px solid #d97706; box-shadow:var(--shadow-md); display:flex; flex-direction:column; justify-content:space-between; background:#fffdfa;">
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:10px; border-bottom:1.5px solid var(--border-color); padding-bottom:10px; margin-bottom:12px;">
+                                        <div style="width:40px; height:40px; border-radius:8px; background:#fef3c7; color:#d97706; display:flex; align-items:center; justify-content:center; font-size:20px;">
+                                            <i class="fa-solid fa-lock"></i>
+                                        </div>
+                                        <div>
+                                            <h3 style="margin:0; font-size:16px; color:#b45309;">1. Download Secure Data Vault (.jccb / .json)</h3>
+                                            <div style="font-size:11.5px; color:var(--text-secondary);">સૌથી સુરક્ષિત અને સચોટ માસ્ટર વૉલ્ટ બેકઅપ ફાઈલ</div>
+                                        </div>
+                                    </div>
+
+                                    <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.5; margin-bottom:14px;">
+                                        આ બેકઅપ ફાઈલમાં સિસ્ટમનો સંપૂર્ણ ડેટાબેઝ, ગ્રાહક અને સોનાના હાઇ-રીઝોલ્યુશન ફોટાઓ, તમામ બ્રાન્ચના છેલ્લા ખાતા/પેકેટ નંબર અને બેંકના કસ્ટમ નિયમો ૧૦૦% સચોટતા સાથે સંગ્રહિત થાય છે:
+                                    </p>
+
+                                    <div style="background:#fefce8; border:1px solid #fef08a; border-radius:8px; padding:10px 14px; font-size:12px; margin-bottom:18px;">
+                                        <div style="font-weight:700; color:#854d0e; margin-bottom:6px;"><i class="fa-solid fa-shield-check"></i> સિક્યોરિટી અને વૉલ્ટ વિશેષતાઓ:</div>
+                                        <ul style="margin:0; padding-left:18px; line-height:1.6; color:#713f12;">
+                                            <li><strong>Automated Integrity Checksum:</strong> ફાઈલ કોઈ અન્ય દ્વારા બદલાયેલ નથી તેની ડિજિટલ ચકાસણી.</li>
+                                            <li><strong>Zero Data Loss:</strong> કોઈ સેલ સાઈઝ લિમિટ વગર તમામ રેકોર્ડ્સ અને ફોટાઓ અખંડ રહે છે.</li>
+                                            <li><strong>Universal Restore Ready:</strong> કોઈપણ નવી સિસ્ટમ કે બ્રાઉઝરમાં ૧-ક્લિકમાં રીસ્ટોર કરી શકાય છે.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                                    <button id="btn-export-backup-secure" class="btn btn-block" style="background:linear-gradient(135deg, #d97706 0%, #b45309 100%); color:#ffffff; font-size:14px; font-weight:700; padding:13px; border-radius:8px; box-shadow:0 4px 12px rgba(217,119,6,0.3); border:none; cursor:pointer; flex:1.2;">
+                                        <i class="fa-solid fa-shield-halved"></i> ડાઉનલોડ સિક્યોર વૉલ્ટ (.jccb)
+                                    </button>
+                                    <button id="btn-export-backup-json" class="btn" style="background:#f1f5f9; color:#334155; font-size:13px; font-weight:700; padding:13px 16px; border-radius:8px; border:1px solid #cbd5e1; cursor:pointer;">
+                                        <i class="fa-solid fa-file-code"></i> .json Format
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 1B: Restore Secure Vault File -->
+                            <div class="card" style="border-top:4px solid #4f46e5; box-shadow:var(--shadow-md); display:flex; flex-direction:column; justify-content:space-between; background:#fafbff;">
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:10px; border-bottom:1.5px solid var(--border-color); padding-bottom:10px; margin-bottom:12px;">
+                                        <div style="width:40px; height:40px; border-radius:8px; background:#e0e7ff; color:#4f46e5; display:flex; align-items:center; justify-content:center; font-size:20px;">
+                                            <i class="fa-solid fa-key"></i>
+                                        </div>
+                                        <div>
+                                            <h3 style="margin:0; font-size:16px; color:#3730a3;">2. Restore from Secure Vault (.jccb / .json)</h3>
+                                            <div style="font-size:11.5px; color:var(--text-secondary);">સિક્યોર વૉલ્ટ ફાઈલ અપલોડ કરી સંપૂર્ણ ડેટા રીસ્ટોર કરો</div>
+                                        </div>
+                                    </div>
+
+                                    <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.5; margin-bottom:14px;">
+                                        અગાઉ ડાઉનલોડ કરેલ <strong>.jccb</strong> અથવા <strong>.json</strong> બેકઅપ ફાઈલ પસંદ કરો. સિસ્ટમ ચેકસમ વેરિફાય કરીને તમામ લોન, ફોટા, ગ્રાહકો અને સેટીંગ્સ અસલ સ્થિતિમાં રીસ્ટોર કરશે:
+                                    </p>
+
+                                    <div class="form-group" style="margin-bottom:12px;">
+                                        <label for="restore-secure-file" style="font-weight:700; font-size:13px; color:var(--primary); display:block; margin-bottom:6px;">
+                                            પસંદ કરો બેકઅપ ફાઈલ (.jccb અથવા .json):
+                                        </label>
+                                        <div style="border:2px dashed #a5b4fc; background:#eef2ff; padding:16px; border-radius:8px; text-align:center;">
+                                            <i class="fa-solid fa-cloud-arrow-up" style="font-size:30px; color:#4f46e5; margin-bottom:6px;"></i>
+                                            <input type="file" id="restore-secure-file" accept=".jccb,.json" style="display:block; margin:0 auto; cursor:pointer;">
+                                            <small style="color:var(--text-secondary); margin-top:6px; display:block;">Supported: Official JCCB Vault Archives (.jccb / .json)</small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Pre-Restore Verification Preview Box -->
+                                    <div id="restore-secure-preview-box" class="hidden" style="background:#ffffff; border:1.5px solid #818cf8; border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:12px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                            <strong style="color:#312e81;"><i class="fa-solid fa-circle-check text-success"></i> વૉલ્ટ વેરિફિકેશન સફળ</strong>
+                                            <span id="secure-preview-checksum" class="badge badge-success" style="font-size:10px;">Valid Checksum</span>
+                                        </div>
+                                        <div id="secure-preview-details" style="font-size:11.5px; color:#475569; line-height:1.45;"></div>
+                                    </div>
+
+                                    <div style="background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; padding:8px 10px; border-radius:6px; font-size:11.5px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                                        <i class="fa-solid fa-circle-info" style="font-size:15px; color:#4f46e5; flex-shrink:0;"></i>
+                                        <span><strong>૧૦૦% સચોટતા:</strong> રીસ્ટોર કરવાથી તમામ એકાઉન્ટ નંબર્સ, પેકેટ સીડ્સ અને નિયમો પણ તાત્કાલિક લાગુ થઈ જશે.</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <button id="btn-import-restore-secure" class="btn btn-block" style="background:linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); color:#ffffff; font-size:14.5px; font-weight:700; padding:13px; border-radius:8px; box-shadow:0 4px 12px rgba(79,70,229,0.3); border:none; cursor:pointer;">
+                                        <i class="fa-solid fa-arrows-rotate"></i> વેરિફાય અને સુરક્ષિત રીસ્ટોર કરો (Restore Secure Vault)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- OPTION 2: UNIVERSAL MULTI-SHEET EXCEL (.xlsx) SPREADSHEET -->
+                    <div>
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                            <span class="badge" style="background:#e2e8f0; color:#334155; font-size:11.5px; padding:4px 10px; font-weight:700;"><i class="fa-solid fa-file-excel"></i> સ્પેડશીટ ફોર્મેટ</span>
+                            <h3 style="margin:0; font-size:17px; color:var(--primary); font-weight:800;">
+                                Option 2: Universal Multi-Sheet Excel Backup & Restore (.xlsx)
+                            </h3>
+                        </div>
+                        <p style="font-size:12.5px; color:var(--text-secondary); margin:0 0 14px 0;">
+                            માઈક્રોસોફ્ટ એક્સેલ (.xlsx) સ્પેડશીટ ફોર્મેટમાં તમામ ૯ શીટ્સ ડાઉનલોડ કરવા અથવા અગાઉ ડાઉનલોડ કરેલ એક્સેલમાંથી ડેટા રીસ્ટોર કરવા માટે:
+                        </p>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 22px;">
+                            
+                            <!-- 2A. Universal Master Backup Card -->
+                            <div class="card" style="border-top:4px solid #16a34a; box-shadow:var(--shadow-md); display:flex; flex-direction:column; justify-content:space-between;">
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:10px; border-bottom:1.5px solid var(--border-color); padding-bottom:10px; margin-bottom:12px;">
+                                        <div style="width:40px; height:40px; border-radius:8px; background:#dcfce7; color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:20px;">
+                                            <i class="fa-solid fa-file-excel"></i>
+                                        </div>
+                                        <div>
+                                            <h3 style="margin:0; font-size:16px; color:#166534;">3. Download Universal Database Excel</h3>
+                                            <div style="font-size:11.5px; color:var(--text-secondary);">સંપૂર્ણ સિસ્ટમનો માસ્ટર એક્સેલ બેકઅપ (.xlsx)</div>
+                                        </div>
+                                    </div>
+
+                                    <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.5; margin-bottom:14px;">
+                                        નીચે આપેલ બટન ક્લિક કરવાથી સિસ્ટમની <strong>તમામ ૯ શીટ</strong> (લોન લેજર, કસ્ટમર, વેલ્યુઅર્સ, પ્રોડક્ટ સ્કીમ્સ, બ્રાન્ચ, સોનાના રેટ, રૂલ્સ માસ્ટર, સિસ્ટમ સેટિંગ્સ અને ફોટો વોલ્ટ) એક જ એક્સેલ ફાઈલમાં સુરક્ષિત ડાઉનલોડ થશે:
+                                    </p>
+
+                                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; font-size:12px; margin-bottom:18px;">
+                                        <div style="font-weight:700; color:var(--primary); margin-bottom:6px;"><i class="fa-solid fa-table-list"></i> શામેલ થયેલ તમામ ૯ માસ્ટર શીટ્સ:</div>
+                                        <ul style="margin:0; padding-left:18px; line-height:1.6; color:var(--text-secondary);">
+                                            <li><strong>1_Loans_Register</strong> (તમામ લોન રેકોર્ડ્સ & વિગતો)</li>
+                                            <li><strong>2_Customer_Master</strong> (ગ્રાહક સભાસદ પ્રોફાઈલ લિસ્ટ)</li>
+                                            <li><strong>3_Valuer_Master</strong> (૧૫ અધિકૃત સોની વેલ્યુઅર લિસ્ટ)</li>
+                                            <li><strong>4_Product_Master</strong> (૫ ગોલ્ડ લોન પ્રોડક્ટ સ્કીમ્સ)</li>
+                                            <li><strong>5_Branch_Master</strong> (૧૭ બેંક શાખાઓ & પાસવર્ડ)</li>
+                                            <li><strong>6_Gold_Rates_History</strong> (ડેઈલી ગોલ્ડ રેટ હિસ્ટ્રી)</li>
+                                            <li><strong>7_Rules_Master</strong> (તમામ સ્ટાન્ડર્ડ + કસ્ટમ ચાર્જ નિયમો)</li>
+                                            <li><strong>8_System_Settings</strong> (પેકેટ સીડ્સ અને સિસ્ટમ કન્ફિગ)</li>
+                                            <li><strong>9_Photo_Vault</strong> (ગ્રાહક અને દાગીનાના હાઇ-રીઝોલ્યુશન ફોટાઓનું સુરક્ષિત સ્ટોરેજ)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <button id="btn-export-backup-excel" class="btn btn-block" style="background:#16a34a; color:#ffffff; font-size:15px; font-weight:700; padding:14px; border-radius:8px; box-shadow:0 4px 12px rgba(22,163,74,0.3); border:none; cursor:pointer;">
+                                        <i class="fa-solid fa-cloud-arrow-down"></i> ડાઉનલોડ કરો સંપૂર્ણ સિસ્ટમ એક્સેલ (Download Backup .xlsx)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 2B. Zero-Error Universal Restore Card -->
+                            <div class="card" style="border-top:4px solid #2563eb; box-shadow:var(--shadow-md); display:flex; flex-direction:column; justify-content:space-between;">
+                                <div>
+                                    <div style="display:flex; align-items:center; gap:10px; border-bottom:1.5px solid var(--border-color); padding-bottom:10px; margin-bottom:12px;">
+                                        <div style="width:40px; height:40px; border-radius:8px; background:#dbeafe; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:20px;">
+                                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                                        </div>
+                                        <div>
+                                            <h3 style="margin:0; font-size:16px; color:#1e40af;">4. 1-Click Zero-Error Database Restore Engine</h3>
+                                            <div style="font-size:11.5px; color:var(--text-secondary);">એક્સેલ ફાઈલ અપલોડ કરી તમામ ડેટા પુનઃપ્રાપ્ત કરો</div>
+                                        </div>
+                                    </div>
+
+                                    <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.5; margin-bottom:14px;">
+                                        અગાઉ ડાઉનલોડ કરેલ બેકઅપ એક્સેલ (.xlsx) પસંદ કરો. સિસ્ટમ આપમેળે તમામ શીટ્સ વેરિફાય કરીને કોઈપણ ક્ષતિ વગર તમામ રેકોર્ડ્સ અને માસ્ટર્સ રિસ્ટોર કરશે:
+                                    </p>
+
+                                    <div class="form-group" style="margin-bottom:14px;">
+                                        <label for="restore-excel-file" style="font-weight:700; font-size:13px; color:var(--primary); display:block; margin-bottom:6px;">
+                                            પસંદ કરો બેકઅપ એક્સેલ ફાઈલ (.xlsx):
+                                        </label>
+                                        <div style="border:2px dashed #93c5fd; background:#f0f7ff; padding:18px; border-radius:8px; text-align:center;">
+                                            <i class="fa-solid fa-file-arrow-up" style="font-size:32px; color:#3b82f6; margin-bottom:8px;"></i>
+                                            <input type="file" id="restore-excel-file" accept=".xlsx" style="display:block; margin:0 auto; cursor:pointer;">
+                                            <small style="color:var(--text-secondary); margin-top:6px; display:block;">Supported: Standard JCCB Multi-Sheet Master Backups (.xlsx)</small>
+                                        </div>
+                                    </div>
+
+                                    <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:10px 12px; border-radius:6px; font-size:11.5px; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                                        <i class="fa-solid fa-shield-halved" style="font-size:16px; flex-shrink:0;"></i>
+                                        <span><strong>સલામતી ખાતરી:</strong> રિસ્ટોર કરતા પહેલા ફાઈલનું ઓટો-વેલિડેશન થશે. રિસ્ટોર પૂર્ણ થતાં જ વિગતવાર રિપોર્ટ સ્ક્રીન પર દેખાશે.</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <button id="btn-import-restore-excel" class="btn btn-block" style="background:#2563eb; color:#ffffff; font-size:15px; font-weight:700; padding:14px; border-radius:8px; box-shadow:0 4px 12px rgba(37,99,235,0.3); border:none; cursor:pointer;">
+                                        <i class="fa-solid fa-arrows-rotate"></i> વેરિફાય અને રીસ્ટોર ડેટા (Upload & Restore All Masters)
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 8. CUSTOMER MASTER VIEW -->
+                <section id="customer-master-view" class="tab-content hidden">
+                    <div class="view-header">
+                        <h2><i class="fa-solid fa-users"></i> Customer Profiles Directory</h2>
+                        <p>Manage member credentials, contact information, and KYC files</p>
+                    </div>
+
+                    <div class="master-layout-grid">
+                        <!-- Left Block: Add/Edit Customer -->
+                        <div class="master-form-card card">
+                            <h3 id="customer-form-title">Register New Customer</h3>
+                            <form id="customer-master-form">
+                                <input type="hidden" id="edit-customer-id">
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="m-cust-no">Customer Number</label>
+                                        <input type="text" id="m-cust-no" placeholder="e.g. 101" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="m-cust-member-no">Membership Number</label>
+                                        <input type="text" id="m-cust-member-no" placeholder="Enter Membership ID">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="m-cust-name">Customer Full Name</label>
+                                    <input type="text" id="m-cust-name" placeholder="Full Name" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="m-cust-address">Address</label>
+                                    <input type="text" id="m-cust-address" placeholder="Address" required>
+                                </div>
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="m-cust-savings-ac">Savings Account No</label>
+                                        <input type="text" id="m-cust-savings-ac" placeholder="Savings A/c" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="m-cust-age">Age</label>
+                                        <input type="number" id="m-cust-age" placeholder="Age" required min="1">
+                                    </div>
+                                </div>
+                                <div class="form-row three-col">
+                                    <div class="form-group">
+                                        <label for="m-cust-occupation">Occupation / ધંધો</label>
+                                        <input type="text" id="m-cust-occupation" placeholder="Occupation" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="m-cust-religion">Religion / ધર્મ</label>
+                                        <input type="text" id="m-cust-religion" placeholder="Religion" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="m-cust-caste">Caste / જ્ઞાતિ</label>
+                                        <input type="text" id="m-cust-caste" placeholder="Caste" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="m-cust-mobile">Mobile Number</label>
+                                    <input type="tel" id="m-cust-mobile" placeholder="Mobile" required pattern="[0-9]{10}">
+                                </div>
+
+                                <div class="form-row two-col">
+                                    <div class="form-group">
+                                        <label for="m-cust-nominee-name">Nominee Name</label>
+                                        <input type="text" id="m-cust-nominee-name" placeholder="Nominee" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="m-cust-nominee-relation">Nominee Relation</label>
+                                        <input type="text" id="m-cust-nominee-relation" placeholder="Relation" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="m-cust-photo-upload">Customer Photo</label>
+                                    <div class="upload-preview-container">
+                                        <input type="file" id="m-cust-photo-upload" accept="image/*" class="photo-file-input">
+                                        <div id="m-cust-photo-preview" class="photo-preview-placeholder">
+                                            <i class="fa-regular fa-image"></i>
+                                            <span>No Photo Selected</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" id="customer-save-btn" class="btn btn-primary btn-block">
+                                    <i class="fa-solid fa-save"></i> Save Customer Profile
+                                </button>
+                                <button type="button" id="customer-cancel-edit-btn" class="btn btn-secondary btn-block hidden" style="margin-top:8px;">
+                                    Cancel Edit
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Right Block: Search and List -->
+                        <div class="master-list-card card">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <h3>Registered Customer Directory</h3>
+                                <input type="text" id="customer-dir-search" placeholder="Search by ID or Name..." style="width:200px; padding:6px 10px; font-size:12px; border:1.5px solid #000000; border-radius:4px;">
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table compact-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Photo</th>
+                                            <th>ID</th>
+                                            <th>Customer Name</th>
+                                            <th>Mobile</th>
+                                            <th>Nominee</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="customer-list-tbody">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== PRINT OPTIONS POPUP MODAL ==================== -->
+    <div id="print-modal" class="modal hidden">
+        <div class="modal-content glassmorphism">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-print"></i> Document Print Center</h3>
+                <button id="close-print-modal-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom:20px; font-size:13px; color:var(--text-secondary);">Select the document you wish to generate and print on A4 sheet:</p>
+                <div class="print-options-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:15px;">
+                    <button class="print-option-card" id="btn-print-application-form">
+                        <div class="option-icon"><i class="fa-solid fa-file-signature"></i></div>
+                        <h4>LOAN DOCUMENTS</h4>
+                        <p>પેઇજ ૧: કરજ માંગણી અરજી + પેઇજ ૨: વેલ્યુએશન & પ્રોમિસરી + પેઇજ ૩: ગ્રાહક પહોંચ + પેઇજ ૪: KFS (+ પેઇજ ૫: સભાસદ અરજી)</p>
+                    </button>
+                    <button class="print-option-card" id="btn-print-sanction-letter" style="border: 2px solid #0284c7;">
+                        <div class="option-icon" style="color:#0284c7;"><i class="fa-solid fa-file-contract"></i></div>
+                        <h4 style="color:#0369a1;">CUSTOMER LATTER (૨ કોપી)</h4>
+                        <p>લોનની વિગતો, ખર્ચ કપાત અને નેટ રકમ દર્શાવતો કસ્ટમર લેટર (Customer Copy + Bank / Loan File Copy)</p>
+                    </button>
+                    <button class="print-option-card" id="btn-print-single-a4">
+                        <div class="option-icon"><i class="fa-solid fa-receipt"></i></div>
+                        <h4>EXPENSE CASH CREDIT VOUCHERS (3-IN-1)</h4>
+                        <p>લોન દીઠ ખર્ચ/કપાતના રોકડ ક્રેડિટ વાઉચર્સ (Cash Credit Vouchers for specific loan)</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== VOUCHER PRINT TEMPLATE (HIDDEN ON SCREEN) ==================== -->
+    <div id="print-area">
+        <!-- Dynamic print injections will go here -->
+    </div>
+
+    <!-- ==================== IMAGE CROPPER POPUP MODAL ==================== -->
+    <div id="crop-modal" class="modal hidden">
+        <div class="modal-content glassmorphism" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-crop-simple"></i> Crop Photograph</h3>
+                <button id="close-crop-modal-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="max-height: 350px; display: flex; justify-content: center; align-items: center; background-color: #000; overflow: hidden; border-radius: 6px;">
+                    <img id="crop-image-element" style="max-width: 100%; max-height: 350px; display: block;">
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button id="btn-crop-save" class="btn btn-primary" style="flex: 1;">
+                        <i class="fa-solid fa-check"></i> Crop & Save
+                    </button>
+                    <button id="btn-crop-cancel" class="btn btn-secondary" style="flex: 1;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PENDING CUST NO REMINDER MODAL ==================== -->
+    <div id="reminder-modal" class="modal hidden">
+        <div class="modal-content glassmorphism" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-bell" style="color: #ff9800;"></i> Pending Customer Numbers Reminder</h3>
+                <button id="close-reminder-modal-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom:15px; font-size:13px; color:var(--text-secondary);">
+                    The following gold loan entries are completed but do not have a Customer Number. Please update them immediately:
+                </p>
+                <div style="max-height: 300px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; margin-bottom: 15px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid rgba(255,255,255,0.1); background-color: rgba(255,255,255,0.05); height: 35px;">
+                                <th style="padding: 8px 12px;">Date</th>
+                                <th style="padding: 8px 12px;">Account No</th>
+                                <th style="padding: 8px 12px;">Borrower Name</th>
+                                <th style="padding: 8px 12px; text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reminder-list-tbody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display: flex; justify-content: flex-end;">
+                    <button id="btn-reminder-close" class="btn btn-secondary">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        if (typeof XLSX === "undefined") {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+        }
+    </script>
+    <script>
+        if (typeof XLSX === "undefined") {
+            document.write('<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script src="app_gold.js"></script>
+</body>
+</html>
