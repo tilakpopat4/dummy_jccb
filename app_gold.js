@@ -554,19 +554,18 @@ async function syncCloudData(isManual = false) {
             });
         }
 
-        if (changed) {
-            saveState();
-            renderDashboard();
-            renderRegisterTable();
-            if (typeof renderReportsTable === "function") renderReportsTable();
-        }
+        saveState();
+        updateHeaderGoldRate();
+        renderDashboard();
+        renderRegisterTable();
+        if (typeof renderReportsTable === "function") renderReportsTable();
 
         if (syncText) syncText.textContent = "Cloud Live";
         if (syncDot) syncDot.style.background = "#22c55e";
 
         if (isManual) {
             const currentR = getActiveGoldRate22K();
-            showToast(`✅ Cloud Synced Successfully! 22K Rate: ₹${currentR.toLocaleString("en-IN")} | Active Loans: ${state.loans ? state.loans.length : 0}`);
+            showToast(`✅ Cloud Synced: 22K Rate ₹${currentR.toLocaleString("en-IN")} | Active Loans: ${state.loans ? state.loans.length : 0}`);
         }
     } catch (e) {
         console.warn("[CloudSync] Background sync check notice:", e);

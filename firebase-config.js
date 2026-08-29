@@ -495,32 +495,34 @@ const FirebaseService = {
      */
     getLoans: async function(branchCode = null) {
         let list = [];
-        // 1. Try Firestore SDK
-        if (this.db) {
+        // 1. Direct REST fetch (instant response, bypasses hanging SDK WebChannel & stale cache)
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4000);
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/loans`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data.documents)) {
+                    list = data.documents.map(d => this.fromFirestoreDocument(d));
+                    console.log("[Firebase REST] Fetched loans from cloud:", list.length);
+                }
+            }
+        } catch (restErr) {
+            console.warn("[Firebase REST] Error fetching loans via REST:", restErr);
+        }
+
+        // 2. Fallback to Firestore SDK
+        if (list.length === 0 && this.db) {
             try {
-                const snapshot = await this.db.collection('loans').get({ source: 'server' });
+                const snapshot = await this.db.collection('loans').get();
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     list.push({ ...data, id: doc.id, loanId: data.loanId || doc.id });
                 });
-            } catch (sdkErr) {
-                // Ignore SDK error and fall through to REST
-            }
-        }
-
-        // 2. If SDK returned empty, query REST API directly
-        if (list.length === 0) {
-            try {
-                const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/loans`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data.documents)) {
-                        list = data.documents.map(d => this.fromFirestoreDocument(d));
-                    }
-                }
-            } catch (restErr) {
-                console.warn("[Firebase REST] Error fetching loans via REST:", restErr);
-            }
+            } catch (sdkErr) {}
         }
 
         if (branchCode && branchCode !== '99') {
@@ -570,28 +572,45 @@ const FirebaseService = {
     // =================================================================
 
     /**
-     * Get daily gold rates from Firestore (Dual SDK + REST fallback)
+     * Get daily gold rates from Firestore (Direct REST with SDK fallback)
      */
     getDailyRates: async function() {
-        // 1. Try SDK
-        if (this.db) {
-            try {
-                const doc = await this.db.collection('rates').doc('today').get({ source: 'server' });
-                if (doc && doc.exists) {
-                    return doc.data();
+        // 1. Direct REST fetch (instant, never hangs)
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/rates/today`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                const data = await res.json();
+                const parsed = this.fromFirestoreDocument(data);
+                if (parsed && (parseFloat(parsed.rate22K) > 0 || parseFloat(parsed.rate24K) > 0)) {
+                    return parsed;
                 }
-            } catch (e) {}
+            }
+        } catch (restErr) {
+            console.warn("[Firebase REST] Rates REST fetch notice:", restErr);
         }
 
-        // 2. Direct REST fetch
+        // 2. Fallback check in settings/dailyRates
         try {
-            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/rates/today`);
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/dailyRates`);
             if (res.ok) {
                 const data = await res.json();
                 return this.fromFirestoreDocument(data);
             }
-        } catch (restErr) {
-            console.warn("[Firebase REST] Rates REST fetch error:", restErr);
+        } catch (e) {}
+
+        // 3. Fallback to SDK
+        if (this.db) {
+            try {
+                const doc = await this.db.collection('rates').doc('today').get();
+                if (doc && doc.exists) {
+                    return doc.data();
+                }
+            } catch (e) {}
         }
         return null;
     },
