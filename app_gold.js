@@ -883,7 +883,7 @@ function updateBranchContextUI() {
     const settingsNav = document.getElementById("settings-nav");
     const configNavDivider = document.getElementById("config-nav-divider");
 
-    // Strictly show only Customer Master and Daily Gold Rate for Branch users
+    // Strictly show Customer Master, Daily Gold Rate, and Account Settings for Branch users
     if (customerMasterNav) customerMasterNav.classList.remove("hidden");
     if (goldRateMasterNav) goldRateMasterNav.classList.remove("hidden");
     if (branchMasterNav) branchMasterNav.classList.toggle("hidden", !isHO);
@@ -891,8 +891,8 @@ function updateBranchContextUI() {
     if (productMasterNav) productMasterNav.classList.toggle("hidden", !isHO);
     if (rulesMasterNav) rulesMasterNav.classList.toggle("hidden", !isHO);
     if (backupRestoreNav) backupRestoreNav.classList.toggle("hidden", !isHO);
-    if (settingsNav) settingsNav.classList.toggle("hidden", !isHO);
-    if (configNavDivider) configNavDivider.classList.toggle("hidden", !isHO);
+    if (settingsNav) settingsNav.classList.remove("hidden");
+    if (configNavDivider) configNavDivider.classList.remove("hidden");
 
     // 3. Daily Gold Rate Master: View-Only for Branch, Editable for Head Office
     const goldRateFormCard = document.querySelector("#gold-rate-master-view .master-form-card");
@@ -981,11 +981,24 @@ function updateBranchContextUI() {
 
     // 7. Account Settings: lock branch selection to branch for Branch user
     const settingsBranchSelect = document.getElementById("settings-branch-select");
-    if (settingsBranchSelect && !isHO) {
-        settingsBranchSelect.value = state.currentSession.code;
-        settingsBranchSelect.disabled = true;
-    } else if (settingsBranchSelect) {
-        settingsBranchSelect.disabled = false;
+    if (settingsBranchSelect) {
+        if (!isHO) {
+            settingsBranchSelect.innerHTML = `<option value="${userBranch}">${userBranch} ${userBranchName}</option>`;
+            settingsBranchSelect.value = userBranch;
+            settingsBranchSelect.disabled = true;
+            settingsBranchSelect.style.backgroundColor = "#f1f5f9";
+            settingsBranchSelect.style.cursor = "not-allowed";
+        } else {
+            settingsBranchSelect.disabled = false;
+            settingsBranchSelect.style.backgroundColor = "";
+            settingsBranchSelect.style.cursor = "default";
+        }
+    }
+
+    // Hide Factory Reset for non-HO users
+    const factoryResetCard = document.getElementById("settings-factory-reset-card") || (document.getElementById("reset-system-data-btn") ? document.getElementById("reset-system-data-btn").closest(".card") : null);
+    if (factoryResetCard) {
+        factoryResetCard.style.display = isHO ? "" : "none";
     }
 
     // 8. Register Filter Branch lock
@@ -1045,7 +1058,7 @@ function initNavigation() {
             if (!targetId) return;
 
             const isHO = isHeadOfficeSession();
-            const restrictedTabs = ["branch-master-view", "valuer-master-view", "product-master-view", "rules-master-view", "backup-restore-view", "settings-view"];
+            const restrictedTabs = ["branch-master-view", "valuer-master-view", "product-master-view", "rules-master-view", "backup-restore-view"];
             if (!isHO && restrictedTabs.includes(targetId)) {
                 alert("આ સેક્શન ફક્ત હેડ ઓફિસ (Head Office) માટે ઉપલબ્ધ છે.");
                 return;
@@ -6053,8 +6066,10 @@ function getUniqueProductCodes() {
 }
 
 function saveBranchSettings(targetBranch = null) {
+    const isHO = isHeadOfficeSession();
     const branchSelect = document.getElementById("settings-branch-select");
-    const selectedBranch = targetBranch || (branchSelect ? branchSelect.value : (state.currentSession ? state.currentSession.code : "99"));
+    const currentCode = state.currentSession ? state.currentSession.code : "99";
+    const selectedBranch = !isHO ? currentCode : (targetBranch || (branchSelect ? branchSelect.value : currentCode));
     const numOnly = String(selectedBranch).replace(/\D/g, '');
     const bCode2 = numOnly ? numOnly.padStart(2, '0') : "99";
     const bCode3 = numOnly ? numOnly.padStart(3, '0') : "099";
@@ -6112,12 +6127,17 @@ function renderBranchSettings(targetBranch = null) {
     const container = document.getElementById("account-seeds-container");
     if (!branchSelect || !container) return;
 
+    const isHO = isHeadOfficeSession();
     const branches = state.branches || DEFAULT_BRANCHES;
     const currentCode = state.currentSession ? state.currentSession.code : "99";
+    const currentBranchObj = branches.find(b => String(b.code) === String(currentCode)) || (state.currentSession || { code: currentCode, name: currentCode });
+    const currentName = currentBranchObj.name || (state.currentSession ? state.currentSession.name : currentCode);
     
     // Maintain current dropdown selection if valid, otherwise fallback to session code or targetBranch
     let selectedBranch = targetBranch;
-    if (!selectedBranch) {
+    if (!isHO) {
+        selectedBranch = currentCode;
+    } else if (!selectedBranch) {
         selectedBranch = branchSelect.value ? branchSelect.value : currentCode;
     }
     
@@ -6125,20 +6145,37 @@ function renderBranchSettings(targetBranch = null) {
     const bCode2 = numOnly ? numOnly.padStart(2, '0') : "99";
     const bCode3 = numOnly ? numOnly.padStart(3, '0') : "099";
 
-    // Populate branch options if empty
-    if (branchSelect.children.length !== branches.length) {
-        branchSelect.innerHTML = "";
-        branches.forEach(b => {
-            const opt = document.createElement("option");
-            opt.value = b.code;
-            opt.textContent = `${b.code} ${b.name}`;
-            if (b.code === selectedBranch || String(b.code).replace(/\D/g, '').padStart(2, '0') === bCode2) {
-                opt.selected = true;
-            }
-            branchSelect.appendChild(opt);
-        });
+    // Populate branch options
+    if (!isHO) {
+        branchSelect.innerHTML = `<option value="${currentCode}">${currentCode} ${currentName}</option>`;
+        branchSelect.value = currentCode;
+        branchSelect.disabled = true;
+        branchSelect.style.backgroundColor = "#f1f5f9";
+        branchSelect.style.cursor = "not-allowed";
+    } else {
+        branchSelect.disabled = false;
+        branchSelect.style.backgroundColor = "";
+        branchSelect.style.cursor = "default";
+        if (branchSelect.children.length !== branches.length) {
+            branchSelect.innerHTML = "";
+            branches.forEach(b => {
+                const opt = document.createElement("option");
+                opt.value = b.code;
+                opt.textContent = `${b.code} ${b.name}`;
+                if (b.code === selectedBranch || String(b.code).replace(/\D/g, '').padStart(2, '0') === bCode2) {
+                    opt.selected = true;
+                }
+                branchSelect.appendChild(opt);
+            });
+        }
+        branchSelect.value = selectedBranch;
     }
-    branchSelect.value = selectedBranch;
+
+    // Toggle Factory Reset Card visibility
+    const factoryResetCard = document.getElementById("settings-factory-reset-card") || (document.getElementById("reset-system-data-btn") ? document.getElementById("reset-system-data-btn").closest(".card") : null);
+    if (factoryResetCard) {
+        factoryResetCard.style.display = isHO ? "" : "none";
+    }
 
     if (!state.settings) state.settings = {};
     if (!state.settings.branchSeeds) state.settings.branchSeeds = {};
