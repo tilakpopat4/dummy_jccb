@@ -1408,8 +1408,8 @@ function renderDashboard() {
     const isHO = isHeadOfficeSession();
     const userBranch = state.currentSession ? state.currentSession.code : "99";
 
-    // Aggregate all loans across the bank
-    const filteredLoans = (state.loans || []);
+    // Branch sees only its own loans, Head Office sees all branches combined
+    const filteredLoans = isHO ? (state.loans || []) : (state.loans || []).filter(l => isBranchMatch(l.branchCode, userBranch));
 
     let totalLoans = filteredLoans.length;
     let totalSanctioned = 0;
@@ -2778,10 +2778,10 @@ function renderRegisterTable() {
     const dateTo = document.getElementById("filter-date-to") ? document.getElementById("filter-date-to").value : "";
     const product = document.getElementById("filter-product") ? document.getElementById("filter-product").value : "";
 
-    // Show all loan entries across all branches and Head Office
-    let list = (state.loans || []);
+    // Branch sees only its own loans by default; Head Office sees all branches
+    let list = isHO ? (state.loans || []) : (state.loans || []).filter(l => isBranchMatch(l.branchCode, userBranch));
 
-    if (filterBranch) list = list.filter(l => isBranchMatch(l.branchCode, filterBranch));
+    if (isHO && filterBranch) list = list.filter(l => isBranchMatch(l.branchCode, filterBranch));
     if (product) list = list.filter(l => (l.loanType || "").includes(product));
     if (dateFrom) list = list.filter(l => l.date >= dateFrom);
     if (dateTo) list = list.filter(l => l.date <= dateTo);
