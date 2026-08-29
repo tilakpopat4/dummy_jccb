@@ -417,6 +417,20 @@ const FirebaseService = {
         }, { merge: true });
     },
 
+    /**
+     * Realtime listener for daily gold rates
+     */
+    listenDailyRates: function(onUpdate) {
+        if (!this.db) return () => {};
+        return this.db.collection('rates').doc('today').onSnapshot((doc) => {
+            if (doc.exists && typeof onUpdate === 'function') {
+                onUpdate(doc.data());
+            }
+        }, (err) => {
+            console.warn("[Firebase] Rates listener error:", err);
+        });
+    },
+
     // =================================================================
     // CLOUD STORAGE UPLOADS (ORNAMENTS & KYC)
     // =================================================================

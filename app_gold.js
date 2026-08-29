@@ -207,6 +207,16 @@ function isHeadOfficeSession() {
     return (code === "99" || code === "099" || code === "00" || sess.isHO === true || name.includes("HEAD OFFICE") || name.includes("HO"));
 }
 
+function isBranchMatch(codeA, codeB) {
+    if (!codeA || !codeB) return false;
+    const a = String(codeA).trim().replace(/\D/g, '');
+    const b = String(codeB).trim().replace(/\D/g, '');
+    if (a && b) {
+        return parseInt(a, 10) === parseInt(b, 10);
+    }
+    return String(codeA).trim().toLowerCase() === String(codeB).trim().toLowerCase();
+}
+
 let state = loadState();
 let cropperInstance = null;
 let currentPhotoTarget = null;
@@ -393,8 +403,20 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (fbRates && fbRates.rate22K > 0) {
                         const todayStr = getTodayDateYMD();
                         if (fbRates.date === todayStr) {
-                            setDailyGoldRate(fbRates.rate22K, fbRates.date);
+                            applyDailyGoldRate(fbRates.rate22K, fbRates.date);
                         }
+                    }
+
+                    // Realtime listener for Daily Gold Rates across all branches
+                    if (typeof window.FirebaseService.listenDailyRates === "function") {
+                        window.FirebaseService.listenDailyRates((cloudRates) => {
+                            if (cloudRates && cloudRates.rate22K > 0) {
+                                const todayStr = getTodayDateYMD();
+                                if (cloudRates.date === todayStr) {
+                                    applyDailyGoldRate(cloudRates.rate22K, cloudRates.date);
+                                }
+                            }
+                        });
                     }
 
                     // Listen for realtime branch loan updates
@@ -642,14 +664,15 @@ function showApp() {
 function updateBranchContextUI() {
     const isHO = isHeadOfficeSession();
     const userBranch = state.currentSession ? state.currentSession.code : "99";
+    const userBranchName = state.currentSession ? state.currentSession.name : "99 HEAD OFFICE";
 
-    // 1. Loan Branch Select in Loan Entry
+    // 1. Loan Branch Select in Loan Entry Sheet (Strict single option and locked for branch)
     const branchSelect = document.getElementById("loan-branch");
     if (branchSelect) {
         branchSelect.innerHTML = "";
         if (isHO) {
             branchSelect.disabled = false;
-            state.branches.forEach(b => {
+            (state.branches || []).forEach(b => {
                 const opt = document.createElement("option");
                 opt.value = b.code;
                 opt.textContent = b.name;
@@ -657,6 +680,7 @@ function updateBranchContextUI() {
             });
             branchSelect.value = "99";
         } else {
+            // ONLY the logged-in branch option is present in the list, completely excluding all other branches
             const opt = document.createElement("option");
             opt.value = state.currentSession.code;
             opt.textContent = state.currentSession.name;
@@ -674,15 +698,24 @@ function updateBranchContextUI() {
     // 2. Hide / Show Sidebar Navigation Items based on Branch vs Head Office role
     const branchMasterNav = document.getElementById("branch-master-nav");
     const valuerMasterNav = document.getElementById("valuer-master-nav");
+    const customerMasterNav = document.getElementById("customer-master-nav");
+    const goldRateMasterNav = document.getElementById("gold-rate-master-nav");
     const productMasterNav = document.getElementById("product-master-nav");
     const rulesMasterNav = document.getElementById("rules-master-nav");
     const backupRestoreNav = document.getElementById("backup-restore-nav");
+    const settingsNav = document.getElementById("settings-nav");
+    const configNavDivider = document.getElementById("config-nav-divider");
 
+    // Strictly show only Customer Master and Daily Gold Rate for Branch users
+    if (customerMasterNav) customerMasterNav.classList.remove("hidden");
+    if (goldRateMasterNav) goldRateMasterNav.classList.remove("hidden");
     if (branchMasterNav) branchMasterNav.classList.toggle("hidden", !isHO);
     if (valuerMasterNav) valuerMasterNav.classList.toggle("hidden", !isHO);
     if (productMasterNav) productMasterNav.classList.toggle("hidden", !isHO);
     if (rulesMasterNav) rulesMasterNav.classList.toggle("hidden", !isHO);
     if (backupRestoreNav) backupRestoreNav.classList.toggle("hidden", !isHO);
+    if (settingsNav) settingsNav.classList.toggle("hidden", !isHO);
+    if (configNavDivider) configNavDivider.classList.toggle("hidden", !isHO);
 
     // 3. Daily Gold Rate Master: View-Only for Branch, Editable for Head Office
     const goldRateFormCard = document.querySelector("#gold-rate-master-view .master-form-card");
@@ -778,11 +811,23 @@ function updateBranchContextUI() {
         settingsBranchSelect.disabled = false;
     }
 
-    // 8. Reports Filter Branch lock
+    // 8. Register Filter Branch lock
+    const filterBranchEl = document.getElementById("filter-branch");
+    if (filterBranchEl) {
+        if (!isHO) {
+            filterBranchEl.innerHTML = `<option value="${userBranch}">${userBranchName}</option>`;
+            filterBranchEl.value = userBranch;
+            filterBranchEl.disabled = true;
+        } else {
+            filterBranchEl.disabled = false;
+        }
+    }
+
+    // 9. Reports Filter Branch lock
     const repBranchSelect = document.getElementById("report-filter-branch");
     if (repBranchSelect) {
         if (!isHO) {
-            repBranchSelect.innerHTML = `<option value="${userBranch}">${state.currentSession.name}</option>`;
+            repBranchSelect.innerHTML = `<option value="${userBranch}">${userBranchName}</option>`;
             repBranchSelect.value = userBranch;
             repBranchSelect.disabled = true;
         } else {
@@ -800,6 +845,18 @@ function updateBranchContextUI() {
             }
         }
     }
+
+    // 10. Voucher Filter Branch lock
+    const voucherBranchSelect = document.getElementById("voucher-branch-select");
+    if (voucherBranchSelect) {
+        if (!isHO) {
+            voucherBranchSelect.innerHTML = `<option value="${userBranch}">${userBranchName}</option>`;
+            voucherBranchSelect.value = userBranch;
+            voucherBranchSelect.disabled = true;
+        } else {
+            voucherBranchSelect.disabled = false;
+        }
+    }
 }
 
 // ==================== NAVIGATION ====================
@@ -809,6 +866,13 @@ function initNavigation() {
         btn.addEventListener("click", () => {
             const targetId = btn.getAttribute("data-tab");
             if (!targetId) return;
+
+            const isHO = isHeadOfficeSession();
+            const restrictedTabs = ["branch-master-view", "valuer-master-view", "product-master-view", "rules-master-view", "backup-restore-view", "settings-view"];
+            if (!isHO && restrictedTabs.includes(targetId)) {
+                alert("આ સેક્શન ફક્ત હેડ ઓફિસ (Head Office) માટે ઉપલબ્ધ છે.");
+                return;
+            }
 
             document.querySelectorAll(".tab-content").forEach(tab => tab.classList.add("hidden"));
             document.querySelectorAll(".sidebar-nav .nav-item").forEach(b => b.classList.remove("active"));
@@ -820,12 +884,12 @@ function initNavigation() {
             if (targetId === "dashboard-view") renderDashboard();
             if (targetId === "register-view") renderRegisterTable();
             if (targetId === "customer-master-view") renderCustomerMasterList();
-            if (targetId === "valuer-master-view") renderValuers();
+            if (targetId === "valuer-master-view" && isHO) renderValuers();
             if (targetId === "gold-rate-master-view") renderGoldRateMaster();
-            if (targetId === "branch-master-view") renderBranchMaster();
-            if (targetId === "product-master-view") renderProductMaster();
-            if (targetId === "rules-master-view") renderRulesMaster();
-            if (targetId === "backup-restore-view") updateBackupStats();
+            if (targetId === "branch-master-view" && isHO) renderBranchMaster();
+            if (targetId === "product-master-view" && isHO) renderProductMaster();
+            if (targetId === "rules-master-view" && isHO) renderRulesMaster();
+            if (targetId === "backup-restore-view" && isHO) updateBackupStats();
             if (targetId === "daily-vouchers-view") initDailyVouchers();
             if (targetId === "reports-view") {
                 initReports();
@@ -833,6 +897,7 @@ function initNavigation() {
             }
             if (targetId === "settings-view") renderBranchSettings();
             if (targetId === "entry-view") {
+                updateBranchContextUI();
                 const b = document.getElementById("loan-branch") ? document.getElementById("loan-branch").value : (state.currentSession ? state.currentSession.code : "99");
                 generateNextProposalNo(b);
                 generateNextPacketNo(b);
@@ -935,13 +1000,12 @@ function updateHeaderGoldRate() {
     headerRateVal.textContent = `₹ ${rate22.toLocaleString("en-IN")}`;
 }
 
-function setDailyGoldRate(val, targetDate = null) {
+function applyDailyGoldRate(val, targetDate = null) {
     const todayStr = getTodayDateYMD();
     const date = targetDate || todayStr;
     const rate22 = parseFloat(val || 0);
 
     if (rate22 <= 0 || isNaN(rate22)) {
-        alert("કૃપા કરીને ૨૨ કેરેટ સોનાનો માન્ય ભાવ દાખલ કરો.");
         return false;
     }
 
@@ -978,6 +1042,27 @@ function setDailyGoldRate(val, targetDate = null) {
     renderGoldRateMaster();
     if (typeof updateOrnamentsTotals === "function") updateOrnamentsTotals();
     if (typeof calculateAllCharges === "function") calculateAllCharges();
+    return true;
+}
+
+function setDailyGoldRate(val, targetDate = null) {
+    if (!isHeadOfficeSession()) {
+        alert("દૈનિક સોનાનો ભાવ ફક્ત હેડ ઓફિસ (Head Office) દ્વારા જ દાખલ અથવા સુધારી શકાય છે. શાખા માટે આ ફીલ્ડ લોક છે.");
+        return false;
+    }
+    const todayStr = getTodayDateYMD();
+    const date = targetDate || todayStr;
+    const rate22 = parseFloat(val || 0);
+
+    if (rate22 <= 0 || isNaN(rate22)) {
+        alert("કૃપા કરીને ૨૨ કેરેટ સોનાનો માન્ય ભાવ દાખલ કરો.");
+        return false;
+    }
+
+    const success = applyDailyGoldRate(rate22, date);
+    if (!success) return false;
+
+    const rate24 = Math.round(rate22 * (24 / 22));
 
     // Sync Daily Rates to Cloud Firestore
     if (window.FirebaseService && window.FirebaseService.isInitialized) {
@@ -1031,7 +1116,7 @@ function renderDashboard() {
     const isHO = isHeadOfficeSession();
     const userBranch = state.currentSession ? state.currentSession.code : "99";
 
-    const filteredLoans = isHO ? state.loans : state.loans.filter(l => l.branchCode === userBranch);
+    const filteredLoans = isHO ? (state.loans || []) : (state.loans || []).filter(l => isBranchMatch(l.branchCode, userBranch));
 
     let totalLoans = filteredLoans.length;
     let totalSanctioned = 0;
@@ -1913,9 +1998,10 @@ function submitLoanEntry() {
             return;
         }
 
+        const isHO = isHeadOfficeSession();
         const branchEl = document.getElementById("loan-branch");
-        const branchCode = branchEl && branchEl.value ? branchEl.value : (state.currentSession ? state.currentSession.code : "99");
-        const branchObj = state.branches.find(b => b.code === branchCode) || { code: branchCode, name: branchCode + " BRANCH" };
+        const branchCode = isHO ? (branchEl && branchEl.value ? branchEl.value : "99") : (state.currentSession ? state.currentSession.code : "99");
+        const branchObj = state.branches.find(b => isBranchMatch(b.code, branchCode)) || { code: branchCode, name: branchCode + " BRANCH" };
 
         const proposalNoInput = document.getElementById("unique-proposal-no");
         const proposalNo = (proposalNoInput && proposalNoInput.value.trim()) ? proposalNoInput.value.trim() : ("GL-P-" + String(state.loans.length + 1).padStart(4, "0"));
@@ -1923,10 +2009,14 @@ function submitLoanEntry() {
         const loanDateInput = document.getElementById("loan-date");
         const loanDate = (loanDateInput && loanDateInput.value) ? loanDateInput.value : new Date().toISOString().split("T")[0];
         const packetNoInput = document.getElementById("packet-no");
-        const packetNo = (packetNoInput && packetNoInput.value.trim()) ? packetNoInput.value.trim() : generateNextPacketNo();
+        const packetNo = (packetNoInput && packetNoInput.value.trim()) ? packetNoInput.value.trim() : generateNextPacketNo(branchCode);
 
-        const goldRate24K = (state.goldRates && state.goldRates["24K"]) ? state.goldRates["24K"] : 72000;
-        const goldRate22K = Math.round(goldRate24K * (22 / 24));
+        const valRateInput = document.getElementById("val-gold-rate-input");
+        let goldRate22K = (valRateInput && parseFloat(valRateInput.value) > 0) ? parseFloat(valRateInput.value) : 0;
+        if (!goldRate22K) {
+            goldRate22K = (state.goldRates && (state.goldRates["22K"] > 0 || state.goldRates["24K"] > 0)) ? parseFloat(state.goldRates["22K"] || state.goldRates["24K"]) : 72000;
+        }
+        const goldRate24K = Math.round(goldRate22K * (24 / 22));
         const marketValue = Math.round(goldWeight * (goldRate22K / 10));
 
         // Determine loan type code dynamically from Product Master
@@ -2413,14 +2503,15 @@ function renderRegisterTable() {
 
     tbody.innerHTML = "";
 
-    const isHO = state.currentSession && state.currentSession.code === "99";
+    const isHO = isHeadOfficeSession();
     const userBranch = state.currentSession ? state.currentSession.code : "99";
+    const userBranchName = state.currentSession ? state.currentSession.name : "99 HEAD OFFICE";
 
     // Sync filter-branch dropdown options
     const filterBranchEl = document.getElementById("filter-branch");
     if (filterBranchEl) {
         if (!isHO) {
-            filterBranchEl.innerHTML = `<option value="${userBranch}">${state.currentSession.name}</option>`;
+            filterBranchEl.innerHTML = `<option value="${userBranch}">${userBranchName}</option>`;
             filterBranchEl.value = userBranch;
             filterBranchEl.disabled = true;
         } else {
@@ -2445,9 +2536,9 @@ function renderRegisterTable() {
     const dateTo = document.getElementById("filter-date-to") ? document.getElementById("filter-date-to").value : "";
     const product = document.getElementById("filter-product") ? document.getElementById("filter-product").value : "";
 
-    let list = isHO ? state.loans : state.loans.filter(l => l.branchCode === userBranch);
+    let list = isHO ? (state.loans || []) : (state.loans || []).filter(l => isBranchMatch(l.branchCode, userBranch));
 
-    if (filterBranch) list = list.filter(l => l.branchCode === filterBranch);
+    if (isHO && filterBranch) list = list.filter(l => isBranchMatch(l.branchCode, filterBranch));
     if (product) list = list.filter(l => (l.loanType || "").includes(product));
     if (dateFrom) list = list.filter(l => l.date >= dateFrom);
     if (dateTo) list = list.filter(l => l.date <= dateTo);
@@ -2497,49 +2588,44 @@ function renderRegisterTable() {
                     <button class="btn btn-sm btn-gold print-doc-btn" data-id="${loan.id}" title="Loan Documents (૪-૫ પેઇજ)" style="display:inline-flex; align-items:center; gap:5px; padding:4px 10px; font-size:11.5px; font-weight:700; border-radius:5px; white-space:nowrap; height:29px; cursor:pointer;">
                         <i class="fa-solid fa-file-pdf"></i> Loan Documents
                     </button>
-                    <button class="btn btn-sm print-sanction-btn" data-id="${loan.id}" style="background:#0284c7; color:#ffffff; font-weight:700; border:none; border-radius:5px; padding:4px 10px; font-size:11.5px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; height:29px;" title="Sanction Letter / Customer Copy (૨ કોપી)">
-                        <i class="fa-solid fa-file-contract"></i> Sanction Letter
+                    <button class="btn btn-sm print-sanction-btn" data-id="${loan.id}" style="background:#0284c7; color:#ffffff; font-weight:700; border:none; border-radius:5px; padding:4px 10px; font-size:11.5px; white-space:nowrap; height:29px; cursor:pointer;">
+                        <i class="fa-solid fa-print"></i> Sanction
                     </button>
-                </div>
-            </td>
-            <td style="text-align:center; white-space:nowrap; width:100px; min-width:100px; padding:6px 8px;">
-                <div style="display:inline-flex; gap:6px; justify-content:center; align-items:center; flex-wrap:nowrap;">
-                    <button class="btn-icon-blue edit-loan-btn" data-id="${loan.id}" title="Edit Loan Entry" style="margin:0;"><i class="fa-solid fa-pen-to-square"></i></button>
-                    <button class="btn-icon-red delete-loan-btn" data-id="${loan.id}" title="Delete Record" style="margin:0;"><i class="fa-solid fa-trash-can"></i></button>
+                    <button class="btn-icon-blue edit-loan-btn" data-id="${loan.id}" title="Edit Loan Entry" style="width:29px; height:29px; display:inline-flex; align-items:center; justify-content:center; border-radius:5px;"><i class="fa-solid fa-pen-to-square"></i></button>
+                    ${isHO ? `<button class="btn-icon-red delete-loan-btn" data-id="${loan.id}" title="Delete Loan Entry" style="width:29px; height:29px; display:inline-flex; align-items:center; justify-content:center; border-radius:5px;"><i class="fa-solid fa-trash-can"></i></button>` : ''}
                 </div>
             </td>
         `;
         tbody.appendChild(tr);
     });
 
-    // Event listeners for register actions
     tbody.querySelectorAll(".print-doc-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const l = state.loans.find(x => x.id === btn.getAttribute("data-id"));
+        btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-id");
+            const l = state.loans.find(x => x.id === id);
             if (l) print4PageDocument(l);
         });
     });
 
     tbody.querySelectorAll(".print-sanction-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            const l = state.loans.find(x => x.id === btn.getAttribute("data-id"));
+        btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-id");
+            const l = state.loans.find(x => x.id === id);
             if (l) printSanctionLetter(l);
         });
     });
 
     tbody.querySelectorAll(".edit-loan-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            editLoanRecord(btn.getAttribute("data-id"));
+        btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-id");
+            editLoanRecord(id);
         });
     });
 
     tbody.querySelectorAll(".delete-loan-btn").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            deleteLoanRecord(btn.getAttribute("data-id"));
+        btn.addEventListener("click", () => {
+            const id = btn.getAttribute("data-id");
+            deleteLoanRecord(id);
         });
     });
 }
@@ -2547,6 +2633,14 @@ function renderRegisterTable() {
 function editLoanRecord(id) {
     const loan = state.loans.find(l => l.id === id);
     if (!loan) return;
+
+    if (!isHeadOfficeSession()) {
+        const userBranch = state.currentSession ? state.currentSession.code : "";
+        if (!isBranchMatch(loan.branchCode, userBranch)) {
+            alert("તમે ફક્ત તમારી પોતાની શાખાની જ લોન એન્ટ્રીમાં સુધારો કરી શકો છો.");
+            return;
+        }
+    }
 
     isEditingExistingLoan = true;
     currentEditingLoanId = loan.id;
@@ -2649,7 +2743,15 @@ function editLoanRecord(id) {
 }
 
 function deleteLoanRecord(id) {
-    if (confirm("Are you sure you want to delete this gold loan entry?")) {
+    if (!isHeadOfficeSession()) {
+        alert("લોન એન્ટ્રી ડિલીટ કરવાનો અધિકાર ફક્ત હેડ ઓફિસ (Head Office) પાસે છે. શાખા દ્વારા એન્ટ્રી ડિલીટ કરી શકાશે નહીં.");
+        return;
+    }
+
+    const loan = state.loans.find(l => l.id === id);
+    if (!loan) return;
+
+    if (confirm("શું તમે આ ગોલ્ડ લોન એન્ટ્રી કાયમ માટે કાઢી નાંખવા માંગો છો?")) {
         state.loans = state.loans.filter(l => l.id !== id);
         saveState();
         renderDashboard();
@@ -2665,14 +2767,18 @@ function deleteLoanRecord(id) {
 }
 
 function exportRegisterCSV() {
-    if (state.loans.length === 0) {
+    const isHO = isHeadOfficeSession();
+    const userBranch = state.currentSession ? state.currentSession.code : "99";
+    const exportLoans = isHO ? (state.loans || []) : (state.loans || []).filter(l => isBranchMatch(l.branchCode, userBranch));
+
+    if (exportLoans.length === 0) {
         alert("No loan records to export.");
         return;
     }
 
     let csv = "ID,Date,Branch,AccountNo,PacketNo,CustomerNo,BorrowerName,Mobile,Address,Scheme,SanctionedAmount,GoldWeight,ValuationAmount,ShareA,ShareB,MemberFee,ValuerFee,StampDuty,ServiceCharge,DocCharges,Insurance,CGST,SGST,TotalDeductions,NetPaid\n";
 
-    state.loans.forEach(l => {
+    exportLoans.forEach(l => {
         const sanc = Math.round(parseFloat(l.sanctionedAmount || 0));
         const totalDeduct = Math.round(parseFloat(l.totalDeductions || (
             (parseFloat(l.shareA || 0) + parseFloat(l.shareB || 0) + parseFloat(l.memberFee || 0) + 
