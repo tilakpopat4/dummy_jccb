@@ -1175,7 +1175,7 @@ function lockGoldRateFor24Hours() {
     saveState();
 
     // Sync to Cloud Firestore
-    if (window.FirebaseService && window.FirebaseService.isInitialized && typeof window.FirebaseService.saveDailyRates === "function") {
+    if (window.FirebaseService && typeof window.FirebaseService.saveDailyRates === "function") {
         window.FirebaseService.saveDailyRates({
             rate22K: state.goldRates["22K"],
             rate24K: state.goldRates["24K"],
@@ -1210,7 +1210,7 @@ function unlockGoldRate() {
     saveState();
 
     // Sync to Cloud Firestore
-    if (window.FirebaseService && window.FirebaseService.isInitialized && typeof window.FirebaseService.saveDailyRates === "function") {
+    if (window.FirebaseService && typeof window.FirebaseService.saveDailyRates === "function") {
         window.FirebaseService.saveDailyRates({
             rate22K: state.goldRates["22K"],
             rate24K: state.goldRates["24K"],
@@ -1301,24 +1301,16 @@ function setDailyGoldRate(val, targetDate = null) {
 
     // Sync Daily Rates to Cloud Firestore
     if (window.FirebaseService && typeof window.FirebaseService.saveDailyRates === "function") {
-        const doSaveRate = () => {
-            window.FirebaseService.saveDailyRates({
-                date: date,
-                rate22K: rate22,
-                rate24K: rate24,
-                isLocked: true,
-                lockedAt: new Date().toISOString(),
-                lockedBy: state.currentSession ? state.currentSession.name : "HEAD OFFICE"
-            }).then(() => {
-                console.log("[Firebase] Daily rate synced to cloud Firestore successfully:", rate22);
-            }).catch(e => console.error("[Firebase] Daily rate cloud sync error:", e));
-        };
-
-        if (window.FirebaseService.isInitialized) {
-            doSaveRate();
-        } else if (typeof window.FirebaseService.init === "function") {
-            window.FirebaseService.init().then(() => doSaveRate());
-        }
+        window.FirebaseService.saveDailyRates({
+            date: date,
+            rate22K: rate22,
+            rate24K: rate24,
+            isLocked: true,
+            lockedAt: new Date().toISOString(),
+            lockedBy: state.currentSession ? state.currentSession.name : "HEAD OFFICE"
+        }).then(() => {
+            console.log("[Firebase] Daily rate synced to cloud Firestore successfully:", rate22);
+        }).catch(e => console.error("[Firebase] Daily rate cloud sync error:", e));
     }
 
     showToast(`તા. ${formatDateDMY(date)} નો ૨૨ કેરેટ સોનાનો ભાવ ₹${rate22.toLocaleString("en-IN")}/10g સેવ થયો છે.`);
