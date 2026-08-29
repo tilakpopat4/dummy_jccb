@@ -610,6 +610,52 @@ document.addEventListener("DOMContentLoaded", () => {
                             }
                         });
                     }
+
+                    // 7. Resilient Periodic Background Cloud Polling (Syncs every 10 seconds across all branches & Head Office)
+                    setInterval(async () => {
+                        try {
+                            if (window.FirebaseService && window.FirebaseService.isInitialized) {
+                                // 1. Check Daily Rates
+                                const liveRates = await window.FirebaseService.getDailyRates();
+                                if (liveRates && (parseFloat(liveRates.rate22K) > 0 || parseFloat(liveRates.rate24K) > 0)) {
+                                    const r22 = parseFloat(liveRates.rate22K || liveRates.rate24K);
+                                    if (parseFloat(state.goldRates["22K"]) !== r22) {
+                                        applyDailyGoldRate(r22, getTodayDateYMD(), {
+                                            isLocked: liveRates.isLocked,
+                                            lockedAt: liveRates.lockedAt,
+                                            lockedBy: liveRates.lockedBy
+                                        });
+                                    }
+                                }
+
+                                // 2. Check Live Loans
+                                const liveLoans = await window.FirebaseService.getLoans();
+                                if (Array.isArray(liveLoans) && liveLoans.length > 0) {
+                                    if (!state.loans) state.loans = [];
+                                    let hasNew = false;
+                                    liveLoans.forEach(cl => {
+                                        const lId = cl.id || cl.loanId;
+                                        const lIdx = state.loans.findIndex(x => x.id === lId || x.loanId === lId);
+                                        if (lIdx === -1) {
+                                            state.loans.unshift(cl);
+                                            hasNew = true;
+                                        } else if (cl.updatedAt && cl.updatedAt !== state.loans[lIdx].updatedAt) {
+                                            state.loans[lIdx] = { ...state.loans[lIdx], ...cl, id: lId, loanId: lId };
+                                            hasNew = true;
+                                        }
+                                    });
+                                    if (hasNew) {
+                                        saveState();
+                                        renderDashboard();
+                                        renderRegisterTable();
+                                        if (typeof renderReportsTable === "function") renderReportsTable();
+                                    }
+                                }
+                            }
+                        } catch (pollErr) {
+                            // Silent catch for background poll
+                        }
+                    }, 10000);
                 } catch (syncErr) {
                     console.warn("[Firebase] Initial Cloud Sync Notice:", syncErr);
                 }

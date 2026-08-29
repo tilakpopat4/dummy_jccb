@@ -316,32 +316,87 @@ const FirebaseService = {
         await userRef.set(payload, { merge: true });
     },
 
-    // =================================================================
-    // LOAN DATA OPERATIONS & SYNC
-    // =================================================================
+    /**
+     * Compress base64 image if too large to fit in Firestore doc (< 1MB)
+     */
+    compressBase64Image: function(dataUrl, maxWidth = 400, quality = 0.6) {
+        return new Promise((resolve) => {
+            if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:image")) {
+                return resolve(dataUrl || "");
+            }
+            if (dataUrl.length < 120000) {
+                return resolve(dataUrl);
+            }
+            try {
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        const canvas = document.createElement("canvas");
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext("2d");
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const compressed = canvas.toDataURL("image/jpeg", quality);
+                        resolve(compressed);
+                    } catch (e) {
+                        resolve(dataUrl);
+                    }
+                };
+                img.onerror = () => resolve(dataUrl);
+                img.src = dataUrl;
+            } catch (err) {
+                resolve(dataUrl);
+            }
+        });
+    },
 
     /**
      * Save a gold loan record to Firestore
      */
     saveLoan: async function(loanData) {
         if (!this.db) throw new Error("Firestore not initialized.");
-        const loanId = String(loanData.id || loanData.loanId || `LOAN_${Date.now()}_${loanData.branchCode || '01'}`).trim();
+        const loanId = String(loanData.id || loanData.loanId || `GL_${Date.now()}_${loanData.branchCode || '01'}`).trim();
         const loanRef = this.db.collection('loans').doc(loanId);
         
-        const payload = {
+        let custPhoto = loanData.customerPhoto || "";
+        let ornPhoto = loanData.ornamentPhoto || "";
+
+        if (typeof custPhoto === "string" && custPhoto.startsWith("data:image") && custPhoto.length > 120000) {
+            try {
+                custPhoto = await this.compressBase64Image(custPhoto, 400, 0.6);
+            } catch (e) {}
+        }
+        if (typeof ornPhoto === "string" && ornPhoto.startsWith("data:image") && ornPhoto.length > 120000) {
+            try {
+                ornPhoto = await this.compressBase64Image(ornPhoto, 400, 0.6);
+            } catch (e) {}
+        }
+
+        const rawPayload = {
             ...loanData,
             id: loanId,
             loanId: loanId,
+            customerPhoto: custPhoto,
+            ornamentPhoto: ornPhoto,
             branchId: String(loanData.branchCode || loanData.branchId || '01'),
             updatedAt: new Date().toISOString(),
             updatedBy: this.currentUser ? this.currentUser.uid : (loanData.updatedBy || 'SYSTEM')
         };
         if (!loanData.createdAt) {
-            payload.createdAt = new Date().toISOString();
-            payload.createdBy = this.currentUser ? this.currentUser.uid : (loanData.createdBy || 'SYSTEM');
+            rawPayload.createdAt = new Date().toISOString();
+            rawPayload.createdBy = this.currentUser ? this.currentUser.uid : (loanData.createdBy || 'SYSTEM');
         }
 
+        // Clean out undefined values to prevent Firestore unsupported field errors
+        const payload = JSON.parse(JSON.stringify(rawPayload));
         await loanRef.set(payload, { merge: true });
+        console.log("[Firebase] Loan written to Firestore successfully:", loanId);
         return payload;
     },
 
