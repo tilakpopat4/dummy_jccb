@@ -396,6 +396,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         });
                         populateLoginBranches();
                         renderBranchMaster();
+                        updateBranchContextUI();
                     }
 
                     // 2. Sync Daily Rates from Cloud Firestore
@@ -732,21 +733,27 @@ function updateBranchContextUI() {
         branchSelect.innerHTML = "";
         if (isHO) {
             branchSelect.disabled = false;
+            branchSelect.style.pointerEvents = "auto";
+            branchSelect.style.backgroundColor = "";
+            branchSelect.style.cursor = "default";
             (state.branches || []).forEach(b => {
                 const opt = document.createElement("option");
                 opt.value = b.code;
                 opt.textContent = b.name;
                 branchSelect.appendChild(opt);
             });
-            branchSelect.value = "99";
+            if (!branchSelect.value) branchSelect.value = "99";
         } else {
             // ONLY the logged-in branch option is present in the list, completely excluding all other branches
             const opt = document.createElement("option");
-            opt.value = state.currentSession.code;
-            opt.textContent = state.currentSession.name;
+            opt.value = String(userBranch);
+            opt.textContent = String(userBranchName);
             branchSelect.appendChild(opt);
-            branchSelect.value = state.currentSession.code;
-            branchSelect.disabled = true; // Fixed to logged-in branch
+            branchSelect.value = String(userBranch);
+            branchSelect.disabled = true; // Fixed and locked to logged-in branch
+            branchSelect.style.pointerEvents = "none";
+            branchSelect.style.backgroundColor = "#f1f5f9";
+            branchSelect.style.cursor = "not-allowed";
         }
     }
 
@@ -1418,6 +1425,7 @@ let isEditingExistingLoan = false;
 let currentEditingLoanId = null;
 
 function initLoanEntryForm() {
+    updateBranchContextUI();
     const form = document.getElementById("gold-loan-form");
     const loanAmountInput = document.getElementById("loan-amount");
     const loanBranchSelect = document.getElementById("loan-branch");
