@@ -545,25 +545,73 @@ document.addEventListener("DOMContentLoaded", () => {
                         });
                     }
 
-                    // 5. Listen for realtime branch loan updates across all PCs
-                    window.FirebaseService.listenLoans(null, (cloudLoans) => {
-                        if (Array.isArray(cloudLoans) && cloudLoans.length > 0) {
-                            // Merge cloud loans into local state
-                            cloudLoans.forEach(cl => {
-                                const lId = cl.loanId || cl.id;
+                    // 5. Initial Loan Sync from Cloud Firestore on startup
+                    try {
+                        const fbLoans = await window.FirebaseService.getLoans();
+                        if (Array.isArray(fbLoans) && fbLoans.length > 0) {
+                            if (!state.loans) state.loans = [];
+                            
+                            fbLoans.forEach(cl => {
+                                const lId = cl.id || cl.loanId;
                                 const lIdx = state.loans.findIndex(x => x.id === lId || x.loanId === lId);
                                 if (lIdx === -1) {
                                     state.loans.unshift(cl);
                                 } else {
-                                    state.loans[lIdx] = { ...state.loans[lIdx], ...cl };
+                                    state.loans[lIdx] = { ...state.loans[lIdx], ...cl, id: lId, loanId: lId };
                                 }
                             });
+
+                            // Backfill any local offline loans into Firestore
+                            state.loans.forEach(localLoan => {
+                                const lId = localLoan.id || localLoan.loanId;
+                                const inCloud = fbLoans.some(cl => (cl.id === lId || cl.loanId === lId));
+                                if (!inCloud && lId) {
+                                    window.FirebaseService.saveLoan(localLoan).catch(e => console.warn("[Firebase] Backfill loan error:", e));
+                                }
+                            });
+
                             saveState();
                             renderDashboard();
                             renderRegisterTable();
                             if (typeof renderReportsTable === "function") renderReportsTable();
+                        } else if (Array.isArray(state.loans) && state.loans.length > 0) {
+                            // First time cloud sync: upload existing local loans to cloud
+                            state.loans.forEach(localLoan => {
+                                window.FirebaseService.saveLoan(localLoan).catch(e => console.warn("[Firebase] Initial loan cloud upload error:", e));
+                            });
                         }
-                    });
+                    } catch (loadLoanErr) {
+                        console.warn("[Firebase] Initial getLoans error:", loadLoanErr);
+                    }
+
+                    // 6. Listen for realtime branch & Head Office loan updates across all PCs
+                    if (typeof window.FirebaseService.listenLoans === "function") {
+                        window.FirebaseService.listenLoans(null, (cloudLoans) => {
+                            if (Array.isArray(cloudLoans) && cloudLoans.length > 0) {
+                                if (!state.loans) state.loans = [];
+                                let changed = false;
+
+                                cloudLoans.forEach(cl => {
+                                    const lId = cl.id || cl.loanId;
+                                    const lIdx = state.loans.findIndex(x => x.id === lId || x.loanId === lId);
+                                    if (lIdx === -1) {
+                                        state.loans.unshift(cl);
+                                        changed = true;
+                                    } else {
+                                        state.loans[lIdx] = { ...state.loans[lIdx], ...cl, id: lId, loanId: lId };
+                                        changed = true;
+                                    }
+                                });
+
+                                if (changed) {
+                                    saveState();
+                                    renderDashboard();
+                                    renderRegisterTable();
+                                    if (typeof renderReportsTable === "function") renderReportsTable();
+                                }
+                            }
+                        });
+                    }
                 } catch (syncErr) {
                     console.warn("[Firebase] Initial Cloud Sync Notice:", syncErr);
                 }
@@ -2424,9 +2472,15 @@ function submitLoanEntry() {
         renderRegisterTable();
         renderCustomerMasterList();
 
-        // Sync Loan Record to Cloud Firestore
+        // Sync Loan Record & Customer Profile to Cloud Firestore
         if (window.FirebaseService && window.FirebaseService.isInitialized) {
-            window.FirebaseService.saveLoan(loanObj).catch(e => console.warn("[Firebase] Loan record cloud sync error:", e));
+            window.FirebaseService.saveLoan(loanObj).then(() => {
+                console.log("[Firebase] Loan synced successfully to cloud:", loanObj.id);
+            }).catch(e => console.warn("[Firebase] Loan record cloud sync error:", e));
+
+            if (custData && typeof window.FirebaseService.saveCustomer === "function") {
+                window.FirebaseService.saveCustomer(custData).catch(e => console.warn("[Firebase] Customer profile cloud sync error:", e));
+            }
         }
 
         // Switch active tab view to Register Tab immediately

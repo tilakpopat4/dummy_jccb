@@ -315,19 +315,20 @@ const FirebaseService = {
      */
     saveLoan: async function(loanData) {
         if (!this.db) throw new Error("Firestore not initialized.");
-        const loanId = loanData.loanId || `LOAN_${Date.now()}_${loanData.branchCode || '01'}`;
+        const loanId = String(loanData.id || loanData.loanId || `LOAN_${Date.now()}_${loanData.branchCode || '01'}`).trim();
         const loanRef = this.db.collection('loans').doc(loanId);
         
         const payload = {
             ...loanData,
+            id: loanId,
             loanId: loanId,
             branchId: String(loanData.branchCode || loanData.branchId || '01'),
             updatedAt: new Date().toISOString(),
-            updatedBy: this.currentUser ? this.currentUser.uid : 'SYSTEM'
+            updatedBy: this.currentUser ? this.currentUser.uid : (loanData.updatedBy || 'SYSTEM')
         };
         if (!loanData.createdAt) {
             payload.createdAt = new Date().toISOString();
-            payload.createdBy = this.currentUser ? this.currentUser.uid : 'SYSTEM';
+            payload.createdBy = this.currentUser ? this.currentUser.uid : (loanData.createdBy || 'SYSTEM');
         }
 
         await loanRef.set(payload, { merge: true });
@@ -335,21 +336,20 @@ const FirebaseService = {
     },
 
     /**
-     * Fetch loans (filtered by branch for branch staff, all for Admin)
+     * Fetch all loans from Firestore (no complex indexing required)
      */
-    getLoans: async function(branchCode) {
+    getLoans: async function(branchCode = null) {
         if (!this.db) return [];
         try {
-            let query = this.db.collection('loans');
-            // If not head office / admin, restrict query to user's branch
-            if (branchCode && branchCode !== '99' && !this.isAdmin()) {
-                query = query.where('branchId', '==', String(branchCode));
-            }
-            const snapshot = await query.orderBy('createdAt', 'desc').get();
+            const snapshot = await this.db.collection('loans').get();
             const list = [];
             snapshot.forEach(doc => {
-                list.push({ id: doc.id, ...doc.data() });
+                const data = doc.data();
+                list.push({ ...data, id: doc.id, loanId: data.loanId || doc.id });
             });
+            if (branchCode && branchCode !== '99') {
+                return list.filter(l => String(l.branchCode || l.branchId) === String(branchCode));
+            }
             return list;
         } catch (error) {
             console.error("[Firebase] Error fetching loans:", error);
@@ -358,18 +358,15 @@ const FirebaseService = {
     },
 
     /**
-     * Realtime listener for loan records
+     * Realtime listener for loan records across all branches & Head Office
      */
     listenLoans: function(branchCode, onUpdate) {
         if (!this.db) return () => {};
-        let query = this.db.collection('loans');
-        if (branchCode && branchCode !== '99' && !this.isAdmin()) {
-            query = query.where('branchId', '==', String(branchCode));
-        }
-        return query.onSnapshot((snapshot) => {
+        return this.db.collection('loans').onSnapshot((snapshot) => {
             const list = [];
             snapshot.forEach(doc => {
-                list.push({ id: doc.id, ...doc.data() });
+                const data = doc.data();
+                list.push({ ...data, id: doc.id, loanId: data.loanId || doc.id });
             });
             if (typeof onUpdate === 'function') {
                 onUpdate(list);
@@ -380,11 +377,12 @@ const FirebaseService = {
     },
 
     /**
-     * Delete loan record (Admin only)
+     * Delete loan record
      */
     deleteLoan: async function(loanId) {
         if (!this.db) throw new Error("Firestore not initialized.");
-        await this.db.collection('loans').doc(loanId).delete();
+        const cleanId = String(loanId).trim();
+        await this.db.collection('loans').doc(cleanId).delete();
     },
 
     // =================================================================
