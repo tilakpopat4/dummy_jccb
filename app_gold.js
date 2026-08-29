@@ -1405,7 +1405,8 @@ function renderDashboard() {
     const isHO = isHeadOfficeSession();
     const userBranch = state.currentSession ? state.currentSession.code : "99";
 
-    const filteredLoans = isHO ? (state.loans || []) : (state.loans || []).filter(l => isBranchMatch(l.branchCode, userBranch));
+    // Aggregate all loans across the bank
+    const filteredLoans = (state.loans || []);
 
     let totalLoans = filteredLoans.length;
     let totalSanctioned = 0;
@@ -2754,23 +2755,17 @@ function renderRegisterTable() {
     // Sync filter-branch dropdown options
     const filterBranchEl = document.getElementById("filter-branch");
     if (filterBranchEl) {
-        if (!isHO) {
-            filterBranchEl.innerHTML = `<option value="${userBranch}">${userBranchName}</option>`;
-            filterBranchEl.value = userBranch;
-            filterBranchEl.disabled = true;
-        } else {
-            filterBranchEl.disabled = false;
-            if (filterBranchEl.options.length <= 1) {
-                const curVal = filterBranchEl.value;
-                filterBranchEl.innerHTML = '<option value="">-- All Branches --</option>';
-                (state.branches || []).forEach(b => {
-                    const opt = document.createElement("option");
-                    opt.value = b.code;
-                    opt.textContent = b.name;
-                    filterBranchEl.appendChild(opt);
-                });
-                if (curVal) filterBranchEl.value = curVal;
-            }
+        filterBranchEl.disabled = false;
+        if (filterBranchEl.options.length <= 1) {
+            const curVal = filterBranchEl.value;
+            filterBranchEl.innerHTML = '<option value="">-- All Branches (બધી શાખાઓ) --</option>';
+            (state.branches || []).forEach(b => {
+                const opt = document.createElement("option");
+                opt.value = b.code;
+                opt.textContent = b.name;
+                filterBranchEl.appendChild(opt);
+            });
+            if (curVal) filterBranchEl.value = curVal;
         }
     }
 
@@ -2780,9 +2775,10 @@ function renderRegisterTable() {
     const dateTo = document.getElementById("filter-date-to") ? document.getElementById("filter-date-to").value : "";
     const product = document.getElementById("filter-product") ? document.getElementById("filter-product").value : "";
 
-    let list = isHO ? (state.loans || []) : (state.loans || []).filter(l => isBranchMatch(l.branchCode, userBranch));
+    // Show all loan entries across all branches and Head Office
+    let list = (state.loans || []);
 
-    if (isHO && filterBranch) list = list.filter(l => isBranchMatch(l.branchCode, filterBranch));
+    if (filterBranch) list = list.filter(l => isBranchMatch(l.branchCode, filterBranch));
     if (product) list = list.filter(l => (l.loanType || "").includes(product));
     if (dateFrom) list = list.filter(l => l.date >= dateFrom);
     if (dateTo) list = list.filter(l => l.date <= dateTo);
