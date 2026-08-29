@@ -411,27 +411,46 @@ function saveState() {
 
 // ==================== APPLICATION INIT ====================
 document.addEventListener("DOMContentLoaded", () => {
-    initClock();
-    initGlobalUppercaseEnforcer();
-    initAuth();
-    initNavigation();
-    initDashboard();
-    initLoanEntryForm();
-    initRegister();
-    initDailyVouchers();
-    initGoldRateMaster();
-    initBranchMaster();
-    initValuerMaster();
-    initProductMaster();
-    initRulesMaster();
-    initCustomerMaster();
-    initSettings();
-    initBackupRestore();
-    initImageCropper();
-    initReminders();
-    initPrintModal();
-    initReports();
-    updateHeaderGoldRate();
+    const safeRun = (fn, name) => {
+        try { if (typeof fn === "function") fn(); } catch (e) { console.warn(`[Init] Error in ${name}:`, e); }
+    };
+
+    safeRun(initClock, "initClock");
+    safeRun(initGlobalUppercaseEnforcer, "initGlobalUppercaseEnforcer");
+    safeRun(initAuth, "initAuth");
+    safeRun(initNavigation, "initNavigation");
+    safeRun(initDashboard, "initDashboard");
+    safeRun(initLoanEntryForm, "initLoanEntryForm");
+    safeRun(initRegister, "initRegister");
+    safeRun(initDailyVouchers, "initDailyVouchers");
+    safeRun(initGoldRateMaster, "initGoldRateMaster");
+    safeRun(initBranchMaster, "initBranchMaster");
+    safeRun(initValuerMaster, "initValuerMaster");
+    safeRun(initProductMaster, "initProductMaster");
+    safeRun(initRulesMaster, "initRulesMaster");
+    safeRun(initCustomerMaster, "initCustomerMaster");
+    safeRun(initSettings, "initSettings");
+    safeRun(initBackupRestore, "initBackupRestore");
+    safeRun(initImageCropper, "initImageCropper");
+    safeRun(initReminders, "initReminders");
+    safeRun(initPrintModal, "initPrintModal");
+    safeRun(initReports, "initReports");
+    safeRun(updateHeaderGoldRate, "updateHeaderGoldRate");
+
+    // Wire manual sync button in header immediately
+    const btnManualSync = document.getElementById("btn-manual-cloud-sync");
+    if (btnManualSync) {
+        btnManualSync.addEventListener("click", (e) => {
+            e.preventDefault();
+            syncCloudData(true);
+        });
+    }
+
+    // Trigger immediate sync on page startup
+    syncCloudData();
+
+    // Continuous 5-second resilient background cloud polling across all machines
+    setInterval(() => syncCloudData(false), 5000);
 
     // Initialize Firebase Realtime Cloud Backend & Background Auto-Sync
     if (window.FirebaseService) {
@@ -476,22 +495,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 });
             }
-        });
-
-        // Wire manual sync button in header
-        const btnManualSync = document.getElementById("btn-manual-cloud-sync");
-        if (btnManualSync) {
-            btnManualSync.addEventListener("click", (e) => {
-                e.preventDefault();
-                syncCloudData(true);
-            });
-        }
-
-        // Trigger immediate sync on page startup
-        syncCloudData();
-
-        // Continuous 5-second resilient background cloud polling across all machines
-        setInterval(() => syncCloudData(false), 5000);
+        }).catch(err => console.warn("[Firebase] Init warning:", err));
     }
 });
 
@@ -7685,6 +7689,10 @@ function initImageCropper() {
     const goldInput = document.getElementById("gold-photo-upload");
     const custPreview = document.getElementById("cust-photo-preview");
     const goldPreview = document.getElementById("gold-photo-preview");
+    const modal = document.getElementById("cropper-modal");
+    const cropBtn = document.getElementById("crop-btn") || document.getElementById("btn-apply-crop");
+    const cancelBtn = document.getElementById("cropper-cancel-btn");
+    const closeBtn = document.getElementById("cropper-close-btn");
 
     async function processImageFile(file, target) {
         if (!file) return;
