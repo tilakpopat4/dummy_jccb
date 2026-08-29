@@ -62,7 +62,16 @@ const FirebaseService = {
 
             this.auth = firebase.auth();
             this.db = firebase.firestore();
-            this.storage = firebase.storage();
+            
+            // Storage is completely optional (works on free Spark plan without storage)
+            if (firebase.storage) {
+                try {
+                    this.storage = firebase.storage();
+                } catch (stErr) {
+                    console.warn("[Firebase] Storage not enabled on project (using Firestore base64/local mode):", stErr);
+                    this.storage = null;
+                }
+            }
 
             if (firebase.analytics) {
                 try {
