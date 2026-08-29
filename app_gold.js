@@ -407,13 +407,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                     }
 
-                    // Realtime listener for Daily Gold Rates across all branches
+                    // Realtime listener for Daily Gold Rates & 24h Lock across all branches
                     if (typeof window.FirebaseService.listenDailyRates === "function") {
                         window.FirebaseService.listenDailyRates((cloudRates) => {
                             if (cloudRates && cloudRates.rate22K > 0) {
                                 const todayStr = getTodayDateYMD();
                                 if (cloudRates.date === todayStr) {
-                                    applyDailyGoldRate(cloudRates.rate22K, cloudRates.date);
+                                    applyDailyGoldRate(cloudRates.rate22K, cloudRates.date, {
+                                        isLocked: cloudRates.isLocked,
+                                        lockedAt: cloudRates.lockedAt,
+                                        lockedUntil: cloudRates.lockedUntil,
+                                        lockedBy: cloudRates.lockedBy
+                                    });
                                 }
                             }
                         });
@@ -1055,7 +1060,130 @@ function updateHeaderGoldRate() {
     headerRateVal.textContent = `₹ ${rate22.toLocaleString("en-IN")}`;
 }
 
-function applyDailyGoldRate(val, targetDate = null) {
+// ==================== 24-HOUR GOLD RATE LOCK ENGINE ====================
+function isDailyGoldRateLocked() {
+    if (!state.goldRates) return false;
+    if (!state.goldRates.isLocked) return false;
+    if (state.goldRates.lockedUntil) {
+        const until = new Date(state.goldRates.lockedUntil).getTime();
+        if (Date.now() > until) {
+            // Lock period expired
+            state.goldRates.isLocked = false;
+            state.goldRates.lockedUntil = null;
+            state.goldRates.lockedAt = null;
+            saveState();
+            return false;
+        }
+    }
+    return true;
+}
+
+function getLockRemainingInfo() {
+    if (!isDailyGoldRateLocked()) {
+        return { isLocked: false, text: "🔓 Unlocked (ભાવ સુધારી શકાય છે)" };
+    }
+    const until = new Date(state.goldRates.lockedUntil);
+    const msLeft = until.getTime() - Date.now();
+    const hoursLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60)));
+    const minsLeft = Math.max(0, Math.floor((msLeft % (1000 * 60 * 60)) / (1000 * 60)));
+    
+    // Format expiration date and time in 12-hour IST format
+    const dateStr = formatDateDMY(getTodayDateYMD(until));
+    let hrs = until.getHours();
+    const ampm = hrs >= 12 ? 'PM' : 'AM';
+    hrs = hrs % 12 || 12;
+    const timeStr = `${String(hrs).padStart(2, '0')}:${String(until.getMinutes()).padStart(2, '0')} ${ampm}`;
+
+    return {
+        isLocked: true,
+        lockedUntil: until,
+        hoursLeft: hoursLeft,
+        minsLeft: minsLeft,
+        formattedTime: `${dateStr} ${timeStr}`,
+        text: `🔒 ૨૪ કલાક માટે લૉક (માન્ય: ${dateStr} ${timeStr} - ${hoursLeft} કલાક ${minsLeft} મિનિટ બાકી)`
+    };
+}
+
+function lockGoldRateFor24Hours() {
+    if (!isHeadOfficeSession()) {
+        alert("સોનાનો ભાવ લૉક કરવાનો અધિકાર ફક્ત હેડ ઓફિસ (Head Office) પાસે છે.");
+        return false;
+    }
+
+    const rate22 = (state.goldRates && state.goldRates["22K"]) || 0;
+    if (rate22 <= 0) {
+        alert("ભાવ લૉક કરતાં પહેલાં આજનો ૨૨ કેરેટ સોનાનો ભાવ દાખલ કરવો જરૂરી છે.");
+        return false;
+    }
+
+    const now = new Date();
+    const lockUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+    if (!state.goldRates) state.goldRates = { "24K": 0, "22K": 0, rateDate: "" };
+    state.goldRates.isLocked = true;
+    state.goldRates.lockedAt = now.toISOString();
+    state.goldRates.lockedUntil = lockUntil.toISOString();
+    state.goldRates.lockedBy = state.currentSession ? state.currentSession.name : "HEAD OFFICE";
+
+    saveState();
+
+    // Sync to Cloud Firestore
+    if (window.FirebaseService && window.FirebaseService.isInitialized && typeof window.FirebaseService.saveDailyRates === "function") {
+        window.FirebaseService.saveDailyRates({
+            rate22K: state.goldRates["22K"],
+            rate24K: state.goldRates["24K"],
+            date: state.goldRates.rateDate || getTodayDateYMD(),
+            isLocked: true,
+            lockedAt: state.goldRates.lockedAt,
+            lockedUntil: state.goldRates.lockedUntil,
+            lockedBy: state.goldRates.lockedBy
+        }).catch(e => console.warn("[Firebase] Lock rate sync error:", e));
+    }
+
+    updateBranchContextUI();
+    renderDashboard();
+    renderGoldRateMaster();
+    showToast("૨૨ કેરેટ સોનાનો ભાવ આગામી ૨૪ કલાક માટે સફળતાપૂર્વક લૉક કરવામાં આવ્યો છે.");
+    return true;
+}
+
+function unlockGoldRate() {
+    if (!isHeadOfficeSession()) {
+        alert("સોનાનો ભાવ અનલૉક કરવાનો અધિકાર ફક્ત હેડ ઓફિસ (Head Office) પાસે છે.");
+        return false;
+    }
+
+    if (!confirm("શું તમે સોનાનો ભાવ અનલૉક કરવા માંગો છો જેથી નવો ભાવ દાખલ અથવા સુધારી શકાય?")) {
+        return false;
+    }
+
+    if (!state.goldRates) state.goldRates = { "24K": 0, "22K": 0, rateDate: "" };
+    state.goldRates.isLocked = false;
+    state.goldRates.lockedUntil = null;
+    state.goldRates.lockedAt = null;
+
+    saveState();
+
+    // Sync to Cloud Firestore
+    if (window.FirebaseService && window.FirebaseService.isInitialized && typeof window.FirebaseService.saveDailyRates === "function") {
+        window.FirebaseService.saveDailyRates({
+            rate22K: state.goldRates["22K"],
+            rate24K: state.goldRates["24K"],
+            date: state.goldRates.rateDate || getTodayDateYMD(),
+            isLocked: false,
+            lockedAt: null,
+            lockedUntil: null
+        }).catch(e => console.warn("[Firebase] Unlock rate sync error:", e));
+    }
+
+    updateBranchContextUI();
+    renderDashboard();
+    renderGoldRateMaster();
+    showToast("સોનાનો ભાવ અનલૉક થયો. હવે નવો ભાવ દાખલ અથવા સુધારી શકાશે.");
+    return true;
+}
+
+function applyDailyGoldRate(val, targetDate = null, lockData = null) {
     const todayStr = getTodayDateYMD();
     const date = targetDate || todayStr;
     const rate22 = parseFloat(val || 0);
@@ -1080,6 +1208,13 @@ function applyDailyGoldRate(val, targetDate = null) {
         state.goldRates.rateDate = todayStr;
         state.goldRates.lastUpdated = new Date().toISOString();
 
+        if (lockData) {
+            state.goldRates.isLocked = !!lockData.isLocked;
+            state.goldRates.lockedAt = lockData.lockedAt || null;
+            state.goldRates.lockedUntil = lockData.lockedUntil || null;
+            state.goldRates.lockedBy = lockData.lockedBy || null;
+        }
+
         // Synchronize rate input fields across all views
         const valRateInput = document.getElementById("val-gold-rate-input");
         if (valRateInput) valRateInput.value = rate22;
@@ -1095,6 +1230,7 @@ function applyDailyGoldRate(val, targetDate = null) {
     updateHeaderGoldRate();
     renderDashboard();
     renderGoldRateMaster();
+    updateBranchContextUI();
     if (typeof updateOrnamentsTotals === "function") updateOrnamentsTotals();
     if (typeof calculateAllCharges === "function") calculateAllCharges();
     return true;
@@ -1105,6 +1241,14 @@ function setDailyGoldRate(val, targetDate = null) {
         alert("દૈનિક સોનાનો ભાવ ફક્ત હેડ ઓફિસ (Head Office) દ્વારા જ દાખલ અથવા સુધારી શકાય છે. શાખા માટે આ ફીલ્ડ લોક છે.");
         return false;
     }
+
+    // If rate is currently locked for 24h, require unlock first
+    if (isDailyGoldRateLocked()) {
+        const lockInfo = getLockRemainingInfo();
+        alert(`સોનાનો ભાવ હાલ ૨૪ કલાક માટે લૉક કરેલ છે (માન્ય: ${lockInfo.formattedTime || ''}). નવો ભાવ સેટ કરવા માટે પહેલા 'Unlock Rate' બટન પર ક્લિક કરીને અનલૉક કરો.`);
+        return false;
+    }
+
     const todayStr = getTodayDateYMD();
     const date = targetDate || todayStr;
     const rate22 = parseFloat(val || 0);
@@ -1120,15 +1264,18 @@ function setDailyGoldRate(val, targetDate = null) {
     const rate24 = Math.round(rate22 * (24 / 22));
 
     // Sync Daily Rates to Cloud Firestore
-    if (window.FirebaseService && window.FirebaseService.isInitialized) {
+    if (window.FirebaseService && window.FirebaseService.isInitialized && typeof window.FirebaseService.saveDailyRates === "function") {
         window.FirebaseService.saveDailyRates({
             date: date,
             rate22K: rate22,
-            rate24K: rate24
+            rate24K: rate24,
+            isLocked: false,
+            lockedAt: null,
+            lockedUntil: null
         }).catch(e => console.warn("[Firebase] Daily rate cloud sync error:", e));
     }
 
-    showToast(`તા. ${formatDateDMY(date)} નો ૨૨ કેરેટ સોનાનો ભાવ ₹${rate22.toLocaleString("en-IN")}/10g સેવ થયો છે અને રાત્રે ૧૨:૦૦ વાગ્યા સુધી માન્ય રહેશે.`);
+    showToast(`તા. ${formatDateDMY(date)} નો ૨૨ કેરેટ સોનાનો ભાવ ₹${rate22.toLocaleString("en-IN")}/10g સેવ થયો છે.`);
     return true;
 }
 
@@ -1138,6 +1285,22 @@ function initDashboard() {
 
     const rateInput = document.getElementById("dashboard-gold-rate");
     const saveRateBtn = document.getElementById("save-gold-rate-btn") || document.getElementById("btn-save-gold-rate");
+    const btnLock24h = document.getElementById("btn-lock-rate-24h");
+    const btnUnlock = document.getElementById("btn-unlock-rate");
+
+    if (btnLock24h) {
+        btnLock24h.onclick = (e) => {
+            e.preventDefault();
+            lockGoldRateFor24Hours();
+        };
+    }
+
+    if (btnUnlock) {
+        btnUnlock.onclick = (e) => {
+            e.preventDefault();
+            unlockGoldRate();
+        };
+    }
 
     if (saveRateBtn) {
         saveRateBtn.onclick = (e) => {
@@ -4232,6 +4395,22 @@ function initGoldRateMaster() {
             if (setDailyGoldRate(rate22, date)) {
                 showToast(`તા. ${formatDateDMY(date)} નો ૨૨ કેરેટ સોનાનો ભાવ ₹${rate22.toLocaleString("en-IN")}/10g સફળતાપૂર્વક સેટ થયો.`);
             }
+        };
+    }
+
+    const masterBtnLock24h = document.getElementById("master-btn-lock-24h");
+    if (masterBtnLock24h) {
+        masterBtnLock24h.onclick = (e) => {
+            e.preventDefault();
+            lockGoldRateFor24Hours();
+        };
+    }
+
+    const masterBtnUnlock = document.getElementById("master-btn-unlock");
+    if (masterBtnUnlock) {
+        masterBtnUnlock.onclick = (e) => {
+            e.preventDefault();
+            unlockGoldRate();
         };
     }
 

@@ -263,7 +263,16 @@
                                                 <i class="fa-solid fa-floppy-disk"></i> Save
                                             </button>
                                         </div>
-                                        <span class="rate-note" id="dashboard-rate-note">* Set by Head Office (Locked for the day across all branches)</span>
+                                        <div id="dashboard-lock-controls" style="display:flex; gap:6px; margin-top:6px; align-items:center; flex-wrap:wrap;">
+                                            <button type="button" id="btn-lock-rate-24h" class="btn btn-sm" style="background:#f59e0b; color:#ffffff; font-size:11px; padding:3px 8px; border:none; border-radius:4px; font-weight:700; cursor:pointer;">
+                                                <i class="fa-solid fa-lock"></i> Lock Rate (24h)
+                                            </button>
+                                            <button type="button" id="btn-unlock-rate" class="btn btn-sm hidden" style="background:#dc2626; color:#ffffff; font-size:11px; padding:3px 8px; border:none; border-radius:4px; font-weight:700; cursor:pointer;">
+                                                <i class="fa-solid fa-lock-open"></i> Unlock Rate
+                                            </button>
+                                            <span id="dashboard-lock-status-text" style="font-size:11px; color:#475569; font-weight:600;"></span>
+                                        </div>
+                                        <span class="rate-note" id="dashboard-rate-note">* Set by Head Office (Locked for 24 hours across all branches)</span>
                                     </div>
                                 </div>
                             </div>
@@ -1061,7 +1070,14 @@
                     <div class="master-layout-grid">
                         <div class="master-form-card card">
                             <h3 id="gold-rate-form-title"><i class="fa-solid fa-plus-circle"></i> Set / Update 22K Gold Rate</h3>
-                            <p class="helper-text-block">Head Office can set or update 22K gold market rate for any specific date.</p>
+                            <p class="helper-text-block" id="gold-rate-helper-text">Head Office can set or update 22K gold market rate for any specific date.</p>
+                            
+                            <!-- 24h Lock Status Banner -->
+                            <div id="master-rate-lock-banner" class="hidden" style="margin-top:10px; margin-bottom:10px; padding:10px 14px; border-radius:6px; font-size:12px; font-weight:600; display:flex; justify-content:space-between; align-items:center; background:#fef3c7; color:#92400e; border:1.5px solid #fcd34d;">
+                                <span><i class="fa-solid fa-lock"></i> <span id="master-lock-banner-text">Rate Locked for 24 Hours</span></span>
+                                <button type="button" id="master-btn-unlock" class="btn btn-sm" style="background:#dc2626; color:#ffffff; padding:3px 10px; font-size:11.5px; border:none; border-radius:4px; font-weight:700; cursor:pointer;">Unlock</button>
+                            </div>
+
                             <form id="gold-rate-master-form" style="margin-top: 15px;">
                                 <div class="form-group">
                                     <label for="m-gold-rate-date">Date (તારીખ)</label>
@@ -1076,6 +1092,9 @@
                                 </div>
                                 <button type="submit" id="btn-save-gold-rate-master" class="btn btn-gold btn-block" style="margin-top: 15px;">
                                     <i class="fa-solid fa-floppy-disk"></i> Save / Update 22K Gold Rate
+                                </button>
+                                <button type="button" id="master-btn-lock-24h" class="btn btn-block" style="margin-top: 8px; background:#f59e0b; color:#ffffff; font-weight:700; cursor:pointer;">
+                                    <i class="fa-solid fa-lock"></i> Lock Rate for 24 Hours (૨૪ કલાક માટે લૉક કરો)
                                 </button>
                             </form>
                         </div>
