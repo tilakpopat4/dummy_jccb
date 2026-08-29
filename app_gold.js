@@ -1111,13 +1111,25 @@ function initNavigation() {
         });
     });
 
-    // Shortcut buttons in dashboard
-    document.querySelectorAll(".shortcut-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const targetTab = btn.getAttribute("data-go-tab");
+    // Shortcut & Action buttons across dashboard (e.g. View Register, New Loan Entry, etc.)
+    document.querySelectorAll(".shortcut-btn, .view-all-register-btn, [data-go-tab]").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            const targetTab = btn.getAttribute("data-go-tab") || (btn.classList.contains("view-all-register-btn") ? "register-view" : "");
             if (targetTab) {
                 const navBtn = document.querySelector(`.sidebar-nav .nav-item[data-tab="${targetTab}"]`);
-                if (navBtn) navBtn.click();
+                if (navBtn) {
+                    navBtn.click();
+                } else {
+                    // Direct tab switch fallback
+                    document.querySelectorAll(".tab-content").forEach(tab => tab.classList.add("hidden"));
+                    document.querySelectorAll(".sidebar-nav .nav-item").forEach(b => b.classList.remove("active"));
+                    const targetEl = document.getElementById(targetTab);
+                    if (targetEl) targetEl.classList.remove("hidden");
+                    if (targetTab === "register-view" && typeof renderRegisterTable === "function") {
+                        renderRegisterTable();
+                    }
+                }
             }
         });
     });
