@@ -1,3 +1,94 @@
+// ==================== ROLE-BASED ACCESS CONTROL (RBAC) ENGINE ====================
+const ROLES = {
+    ADMIN: "admin", // Head Office Super Admin (Full System Access)
+    BRANCH_MANAGER: "branch_manager", // Branch Manager (Loan Entry, Customer Master, Branch Reports)
+    BRANCH_OPERATOR: "branch_operator", // Loan Operator (Loan Entry & Document Printing)
+    AUDITOR: "auditor" // Auditor / Inspector (Read-Only access across all branches)
+};
+
+const ROLE_DEFINITIONS = {
+    [ROLES.ADMIN]: {
+        key: ROLES.ADMIN,
+        title: "Head Office Admin",
+        titleGuj: "મુખ્ય સંચાલક (Super Admin)",
+        badgeClass: "badge-primary",
+        icon: "fa-crown"
+    },
+    [ROLES.BRANCH_MANAGER]: {
+        key: ROLES.BRANCH_MANAGER,
+        title: "Branch Manager",
+        titleGuj: "શાખા મેનેજર",
+        badgeClass: "badge-gold",
+        icon: "fa-user-tie"
+    },
+    [ROLES.BRANCH_OPERATOR]: {
+        key: ROLES.BRANCH_OPERATOR,
+        title: "Loan Operator",
+        titleGuj: "લોન ઓપરેટર",
+        badgeClass: "badge-secondary",
+        icon: "fa-user-pen"
+    },
+    [ROLES.AUDITOR]: {
+        key: ROLES.AUDITOR,
+        title: "Auditor / Inspector",
+        titleGuj: "ઓડિટર / ઇન્સ્પેક્ટર",
+        badgeClass: "badge-info",
+        icon: "fa-magnifying-glass-chart"
+    }
+};
+
+function getUserRole(session = null) {
+    const s = session || (state ? state.currentSession : null);
+    if (!s) return ROLES.BRANCH_MANAGER;
+    if (s.isHO === true || String(s.code) === "99" || String(s.code) === "099") {
+        return s.role || ROLES.ADMIN;
+    }
+    return s.role || ROLES.BRANCH_MANAGER;
+}
+
+function getRoleBadgeHTML(roleKey) {
+    const r = ROLE_DEFINITIONS[roleKey] || ROLE_DEFINITIONS[ROLES.BRANCH_MANAGER];
+    return `<span class="badge ${r.badgeClass}" style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:4px;"><i class="fa-solid ${r.icon}"></i> ${r.title}</span>`;
+}
+
+function hasPermission(permissionName, targetBranchCode = null) {
+    const role = getUserRole();
+    if (!role) return false;
+    if (role === ROLES.ADMIN) return true; // Super Admin has all privileges
+
+    switch (permissionName) {
+        case "EDIT_GOLD_RATE":
+        case "LOCK_GOLD_RATE":
+        case "DELETE_LOAN":
+        case "MANAGE_BRANCHES":
+        case "MANAGE_VALUERS":
+        case "MANAGE_PRODUCTS":
+        case "MANAGE_RULES":
+        case "BACKUP_RESTORE":
+        case "ACCOUNT_SETTINGS":
+            return role === ROLES.ADMIN;
+
+        case "CREATE_LOAN":
+        case "EDIT_LOAN":
+            if (role === ROLES.AUDITOR) return false; // Auditor is strictly read-only
+            if (targetBranchCode && state.currentSession) return isBranchMatch(state.currentSession.code, targetBranchCode);
+            return true;
+
+        case "VIEW_LOANS":
+        case "VIEW_REPORTS":
+        case "VIEW_VOUCHERS":
+            if (role === ROLES.ADMIN || role === ROLES.AUDITOR) return true;
+            if (targetBranchCode && state.currentSession) return isBranchMatch(state.currentSession.code, targetBranchCode);
+            return true;
+
+        case "MANAGE_CUSTOMERS":
+            return role === ROLES.ADMIN || role === ROLES.BRANCH_MANAGER || role === ROLES.BRANCH_OPERATOR;
+
+        default:
+            return false;
+    }
+}
+
 // ==========================================================================
 // THE JUNAGADH COMMERCIAL CO-OPERATIVE BANK LTD. - GOLD LOAN PORTAL (v3.0)
 // Configured with Fully Editable Rules Master (HO Authorized) & Dynamic Calculations
@@ -9,23 +100,23 @@ const LOGO_SRC = "jccb-logo.png";
 
 // Bank Branches
 const DEFAULT_BRANCHES = [
-    { code: "99", name: "99 HEAD OFFICE", isHO: true, password: "Rahul#80810" },
-    { code: "01", name: "01 AZADCHOWK BRANCH", isHO: false, password: "Admin@123" },
-    { code: "02", name: "02 JOSHIPARA BRANCH", isHO: false, password: "Admin@123" },
-    { code: "03", name: "03 DOLATPARA BRANCH", isHO: false, password: "Admin@123" },
-    { code: "04", name: "04 KODINAR BRANCH", isHO: false, password: "Admin@123" },
-    { code: "05", name: "05 KESHOD BRANCH", isHO: false, password: "Admin@123" },
-    { code: "06", name: "06 VANTHALI BRANCH", isHO: false, password: "Admin@123" },
-    { code: "07", name: "07 MANAVADAR BRANCH", isHO: false, password: "Admin@123" },
-    { code: "08", name: "08 GANDHINAGAR BRANCH", isHO: false, password: "Admin@123" },
-    { code: "09", name: "09 LIMBDI BRANCH", isHO: false, password: "Admin@123" },
-    { code: "10", name: "10 MENDARDA BRANCH", isHO: false, password: "Admin@123" },
-    { code: "11", name: "11 VISAVADAR BRANCH", isHO: false, password: "Admin@123" },
-    { code: "12", name: "12 JAMNAGAR BRANCH", isHO: false, password: "Admin@123" },
-    { code: "13", name: "13 BUS STAND BRANCH", isHO: false, password: "Admin@123" },
-    { code: "14", name: "14 LATHI BRANCH", isHO: false, password: "Admin@123" },
-    { code: "16", name: "16 AHMEDABAD BRANCH", isHO: false, password: "Admin@123" },
-    { code: "17", name: "17 RAJKOT BRANCH", isHO: false, password: "Admin@123" }
+    { code: "99", name: "99 HEAD OFFICE", role: ROLES.ADMIN, isHO: true, password: "Rahul#80810" },
+    { code: "01", name: "01 AZADCHOWK BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "02", name: "02 JOSHIPARA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "03", name: "03 DOLATPARA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "04", name: "04 KODINAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "05", name: "05 KESHOD BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "06", name: "06 VANTHALI BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "07", name: "07 MANAVADAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "08", name: "08 GANDHINAGAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "09", name: "09 LIMBDI BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "10", name: "10 MENDARDA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "11", name: "11 VISAVADAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "12", name: "12 JAMNAGAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "13", name: "13 BUS STAND BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "14", name: "14 LATHI BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "16", name: "16 AHMEDABAD BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "17", name: "17 RAJKOT BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" }
 ];
 
 // Product Schemes
@@ -724,8 +815,22 @@ function showApp() {
 
 function updateBranchContextUI() {
     const isHO = isHeadOfficeSession();
+    const userRole = getUserRole();
     const userBranch = state.currentSession ? state.currentSession.code : "99";
     const userBranchName = state.currentSession ? state.currentSession.name : "99 HEAD OFFICE";
+
+    // 0. Update Role Badges in Sidebar and Dashboard Header
+    const roleDef = ROLE_DEFINITIONS[userRole] || ROLE_DEFINITIONS[ROLES.BRANCH_MANAGER];
+    const userRoleBadge = document.getElementById("current-user-role-badge");
+    const welcomeRoleBadge = document.getElementById("welcome-user-role-badge");
+    if (userRoleBadge) {
+        userRoleBadge.className = `badge ${roleDef.badgeClass}`;
+        userRoleBadge.innerHTML = `<i class="fa-solid ${roleDef.icon}"></i> ${roleDef.title}`;
+    }
+    if (welcomeRoleBadge) {
+        welcomeRoleBadge.className = `badge ${roleDef.badgeClass}`;
+        welcomeRoleBadge.innerHTML = `<i class="fa-solid ${roleDef.icon}"></i> ${roleDef.title}`;
+    }
 
     // 1. Loan Branch Select in Loan Entry Sheet (Strict single option and locked for branch)
     const branchSelect = document.getElementById("loan-branch");
@@ -4629,6 +4734,8 @@ function resetBranchMasterForm() {
 
     const passInput = document.getElementById("branch-password");
     if (passInput) passInput.value = "Admin@123";
+    const roleSelect = document.getElementById("branch-role");
+    if (roleSelect) roleSelect.value = "branch_manager";
 
     const titleEl = document.getElementById("branch-form-title");
     if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-code-branch"></i> Add New Branch Office';
@@ -4663,16 +4770,20 @@ function renderBranchMaster() {
     list.forEach(b => {
         const tr = document.createElement("tr");
         const passDisplay = b.password || (b.code === "99" ? "Rahul#80810" : "Admin@123");
+        const branchRole = b.role || (b.isHO || b.code === "99" ? ROLES.ADMIN : ROLES.BRANCH_MANAGER);
+        const roleBadge = getRoleBadgeHTML(branchRole);
+
         tr.innerHTML = `
             <td><span class="badge badge-primary font-bold">${b.code}</span></td>
             <td><strong>${b.name}</strong> ${b.isHO ? '<span class="badge badge-gold" style="margin-left:5px; font-size:10px;">HO</span>' : ''}</td>
+            <td>${roleBadge}</td>
             <td>
                 <span class="branch-passcode-cell" style="font-family:monospace; background:#f1f5f9; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:600;">
                     ${passDisplay}
                 </span>
             </td>
             <td style="text-align:center; white-space:nowrap;">
-                <button type="button" class="btn-icon-blue edit-branch-btn" data-code="${b.code}" title="Edit Branch & Password"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button type="button" class="btn-icon-blue edit-branch-btn" data-code="${b.code}" title="Edit Branch, Role & Password"><i class="fa-solid fa-pen-to-square"></i></button>
                 ${b.code !== "99" ? `<button type="button" class="btn-icon-red delete-branch-btn" data-code="${b.code}" title="Delete Branch"><i class="fa-solid fa-trash-can"></i></button>` : ""}
             </td>
         `;
@@ -4705,6 +4816,10 @@ function renderBranchMaster() {
             }
             document.getElementById("branch-name").value = branchName;
             document.getElementById("branch-password").value = b.password || (b.code === "99" ? "Rahul#80810" : "Admin@123");
+            const roleSelect = document.getElementById("branch-role");
+            if (roleSelect) {
+                roleSelect.value = b.role || (b.isHO || b.code === "99" ? ROLES.ADMIN : ROLES.BRANCH_MANAGER);
+            }
 
             const titleEl = document.getElementById("branch-form-title");
             if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Edit Branch Office';

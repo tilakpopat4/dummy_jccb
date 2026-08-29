@@ -131,9 +131,12 @@
                     <img src="jccb-logo.png" alt="JCCB Logo" class="sidebar-logo-img">
                     <span class="logo-text">JCCB GOLD</span>
                 </div>
-                <div class="branch-indicator">
-                    <span class="indicator-dot"></span>
-                    <span id="current-user-branch">HEAD OFFICE</span>
+                <div class="branch-indicator" style="align-items:flex-start;">
+                    <span class="indicator-dot" style="margin-top:5px;"></span>
+                    <div>
+                        <span id="current-user-branch" style="display:block; font-weight:700;">HEAD OFFICE</span>
+                        <span id="current-user-role-badge" class="badge badge-primary" style="font-size:10px; margin-top:3px; display:inline-block;">👑 Super Admin</span>
+                    </div>
                 </div>
             </div>
             
@@ -233,9 +236,11 @@
                         <div class="welcome-banner-row">
                             <!-- 1. LEFT: Welcome Greeting & Info -->
                             <div class="welcome-left-col">
-                                <div class="welcome-badge"><i class="fa-solid fa-gem text-gold"></i> સોના ધિરાણ (Gold Loan)</div>
-                                <h2>Welcome, <span id="welcome-branch-name">HEAD OFFICE</span></h2>
-                                <p>Manage daily gold loan transactions, vault records & accounting logs efficiently.</p>
+                                <div class="welcome-text-block">
+                                    <span class="bank-tag"><i class="fa-solid fa-building-columns"></i> The Junagadh Commercial Co-op. Bank Ltd.</span>
+                                    <h2>Welcome, <span id="welcome-branch-name">HEAD OFFICE</span> <span id="welcome-user-role-badge" class="badge" style="font-size:12px; vertical-align:middle; margin-left:8px;">Super Admin</span></h2>
+                                    <p>Gold Loan Management, Valuation, and Verification System</p>
+                                </div>
                             </div>
 
                             <!-- 2. CENTER: Real Gold Ornaments + Currency Cash Bundles Showcase -->
@@ -1144,6 +1149,15 @@
                                     <input type="text" id="branch-name" placeholder="e.g. SURAT BRANCH" required>
                                 </div>
                                 <div class="form-group">
+                                    <label for="branch-role">Assigned System Role / યુઝર રોલ</label>
+                                    <select id="branch-role" required style="font-weight:600;">
+                                        <option value="admin">👑 Head Office Admin (Super Admin - Full Access)</option>
+                                        <option value="branch_manager" selected>🏢 Branch Manager (શાખા મેનેજર - Loan Entry, Reports, Vouchers)</option>
+                                        <option value="branch_operator">📝 Loan Operator (શાખા ઓપરેટર - Loan Entry & Print)</option>
+                                        <option value="auditor">🔍 Auditor / Inspector (ઓડિટર - All Branches Read-Only)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
                                     <label for="branch-password">Branch Login Password / પાસવર્ડ</label>
                                     <div style="display:flex; gap:8px;">
                                         <input type="text" id="branch-password" placeholder="e.g. Admin@123" value="Admin@123" required style="flex:1;">
@@ -1174,6 +1188,7 @@
                                         <tr>
                                             <th style="width:65px;">Code</th>
                                             <th>Branch Title</th>
+                                            <th>Role (રોલ / હોદ્દો)</th>
                                             <th>Login Passcode</th>
                                             <th style="width:95px; text-align:center;">Action</th>
                                         </tr>
