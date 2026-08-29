@@ -364,6 +364,64 @@ document.addEventListener("DOMContentLoaded", () => {
     initPrintModal();
     initReports();
     updateHeaderGoldRate();
+
+    // Initialize Firebase Realtime Cloud Backend
+    if (window.FirebaseService) {
+        window.FirebaseService.init().then(async (connected) => {
+            if (connected) {
+                console.log("[Firebase] Central Cloud Database Connected.");
+                try {
+                    // Sync Branches from Cloud Firestore
+                    const fbBranches = await window.FirebaseService.getBranches();
+                    if (Array.isArray(fbBranches) && fbBranches.length > 0) {
+                        fbBranches.forEach(fb => {
+                            const bCode = fb.branchCode || fb.code;
+                            const bName = fb.branchName || fb.name;
+                            const idx = state.branches.findIndex(b => b.code === bCode);
+                            if (idx !== -1) {
+                                state.branches[idx] = { ...state.branches[idx], ...fb, code: bCode, name: bName };
+                            } else {
+                                state.branches.push({ code: bCode, name: bName, password: fb.password || "Admin@123", isHO: (bCode === "99") });
+                            }
+                        });
+                        populateLoginBranches();
+                        renderBranchMaster();
+                    }
+
+                    // Sync Daily Rates from Cloud Firestore
+                    const fbRates = await window.FirebaseService.getDailyRates();
+                    if (fbRates && fbRates.rate22K > 0) {
+                        const todayStr = getTodayDateYMD();
+                        if (fbRates.date === todayStr) {
+                            setDailyGoldRate(fbRates.rate22K, fbRates.date);
+                        }
+                    }
+
+                    // Listen for realtime branch loan updates
+                    const currentBranch = state.currentSession ? state.currentSession.code : null;
+                    window.FirebaseService.listenLoans(currentBranch, (cloudLoans) => {
+                        if (Array.isArray(cloudLoans) && cloudLoans.length > 0) {
+                            // Merge cloud loans into local state
+                            cloudLoans.forEach(cl => {
+                                const lId = cl.loanId || cl.id;
+                                const lIdx = state.loans.findIndex(x => x.id === lId || x.loanId === lId);
+                                if (lIdx === -1) {
+                                    state.loans.unshift(cl);
+                                } else {
+                                    state.loans[lIdx] = { ...state.loans[lIdx], ...cl };
+                                }
+                            });
+                            saveState();
+                            renderDashboard();
+                            renderRegisterTable();
+                        }
+                    });
+                } catch (syncErr) {
+                    console.warn("[Firebase] Initial Cloud Sync Notice:", syncErr);
+                }
+            }
+        });
+    }
 });
 
 // ==================== GLOBAL UPPERCASE & ENGLISH ENFORCER ====================
@@ -920,6 +978,16 @@ function setDailyGoldRate(val, targetDate = null) {
     renderGoldRateMaster();
     if (typeof updateOrnamentsTotals === "function") updateOrnamentsTotals();
     if (typeof calculateAllCharges === "function") calculateAllCharges();
+
+    // Sync Daily Rates to Cloud Firestore
+    if (window.FirebaseService && window.FirebaseService.isInitialized) {
+        window.FirebaseService.saveDailyRates({
+            date: date,
+            rate22K: rate22,
+            rate24K: rate24
+        }).catch(e => console.warn("[Firebase] Daily rate cloud sync error:", e));
+    }
+
     showToast(`તા. ${formatDateDMY(date)} નો ૨૨ કેરેટ સોનાનો ભાવ ₹${rate22.toLocaleString("en-IN")}/10g સેવ થયો છે અને રાત્રે ૧૨:૦૦ વાગ્યા સુધી માન્ય રહેશે.`);
     return true;
 }
@@ -2049,6 +2117,11 @@ function submitLoanEntry() {
         renderRegisterTable();
         renderCustomerMasterList();
 
+        // Sync Loan Record to Cloud Firestore
+        if (window.FirebaseService && window.FirebaseService.isInitialized) {
+            window.FirebaseService.saveLoan(loanObj).catch(e => console.warn("[Firebase] Loan record cloud sync error:", e));
+        }
+
         // Switch active tab view to Register Tab immediately
         document.querySelectorAll(".tab-content").forEach(tab => tab.classList.add("hidden"));
         document.querySelectorAll(".sidebar-nav .nav-item").forEach(b => b.classList.remove("active"));
@@ -2581,6 +2654,12 @@ function deleteLoanRecord(id) {
         saveState();
         renderDashboard();
         renderRegisterTable();
+
+        // Delete from Cloud Firestore (Admin privilege)
+        if (window.FirebaseService && window.FirebaseService.isInitialized) {
+            window.FirebaseService.deleteLoan(id).catch(e => console.warn("[Firebase] Loan delete cloud error:", e));
+        }
+
         showToast("Loan entry deleted.");
     }
 }
@@ -4172,6 +4251,17 @@ function initBranchMaster() {
             renderBranchMaster();
             updateBranchContextUI();
             populateLoginBranches();
+
+            // Sync Branch to Cloud Firestore (Admin privilege)
+            if (window.FirebaseService && window.FirebaseService.isInitialized) {
+                window.FirebaseService.saveBranch({
+                    branchCode: code,
+                    branchName: name,
+                    password: password,
+                    isHeadOffice: (code === "99"),
+                    isActive: true
+                }).catch(e => console.warn("[Firebase] Branch cloud save error:", e));
+            }
         });
     }
 }
@@ -4292,6 +4382,12 @@ function renderBranchMaster() {
                 renderBranchMaster();
                 updateBranchContextUI();
                 populateLoginBranches();
+
+                // Delete Branch from Cloud Firestore (Admin privilege)
+                if (window.FirebaseService && window.FirebaseService.isInitialized) {
+                    window.FirebaseService.deleteBranch(code).catch(e => console.warn("[Firebase] Branch cloud delete error:", e));
+                }
+
                 showToast("Branch removed successfully.");
             }
         });

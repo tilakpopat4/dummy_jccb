@@ -1,59 +1,105 @@
 /**
  * The Junagadh Commercial Co-operative Bank Ltd. (JCCB)
- * Firebase Configuration & RBAC Service
+ * Firebase Configuration & Realtime RBAC Database Engine
  */
 
 const firebaseConfig = {
-    apiKey: "YOUR_FIREBASE_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAOIUkyCR_88wGGXb10qmdyK13xWPDSOCU",
+  authDomain: "jccbgold.firebaseapp.com",
+  projectId: "jccbgold",
+  storageBucket: "jccbgold.firebasestorage.app",
+  messagingSenderId: "665851575048",
+  appId: "1:665851575048:web:a823afb8824c80abe14abd",
+  measurementId: "G-KGRPF845CW"
 };
 
-// Global Firebase State
+// Default static branch list used for initial seed / offline fallback
+const DEFAULT_JCCB_BRANCHES = [
+    { branchCode: "99", branchName: "HEAD OFFICE", branchNameGuj: "હેડ ઓફિસ (મુખ્ય કચેરી)", isActive: true, isHeadOffice: true },
+    { branchCode: "01", branchName: "AZADCHOWK BRANCH", branchNameGuj: "આઝાદચોક શાખા", isActive: true },
+    { branchCode: "02", branchName: "JOSHIPARA BRANCH", branchNameGuj: "જોશીપરા શાખા", isActive: true },
+    { branchCode: "03", branchName: "DOLATPARA BRANCH", branchNameGuj: "દોલતપરા શાખા", isActive: true },
+    { branchCode: "04", branchName: "KODINAR BRANCH", branchNameGuj: "કોડીનાર શાખા", isActive: true },
+    { branchCode: "05", branchName: "KESHOD BRANCH", branchNameGuj: "કેશોદ શાખા", isActive: true },
+    { branchCode: "06", branchName: "VANTHALI BRANCH", branchNameGuj: "વંથલી શાખા", isActive: true },
+    { branchCode: "07", branchName: "MANAVADAR BRANCH", branchNameGuj: "માણાવદર શાખા", isActive: true },
+    { branchCode: "08", branchName: "GANDHINAGAR BRANCH", branchNameGuj: "ગાંધીનગર શાખા", isActive: true },
+    { branchCode: "09", branchName: "LIMBDI BRANCH", branchNameGuj: "લીંબડી શાખા", isActive: true },
+    { branchCode: "10", branchName: "MENDARDA BRANCH", branchNameGuj: "મેંદરડા શાખા", isActive: true },
+    { branchCode: "11", branchName: "VISAVADAR BRANCH", branchNameGuj: "વિસાવદર શાખા", isActive: true },
+    { branchCode: "12", branchName: "JAMNAGAR BRANCH", branchNameGuj: "જામનગર શાખા", isActive: true },
+    { branchCode: "13", branchName: "BUS STAND BRANCH", branchNameGuj: "બસ સ્ટેન્ડ શાખા", isActive: true },
+    { branchCode: "14", branchName: "LATHI BRANCH", branchNameGuj: "લાઠી શાખા", isActive: true },
+    { branchCode: "16", branchName: "AHMEDABAD BRANCH", branchNameGuj: "અમદાવાદ શાખા", isActive: true },
+    { branchCode: "17", branchName: "RAJKOT BRANCH", branchNameGuj: "રાજકોટ શાખા", isActive: true }
+];
+
 const FirebaseService = {
     app: null,
     auth: null,
     db: null,
     storage: null,
+    analytics: null,
+    isInitialized: false,
     currentUser: null,
     userProfile: null, // { uid, email, role: 'admin'|'branch_manager'|'branch_user', branchId, branchName, isActive }
 
     /**
-     * Initialize Firebase SDK
+     * Initialize Firebase App and Services
      */
-    init: function() {
-        if (typeof firebase === 'undefined') {
-            console.error("Firebase SDK script not loaded.");
-            return;
-        }
-
-        if (!firebase.apps.length) {
-            this.app = firebase.initializeApp(firebaseConfig);
-        } else {
-            this.app = firebase.app();
-        }
-
-        this.auth = firebase.auth();
-        this.db = firebase.firestore();
-        this.storage = firebase.storage();
-
-        // Enable offline persistence for Firestore (banking reliability)
-        this.db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn("Firestore persistence failed: Multiple tabs open.");
-            } else if (err.code === 'unimplemented') {
-                console.warn("Firestore persistence not supported in this browser.");
+    init: async function() {
+        try {
+            if (typeof firebase === 'undefined') {
+                console.warn("[Firebase] SDK script tags not loaded yet. Running in offline/local mode.");
+                return false;
             }
-        });
 
-        console.log("JCCB Firebase Service Initialized.");
+            if (!firebase.apps.length) {
+                this.app = firebase.initializeApp(firebaseConfig);
+            } else {
+                this.app = firebase.app();
+            }
+
+            this.auth = firebase.auth();
+            this.db = firebase.firestore();
+            this.storage = firebase.storage();
+
+            if (firebase.analytics) {
+                try {
+                    this.analytics = firebase.analytics();
+                } catch (anErr) {
+                    console.warn("[Firebase Analytics]", anErr);
+                }
+            }
+
+            // Enable offline persistence for reliable banking operations
+            try {
+                await this.db.enablePersistence({ synchronizeTabs: true });
+                console.log("[Firebase] Firestore offline persistence enabled.");
+            } catch (err) {
+                if (err.code === 'failed-precondition') {
+                    console.warn("[Firebase] Persistence failed: Multiple tabs open simultaneously.");
+                } else if (err.code === 'unimplemented') {
+                    console.warn("[Firebase] Persistence not supported in current browser.");
+                }
+            }
+
+            this.isInitialized = true;
+            console.log("[Firebase] Successfully connected to Firebase Project:", firebaseConfig.projectId);
+            return true;
+        } catch (error) {
+            console.error("[Firebase] Initialization error:", error);
+            this.isInitialized = false;
+            return false;
+        }
     },
 
+    // =================================================================
+    // AUTHENTICATION & RBAC STATE
+    // =================================================================
+
     /**
-     * Listen for authentication state changes and fetch RBAC profile
+     * Listen for Auth changes and load user RBAC profile from Firestore
      */
     onAuthStateChanged: function(callback) {
         if (!this.auth) return;
@@ -65,21 +111,25 @@ const FirebaseService = {
                     if (userDoc.exists) {
                         this.userProfile = userDoc.data();
                     } else {
+                        // Default profile if newly signed up
                         this.userProfile = {
                             uid: user.uid,
                             email: user.email,
                             role: 'branch_user',
-                            branchId: null,
-                            isActive: false
+                            branchId: '01',
+                            branchName: 'Branch 01',
+                            isActive: true,
+                            createdAt: new Date().toISOString()
                         };
                     }
                 } catch (e) {
-                    console.error("Error fetching user profile:", e);
+                    console.warn("[Firebase] Could not fetch user profile:", e);
                 }
             } else {
                 this.currentUser = null;
                 this.userProfile = null;
             }
+
             if (typeof callback === 'function') {
                 callback(this.currentUser, this.userProfile);
             }
@@ -87,20 +137,293 @@ const FirebaseService = {
     },
 
     /**
-     * Role Check Utilities
+     * Sign in with email and password
      */
-    isAdmin: function() {
-        return this.userProfile && this.userProfile.role === 'admin' && this.userProfile.isActive;
+    login: async function(email, password) {
+        if (!this.auth) throw new Error("Firebase Auth not initialized.");
+        const cred = await this.auth.signInWithEmailAndPassword(email, password);
+        const userDoc = await this.db.collection('users').doc(cred.user.uid).get();
+        if (userDoc.exists) {
+            this.userProfile = userDoc.data();
+        }
+        return { user: cred.user, profile: this.userProfile };
     },
 
+    /**
+     * Sign out
+     */
+    logout: async function() {
+        if (this.auth) {
+            await this.auth.signOut();
+        }
+        this.currentUser = null;
+        this.userProfile = null;
+    },
+
+    /**
+     * Check if current user is Head Office Admin
+     */
+    isAdmin: function() {
+        return (this.userProfile && this.userProfile.role === 'admin' && this.userProfile.isActive) ||
+               (this.userProfile && this.userProfile.branchId === '99');
+    },
+
+    /**
+     * Check if user is active branch manager
+     */
     isBranchManager: function() {
         return this.userProfile && this.userProfile.role === 'branch_manager' && this.userProfile.isActive;
     },
 
+    /**
+     * Get assigned branch ID
+     */
     getUserBranchId: function() {
         return this.userProfile ? this.userProfile.branchId : null;
+    },
+
+    // =================================================================
+    // BRANCH MANAGEMENT (HEAD OFFICE ADMIN PRIVILEGE)
+    // =================================================================
+
+    /**
+     * Get all branches (realtime or fetch from Firestore)
+     */
+    getBranches: async function() {
+        if (!this.db) return DEFAULT_JCCB_BRANCHES;
+        try {
+            const snapshot = await this.db.collection('branches').orderBy('branchCode').get();
+            if (snapshot.empty) {
+                // If branches collection is empty, seed defaults
+                console.log("[Firebase] Seeding initial branch master list...");
+                await this.seedDefaultBranches();
+                return DEFAULT_JCCB_BRANCHES;
+            }
+            const list = [];
+            snapshot.forEach(doc => {
+                list.push({ id: doc.id, ...doc.data() });
+            });
+            return list;
+        } catch (error) {
+            console.warn("[Firebase] Error fetching branches from Firestore:", error);
+            return DEFAULT_JCCB_BRANCHES;
+        }
+    },
+
+    /**
+     * Seed default 17 JCCB branches into Firestore
+     */
+    seedDefaultBranches: async function() {
+        if (!this.db) return;
+        const batch = this.db.batch();
+        DEFAULT_JCCB_BRANCHES.forEach(branch => {
+            const ref = this.db.collection('branches').doc(branch.branchCode);
+            batch.set(ref, {
+                ...branch,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        });
+        await batch.commit();
+    },
+
+    /**
+     * Add or Update a Branch (Admin Only)
+     */
+    saveBranch: async function(branchData) {
+        if (!this.db) throw new Error("Firestore not initialized.");
+        const branchCode = String(branchData.branchCode).padStart(2, '0');
+        const docRef = this.db.collection('branches').doc(branchCode);
+        const payload = {
+            ...branchData,
+            branchCode: branchCode,
+            updatedAt: new Date().toISOString(),
+            updatedBy: this.currentUser ? this.currentUser.uid : 'ADMIN'
+        };
+        if (!branchData.createdAt) {
+            payload.createdAt = new Date().toISOString();
+        }
+        await docRef.set(payload, { merge: true });
+        return { id: branchCode, ...payload };
+    },
+
+    /**
+     * Remove / Delete a Branch (Admin Only)
+     */
+    deleteBranch: async function(branchCode) {
+        if (!this.db) throw new Error("Firestore not initialized.");
+        await this.db.collection('branches').doc(String(branchCode)).delete();
+    },
+
+    /**
+     * Toggle Branch Active/Inactive Status
+     */
+    toggleBranchStatus: async function(branchCode, isActive) {
+        if (!this.db) throw new Error("Firestore not initialized.");
+        await this.db.collection('branches').doc(String(branchCode)).update({
+            isActive: Boolean(isActive),
+            updatedAt: new Date().toISOString()
+        });
+    },
+
+    // =================================================================
+    // USER & ROLE MANAGEMENT (HEAD OFFICE ADMIN PRIVILEGE)
+    // =================================================================
+
+    /**
+     * Get all users in system (Admin only)
+     */
+    getUsers: async function() {
+        if (!this.db) return [];
+        const snapshot = await this.db.collection('users').get();
+        const users = [];
+        snapshot.forEach(doc => {
+            users.push({ id: doc.id, ...doc.data() });
+        });
+        return users;
+    },
+
+    /**
+     * Create or update a user's role and branch assignment
+     */
+    saveUserRole: async function(uid, userData) {
+        if (!this.db) throw new Error("Firestore not initialized.");
+        const userRef = this.db.collection('users').doc(uid);
+        const payload = {
+            ...userData,
+            uid: uid,
+            updatedAt: new Date().toISOString()
+        };
+        await userRef.set(payload, { merge: true });
+    },
+
+    // =================================================================
+    // LOAN DATA OPERATIONS & SYNC
+    // =================================================================
+
+    /**
+     * Save a gold loan record to Firestore
+     */
+    saveLoan: async function(loanData) {
+        if (!this.db) throw new Error("Firestore not initialized.");
+        const loanId = loanData.loanId || `LOAN_${Date.now()}_${loanData.branchCode || '01'}`;
+        const loanRef = this.db.collection('loans').doc(loanId);
+        
+        const payload = {
+            ...loanData,
+            loanId: loanId,
+            branchId: String(loanData.branchCode || loanData.branchId || '01'),
+            updatedAt: new Date().toISOString(),
+            updatedBy: this.currentUser ? this.currentUser.uid : 'SYSTEM'
+        };
+        if (!loanData.createdAt) {
+            payload.createdAt = new Date().toISOString();
+            payload.createdBy = this.currentUser ? this.currentUser.uid : 'SYSTEM';
+        }
+
+        await loanRef.set(payload, { merge: true });
+        return payload;
+    },
+
+    /**
+     * Fetch loans (filtered by branch for branch staff, all for Admin)
+     */
+    getLoans: async function(branchCode) {
+        if (!this.db) return [];
+        try {
+            let query = this.db.collection('loans');
+            // If not head office / admin, restrict query to user's branch
+            if (branchCode && branchCode !== '99' && !this.isAdmin()) {
+                query = query.where('branchId', '==', String(branchCode));
+            }
+            const snapshot = await query.orderBy('createdAt', 'desc').get();
+            const list = [];
+            snapshot.forEach(doc => {
+                list.push({ id: doc.id, ...doc.data() });
+            });
+            return list;
+        } catch (error) {
+            console.error("[Firebase] Error fetching loans:", error);
+            return [];
+        }
+    },
+
+    /**
+     * Realtime listener for loan records
+     */
+    listenLoans: function(branchCode, onUpdate) {
+        if (!this.db) return () => {};
+        let query = this.db.collection('loans');
+        if (branchCode && branchCode !== '99' && !this.isAdmin()) {
+            query = query.where('branchId', '==', String(branchCode));
+        }
+        return query.onSnapshot((snapshot) => {
+            const list = [];
+            snapshot.forEach(doc => {
+                list.push({ id: doc.id, ...doc.data() });
+            });
+            if (typeof onUpdate === 'function') {
+                onUpdate(list);
+            }
+        }, (err) => {
+            console.warn("[Firebase] Loan snapshot listener error:", err);
+        });
+    },
+
+    /**
+     * Delete loan record (Admin only)
+     */
+    deleteLoan: async function(loanId) {
+        if (!this.db) throw new Error("Firestore not initialized.");
+        await this.db.collection('loans').doc(loanId).delete();
+    },
+
+    // =================================================================
+    // DAILY RATES & GLOBAL SETTINGS
+    // =================================================================
+
+    /**
+     * Get daily gold rates from Firestore
+     */
+    getDailyRates: async function() {
+        if (!this.db) return null;
+        try {
+            const doc = await this.db.collection('rates').doc('today').get();
+            return doc.exists ? doc.data() : null;
+        } catch (e) {
+            console.warn("[Firebase] Could not fetch rates:", e);
+            return null;
+        }
+    },
+
+    /**
+     * Save daily gold rates (Admin only)
+     */
+    saveDailyRates: async function(ratesData) {
+        if (!this.db) throw new Error("Firestore not initialized.");
+        await this.db.collection('rates').doc('today').set({
+            ...ratesData,
+            updatedAt: new Date().toISOString(),
+            updatedBy: this.currentUser ? this.currentUser.uid : 'ADMIN'
+        }, { merge: true });
+    },
+
+    // =================================================================
+    // CLOUD STORAGE UPLOADS (ORNAMENTS & KYC)
+    // =================================================================
+
+    /**
+     * Upload gold ornament photo to Firebase Storage
+     */
+    uploadOrnamentPhoto: async function(branchCode, loanId, fileBlob, fileName) {
+        if (!this.storage) throw new Error("Firebase Storage not initialized.");
+        const path = `branches/${branchCode}/loans/${loanId}/${Date.now()}_${fileName || 'ornament.jpg'}`;
+        const storageRef = this.storage.ref().child(path);
+        const snapshot = await storageRef.put(fileBlob);
+        const downloadUrl = await snapshot.ref.getDownloadURL();
+        return { path, downloadUrl };
     }
 };
 
-// Export to window
+// Expose globally
 window.FirebaseService = FirebaseService;
