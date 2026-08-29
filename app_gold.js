@@ -351,23 +351,10 @@ function loadState() {
                 }));
             }
 
-            let rateHist = Array.isArray(parsed.rateHistory) ? [...parsed.rateHistory] : [...DEFAULT_STATE.rateHistory];
+            let rateHist = Array.isArray(parsed.rateHistory) ? parsed.rateHistory : [...DEFAULT_STATE.rateHistory];
             
-            // Normalize all rates in rateHistory:
-            // The rate entered by user is strictly the 22 Karat (22K) Gold Market Rate per 10g
             rateHist = rateHist.map(r => {
-                let r22 = parseFloat(r.rate22K || 0);
-                let r24 = parseFloat(r.rate24K || 0);
-                
-                // If r24 was previously entered (e.g. 72000) and r22 was computed as 66000 or 0:
-                if (r24 > 0 && (r22 === 0 || r22 === Math.round(r24 * (22 / 24)))) {
-                    r22 = r24;
-                } else if (r22 === 0 && r24 > 0) {
-                    r22 = r24;
-                } else if (r22 === 0) {
-                    r22 = 72000;
-                }
-                
+                const r22 = parseFloat(r.rate22K || r.rate24K || 72000);
                 return {
                     date: r.date,
                     rate22K: r22,
@@ -376,41 +363,16 @@ function loadState() {
                 };
             });
 
-            // Ensure 2026-08-21 exists with 22K rate if missing
-            if (!rateHist.some(r => r.date === "2026-08-21")) {
-                rateHist.push({
-                    date: "2026-08-21",
-                    rate22K: 72000,
-                    rate24K: Math.round(72000 * (24 / 22))
-                });
-            }
-
-            // Sync any existing loans with rateHistory so every loan date has a recorded rate
-            if (Array.isArray(loans)) {
-                loans.forEach(l => {
-                    if (l.date) {
-                        const lDate = String(l.date).split("T")[0];
-                        const match = rateHist.find(r => r.date === lDate);
-                        if (!match) {
-                            let r22 = 72000;
-                            if (l.valuationAmount && l.goldWeight && parseFloat(l.goldWeight) > 0) {
-                                const ratePerGm22 = parseFloat(l.valuationAmount) / parseFloat(l.goldWeight);
-                                r22 = Math.round(ratePerGm22 * 10);
-                            }
-                            rateHist.push({
-                                date: lDate,
-                                rate22K: r22,
-                                rate24K: Math.round(r22 * (24 / 22))
-                            });
-                        }
-                    }
-                });
+            // Ensure baseline rate history if empty
+            if (rateHist.length === 0) {
+                rateHist = [...DEFAULT_STATE.rateHistory];
             }
 
             let goldRates = parsed.goldRates || { "24K": 0, "22K": 0, rateDate: "", lastUpdated: "" };
-            if (goldRates["24K"] > 0 && (goldRates["22K"] === 0 || goldRates["22K"] === Math.round(goldRates["24K"] * (22 / 24)))) {
-                goldRates["22K"] = goldRates["24K"];
-                goldRates["24K"] = Math.round(goldRates["22K"] * (24 / 22));
+            if (goldRates && (parseFloat(goldRates["22K"]) > 0 || parseFloat(goldRates["24K"]) > 0)) {
+                const r22 = parseFloat(goldRates["22K"] || goldRates["24K"]);
+                goldRates["22K"] = r22;
+                goldRates["24K"] = Math.round(r22 * (24 / 22));
             }
 
             let settings = parsed.settings || JSON.parse(JSON.stringify(DEFAULT_STATE.settings));
