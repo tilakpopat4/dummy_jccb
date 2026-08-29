@@ -398,7 +398,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         renderBranchMaster();
                     }
 
-                    // Sync Daily Rates from Cloud Firestore
+                    // 2. Sync Daily Rates from Cloud Firestore
                     const fbRates = await window.FirebaseService.getDailyRates();
                     if (fbRates && fbRates.rate22K > 0) {
                         const todayStr = getTodayDateYMD();
@@ -419,9 +419,63 @@ document.addEventListener("DOMContentLoaded", () => {
                         });
                     }
 
-                    // Listen for realtime branch loan updates
-                    const currentBranch = state.currentSession ? state.currentSession.code : null;
-                    window.FirebaseService.listenLoans(currentBranch, (cloudLoans) => {
+                    // 3. Sync and Listen Customers in Realtime across all PCs
+                    if (typeof window.FirebaseService.getCustomers === "function") {
+                        const fbCusts = await window.FirebaseService.getCustomers();
+                        if (Array.isArray(fbCusts) && fbCusts.length > 0) {
+                            if (!state.customers) state.customers = [];
+                            fbCusts.forEach(fc => {
+                                const cNo = fc.customerNo || fc.id;
+                                const idx = state.customers.findIndex(c => c.customerNo === cNo || c.id === cNo);
+                                if (idx !== -1) {
+                                    state.customers[idx] = { ...state.customers[idx], ...fc };
+                                } else {
+                                    state.customers.push(fc);
+                                }
+                            });
+                            saveState();
+                            renderCustomerMasterList();
+                        }
+                    }
+
+                    if (typeof window.FirebaseService.listenCustomers === "function") {
+                        window.FirebaseService.listenCustomers((cloudCusts) => {
+                            if (Array.isArray(cloudCusts) && cloudCusts.length > 0) {
+                                if (!state.customers) state.customers = [];
+                                cloudCusts.forEach(fc => {
+                                    const cNo = fc.customerNo || fc.id;
+                                    const idx = state.customers.findIndex(c => c.customerNo === cNo || c.id === cNo);
+                                    if (idx !== -1) {
+                                        state.customers[idx] = { ...state.customers[idx], ...fc };
+                                    } else {
+                                        state.customers.push(fc);
+                                    }
+                                });
+                                saveState();
+                                renderCustomerMasterList();
+                            }
+                        });
+                    }
+
+                    // 4. Sync and Listen Branch Seeds & Settings across all PCs
+                    if (typeof window.FirebaseService.getSettings === "function") {
+                        const fbSettings = await window.FirebaseService.getSettings();
+                        if (fbSettings && fbSettings.branchSeeds) {
+                            state.settings = { ...state.settings, ...fbSettings };
+                            saveState();
+                        }
+                    }
+                    if (typeof window.FirebaseService.listenSettings === "function") {
+                        window.FirebaseService.listenSettings((cloudSettings) => {
+                            if (cloudSettings && cloudSettings.branchSeeds) {
+                                state.settings = { ...state.settings, ...cloudSettings };
+                                saveState();
+                            }
+                        });
+                    }
+
+                    // 5. Listen for realtime branch loan updates across all PCs
+                    window.FirebaseService.listenLoans(null, (cloudLoans) => {
                         if (Array.isArray(cloudLoans) && cloudLoans.length > 0) {
                             // Merge cloud loans into local state
                             cloudLoans.forEach(cl => {
@@ -436,6 +490,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             saveState();
                             renderDashboard();
                             renderRegisterTable();
+                            if (typeof renderReportsTable === "function") renderReportsTable();
                         }
                     });
                 } catch (syncErr) {
@@ -4984,6 +5039,11 @@ function initCustomerMaster() {
             saveState();
             resetCustomerMasterForm();
             renderCustomerMasterList();
+
+            // Sync Customer Profile to Cloud Firestore (Live across all PCs)
+            if (window.FirebaseService && window.FirebaseService.isInitialized && typeof window.FirebaseService.saveCustomer === "function") {
+                window.FirebaseService.saveCustomer(custObj).catch(e => console.warn("[Firebase] Customer cloud sync error:", e));
+            }
         });
     }
 }
@@ -5133,6 +5193,12 @@ function renderCustomerMasterList() {
                 state.customers = state.customers.filter(x => x.id !== id && x.customerNo !== id);
                 saveState();
                 renderCustomerMasterList();
+
+                // Delete from Cloud Firestore (Live across all PCs)
+                if (window.FirebaseService && window.FirebaseService.isInitialized && typeof window.FirebaseService.deleteCustomer === "function") {
+                    window.FirebaseService.deleteCustomer(id).catch(e => console.warn("[Firebase] Customer cloud delete error:", e));
+                }
+
                 showToast("Customer profile deleted.");
             }
         });
@@ -5718,6 +5784,11 @@ function saveBranchSettings(targetBranch = null) {
 
     saveState();
     renderBranchSettings(selectedBranch);
+
+    // Sync Branch Seeds & Settings to Cloud Firestore (Live across all PCs)
+    if (window.FirebaseService && window.FirebaseService.isInitialized && typeof window.FirebaseService.saveSettings === "function") {
+        window.FirebaseService.saveSettings(state.settings).catch(e => console.warn("[Firebase] Settings cloud sync error:", e));
+    }
 
     // Refresh loan entry active form
     updateLoanAmountLogic();

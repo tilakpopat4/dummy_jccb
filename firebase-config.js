@@ -432,6 +432,114 @@ const FirebaseService = {
     },
 
     // =================================================================
+    // CUSTOMER DIRECTORY OPERATIONS & SYNC
+    // =================================================================
+
+    /**
+     * Save customer profile to Firestore
+     */
+    saveCustomer: async function(custData) {
+        if (!this.db) return custData;
+        const custId = String(custData.customerNo || custData.id || `CUST_${Date.now()}`).trim();
+        const docRef = this.db.collection('customers').doc(custId);
+        const payload = {
+            ...custData,
+            id: custId,
+            customerNo: custData.customerNo || custId,
+            updatedAt: new Date().toISOString()
+        };
+        if (!custData.createdAt) {
+            payload.createdAt = new Date().toISOString();
+        }
+        await docRef.set(payload, { merge: true });
+        return payload;
+    },
+
+    /**
+     * Get all customers from Firestore
+     */
+    getCustomers: async function() {
+        if (!this.db) return [];
+        try {
+            const snapshot = await this.db.collection('customers').get();
+            const list = [];
+            snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+            return list;
+        } catch (e) {
+            console.warn("[Firebase] Error fetching customers:", e);
+            return [];
+        }
+    },
+
+    /**
+     * Realtime listener for customers
+     */
+    listenCustomers: function(onUpdate) {
+        if (!this.db) return () => {};
+        return this.db.collection('customers').onSnapshot((snapshot) => {
+            const list = [];
+            snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+            if (typeof onUpdate === 'function') {
+                onUpdate(list);
+            }
+        }, (err) => {
+            console.warn("[Firebase] Customer snapshot error:", err);
+        });
+    },
+
+    /**
+     * Delete customer from Firestore
+     */
+    deleteCustomer: async function(custId) {
+        if (!this.db) return;
+        const id = String(custId).trim();
+        await this.db.collection('customers').doc(id).delete();
+    },
+
+    // =================================================================
+    // SYSTEM SETTINGS & BRANCH SEEDS SYNC
+    // =================================================================
+
+    /**
+     * Save branch seeds & settings to Firestore
+     */
+    saveSettings: async function(settingsData) {
+        if (!this.db) return;
+        await this.db.collection('settings').doc('branchSeeds').set({
+            ...settingsData,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+    },
+
+    /**
+     * Get branch seeds & settings from Firestore
+     */
+    getSettings: async function() {
+        if (!this.db) return null;
+        try {
+            const doc = await this.db.collection('settings').doc('branchSeeds').get();
+            return doc.exists ? doc.data() : null;
+        } catch (e) {
+            console.warn("[Firebase] Error fetching settings:", e);
+            return null;
+        }
+    },
+
+    /**
+     * Realtime listener for branch settings
+     */
+    listenSettings: function(onUpdate) {
+        if (!this.db) return () => {};
+        return this.db.collection('settings').doc('branchSeeds').onSnapshot((doc) => {
+            if (doc.exists && typeof onUpdate === 'function') {
+                onUpdate(doc.data());
+            }
+        }, (err) => {
+            console.warn("[Firebase] Settings snapshot error:", err);
+        });
+    },
+
+    // =================================================================
     // CLOUD STORAGE UPLOADS (ORNAMENTS & KYC)
     // =================================================================
 
