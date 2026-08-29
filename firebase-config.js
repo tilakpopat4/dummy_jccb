@@ -87,9 +87,19 @@ const FirebaseService = {
                 console.log("[Firebase] Firestore offline persistence enabled.");
             } catch (err) {
                 if (err.code === 'failed-precondition') {
-                    console.warn("[Firebase] Persistence failed: Multiple tabs open simultaneously.");
+                    console.warn("[Firebase] Persistence notice: Multiple tabs open simultaneously.");
                 } else if (err.code === 'unimplemented') {
                     console.warn("[Firebase] Persistence not supported in current browser.");
+                }
+            }
+
+            // Ensure authenticated Firebase session (Anonymous auth fallback)
+            if (this.auth && !this.auth.currentUser) {
+                try {
+                    await this.auth.signInAnonymously();
+                    console.log("[Firebase] Cloud authentication session active.");
+                } catch (authErr) {
+                    console.warn("[Firebase] Anonymous auth fallback notice:", authErr);
                 }
             }
 
@@ -336,12 +346,17 @@ const FirebaseService = {
     },
 
     /**
-     * Fetch all loans from Firestore (no complex indexing required)
+     * Fetch all loans from Firestore (live from server first)
      */
     getLoans: async function(branchCode = null) {
         if (!this.db) return [];
         try {
-            const snapshot = await this.db.collection('loans').get();
+            let snapshot;
+            try {
+                snapshot = await this.db.collection('loans').get({ source: 'server' });
+            } catch (netErr) {
+                snapshot = await this.db.collection('loans').get();
+            }
             const list = [];
             snapshot.forEach(doc => {
                 const data = doc.data();
@@ -390,13 +405,23 @@ const FirebaseService = {
     // =================================================================
 
     /**
-     * Get daily gold rates from Firestore
+     * Get daily gold rates from Firestore (fetches live freshest rate from server)
      */
     getDailyRates: async function() {
         if (!this.db) return null;
         try {
-            const doc = await this.db.collection('rates').doc('today').get();
-            return doc.exists ? doc.data() : null;
+            let doc;
+            try {
+                doc = await this.db.collection('rates').doc('today').get({ source: 'server' });
+            } catch (netErr) {
+                doc = await this.db.collection('rates').doc('today').get();
+            }
+            if (doc && doc.exists) {
+                return doc.data();
+            }
+            // Fallback check in settings/dailyRates
+            const setDoc = await this.db.collection('settings').doc('dailyRates').get();
+            return setDoc.exists ? setDoc.data() : null;
         } catch (e) {
             console.warn("[Firebase] Could not fetch rates:", e);
             return null;
@@ -404,15 +429,21 @@ const FirebaseService = {
     },
 
     /**
-     * Save daily gold rates (Admin only)
+     * Save daily gold rates to Firestore (Admin only)
      */
     saveDailyRates: async function(ratesData) {
         if (!this.db) throw new Error("Firestore not initialized.");
-        await this.db.collection('rates').doc('today').set({
+        const payload = {
             ...ratesData,
             updatedAt: new Date().toISOString(),
             updatedBy: this.currentUser ? this.currentUser.uid : 'ADMIN'
-        }, { merge: true });
+        };
+        // Save to rates/today AND settings/dailyRates for maximum compatibility
+        await Promise.all([
+            this.db.collection('rates').doc('today').set(payload, { merge: true }),
+            this.db.collection('settings').doc('dailyRates').set(payload, { merge: true })
+        ]);
+        return payload;
     },
 
     /**

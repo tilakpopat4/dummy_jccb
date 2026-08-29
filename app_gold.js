@@ -478,14 +478,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         window.FirebaseService.listenDailyRates((cloudRates) => {
                             if (cloudRates && (parseFloat(cloudRates.rate22K) > 0 || parseFloat(cloudRates.rate24K) > 0)) {
                                 const cloud22 = parseFloat(cloudRates.rate22K || cloudRates.rate24K);
-                                if (!state.goldRates || parseFloat(state.goldRates["22K"]) !== cloud22) {
-                                    applyDailyGoldRate(cloud22, getTodayDateYMD(), {
-                                        isLocked: cloudRates.isLocked,
-                                        lockedAt: cloudRates.lockedAt,
-                                        lockedUntil: cloudRates.lockedUntil,
-                                        lockedBy: cloudRates.lockedBy
-                                    });
-                                }
+                                applyDailyGoldRate(cloud22, getTodayDateYMD(), {
+                                    isLocked: cloudRates.isLocked,
+                                    lockedAt: cloudRates.lockedAt,
+                                    lockedUntil: cloudRates.lockedUntil,
+                                    lockedBy: cloudRates.lockedBy
+                                });
                             }
                         });
                     }
@@ -1361,15 +1359,25 @@ function setDailyGoldRate(val, targetDate = null) {
     const rate24 = Math.round(rate22 * (24 / 22));
 
     // Sync Daily Rates to Cloud Firestore
-    if (window.FirebaseService && window.FirebaseService.isInitialized && typeof window.FirebaseService.saveDailyRates === "function") {
-        window.FirebaseService.saveDailyRates({
-            date: date,
-            rate22K: rate22,
-            rate24K: rate24,
-            isLocked: true,
-            lockedAt: new Date().toISOString(),
-            lockedBy: state.currentSession ? state.currentSession.name : "HEAD OFFICE"
-        }).catch(e => console.warn("[Firebase] Daily rate cloud sync error:", e));
+    if (window.FirebaseService && typeof window.FirebaseService.saveDailyRates === "function") {
+        const doSaveRate = () => {
+            window.FirebaseService.saveDailyRates({
+                date: date,
+                rate22K: rate22,
+                rate24K: rate24,
+                isLocked: true,
+                lockedAt: new Date().toISOString(),
+                lockedBy: state.currentSession ? state.currentSession.name : "HEAD OFFICE"
+            }).then(() => {
+                console.log("[Firebase] Daily rate synced to cloud Firestore successfully:", rate22);
+            }).catch(e => console.error("[Firebase] Daily rate cloud sync error:", e));
+        };
+
+        if (window.FirebaseService.isInitialized) {
+            doSaveRate();
+        } else if (typeof window.FirebaseService.init === "function") {
+            window.FirebaseService.init().then(() => doSaveRate());
+        }
     }
 
     showToast(`તા. ${formatDateDMY(date)} નો ૨૨ કેરેટ સોનાનો ભાવ ₹${rate22.toLocaleString("en-IN")}/10g સેવ થયો છે.`);
