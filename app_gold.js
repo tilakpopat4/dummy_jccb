@@ -2539,7 +2539,7 @@ function submitLoanEntry() {
         renderCustomerMasterList();
 
         // Sync Loan Record & Customer Profile to Cloud Firestore
-        if (window.FirebaseService && window.FirebaseService.isInitialized) {
+        if (window.FirebaseService && typeof window.FirebaseService.saveLoan === "function") {
             window.FirebaseService.saveLoan(loanObj).then(() => {
                 console.log("[Firebase] Loan synced successfully to cloud:", loanObj.id);
             }).catch(e => console.warn("[Firebase] Loan record cloud sync error:", e));

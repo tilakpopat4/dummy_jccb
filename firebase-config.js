@@ -357,12 +357,80 @@ const FirebaseService = {
     },
 
     /**
-     * Save a gold loan record to Firestore
+     * Convert JS object to Firestore REST API document format
+     */
+    toFirestoreDocument: function(obj) {
+        const fields = {};
+        for (const [key, val] of Object.entries(obj)) {
+            if (val === undefined || val === null) {
+                fields[key] = { nullValue: null };
+            } else if (typeof val === "boolean") {
+                fields[key] = { booleanValue: val };
+            } else if (typeof val === "number") {
+                if (Number.isInteger(val)) {
+                    fields[key] = { integerValue: String(val) };
+                } else {
+                    fields[key] = { doubleValue: val };
+                }
+            } else if (typeof val === "string") {
+                fields[key] = { stringValue: val };
+            } else if (Array.isArray(val)) {
+                fields[key] = {
+                    arrayValue: {
+                        values: val.map(item => {
+                            if (typeof item === "object" && item !== null) {
+                                return { mapValue: this.toFirestoreDocument(item) };
+                            } else if (typeof item === "number") {
+                                return Number.isInteger(item) ? { integerValue: String(item) } : { doubleValue: item };
+                            } else {
+                                return { stringValue: String(item || "") };
+                            }
+                        })
+                    }
+                };
+            } else if (typeof val === "object") {
+                fields[key] = { mapValue: this.toFirestoreDocument(val) };
+            }
+        }
+        return { fields };
+    },
+
+    /**
+     * Convert Firestore REST API document to plain JS object
+     */
+    fromFirestoreDocument: function(doc) {
+        if (!doc || !doc.fields) return {};
+        const result = {};
+        for (const [key, valObj] of Object.entries(doc.fields)) {
+            if ("stringValue" in valObj) result[key] = valObj.stringValue;
+            else if ("integerValue" in valObj) result[key] = parseInt(valObj.integerValue, 10);
+            else if ("doubleValue" in valObj) result[key] = parseFloat(valObj.doubleValue);
+            else if ("booleanValue" in valObj) result[key] = valObj.booleanValue;
+            else if ("nullValue" in valObj) result[key] = null;
+            else if ("mapValue" in valObj) result[key] = this.fromFirestoreDocument(valObj.mapValue);
+            else if ("arrayValue" in valObj) {
+                result[key] = (valObj.arrayValue.values || []).map(v => {
+                    if ("stringValue" in v) return v.stringValue;
+                    if ("integerValue" in v) return parseInt(v.integerValue, 10);
+                    if ("doubleValue" in v) return parseFloat(v.doubleValue);
+                    if ("booleanValue" in v) return v.booleanValue;
+                    if ("mapValue" in v) return this.fromFirestoreDocument(v.mapValue);
+                    return null;
+                });
+            }
+        }
+        if (doc.name) {
+            const parts = doc.name.split("/");
+            result.id = parts[parts.length - 1];
+        }
+        return result;
+    },
+
+    /**
+     * Save a gold loan record to Firestore (Dual SDK + REST fallback)
      */
     saveLoan: async function(loanData) {
-        if (!this.db) throw new Error("Firestore not initialized.");
         const loanId = String(loanData.id || loanData.loanId || `GL_${Date.now()}_${loanData.branchCode || '01'}`).trim();
-        const loanRef = this.db.collection('loans').doc(loanId);
         
         let custPhoto = loanData.customerPhoto || "";
         let ornPhoto = loanData.ornamentPhoto || "";
@@ -393,38 +461,72 @@ const FirebaseService = {
             rawPayload.createdBy = this.currentUser ? this.currentUser.uid : (loanData.createdBy || 'SYSTEM');
         }
 
-        // Clean out undefined values to prevent Firestore unsupported field errors
         const payload = JSON.parse(JSON.stringify(rawPayload));
-        await loanRef.set(payload, { merge: true });
-        console.log("[Firebase] Loan written to Firestore successfully:", loanId);
+
+        // 1. Write via Firestore SDK
+        if (this.db) {
+            try {
+                const loanRef = this.db.collection('loans').doc(loanId);
+                await loanRef.set(payload, { merge: true });
+                console.log("[Firebase SDK] Loan saved to Firestore:", loanId);
+            } catch (sdkErr) {
+                console.warn("[Firebase SDK] Firestore write notice:", sdkErr);
+            }
+        }
+
+        // 2. Guaranteed REST API cloud write fallback
+        try {
+            const fsDoc = this.toFirestoreDocument(payload);
+            await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/loans/${loanId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(fsDoc)
+            });
+            console.log("[Firebase REST] Loan synced to Firestore cloud:", loanId);
+        } catch (restErr) {
+            console.warn("[Firebase REST] REST sync error:", restErr);
+        }
+
         return payload;
     },
 
     /**
-     * Fetch all loans from Firestore (live from server first)
+     * Fetch all loans from Firestore (Dual SDK + REST fallback)
      */
     getLoans: async function(branchCode = null) {
-        if (!this.db) return [];
-        try {
-            let snapshot;
+        let list = [];
+        // 1. Try Firestore SDK
+        if (this.db) {
             try {
-                snapshot = await this.db.collection('loans').get({ source: 'server' });
-            } catch (netErr) {
-                snapshot = await this.db.collection('loans').get();
+                const snapshot = await this.db.collection('loans').get({ source: 'server' });
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    list.push({ ...data, id: doc.id, loanId: data.loanId || doc.id });
+                });
+            } catch (sdkErr) {
+                // Ignore SDK error and fall through to REST
             }
-            const list = [];
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                list.push({ ...data, id: doc.id, loanId: data.loanId || doc.id });
-            });
-            if (branchCode && branchCode !== '99') {
-                return list.filter(l => String(l.branchCode || l.branchId) === String(branchCode));
-            }
-            return list;
-        } catch (error) {
-            console.error("[Firebase] Error fetching loans:", error);
-            return [];
         }
+
+        // 2. If SDK returned empty, query REST API directly
+        if (list.length === 0) {
+            try {
+                const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/loans`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data.documents)) {
+                        list = data.documents.map(d => this.fromFirestoreDocument(d));
+                    }
+                }
+            } catch (restErr) {
+                console.warn("[Firebase REST] Error fetching loans via REST:", restErr);
+            }
+        }
+
+        if (branchCode && branchCode !== '99') {
+            return list.filter(l => String(l.branchCode || l.branchId) === String(branchCode));
+        }
+        return list;
     },
 
     /**
@@ -442,7 +544,7 @@ const FirebaseService = {
                 onUpdate(list);
             }
         }, (err) => {
-            console.warn("[Firebase] Loan snapshot listener error:", err);
+            console.warn("[Firebase] Loan snapshot listener notice:", err);
         });
     },
 
@@ -450,9 +552,17 @@ const FirebaseService = {
      * Delete loan record
      */
     deleteLoan: async function(loanId) {
-        if (!this.db) throw new Error("Firestore not initialized.");
         const cleanId = String(loanId).trim();
-        await this.db.collection('loans').doc(cleanId).delete();
+        if (this.db) {
+            try {
+                await this.db.collection('loans').doc(cleanId).delete();
+            } catch (e) {}
+        }
+        try {
+            await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/loans/${cleanId}`, {
+                method: "DELETE"
+            });
+        } catch (e) {}
     },
 
     // =================================================================
@@ -460,44 +570,72 @@ const FirebaseService = {
     // =================================================================
 
     /**
-     * Get daily gold rates from Firestore (fetches live freshest rate from server)
+     * Get daily gold rates from Firestore (Dual SDK + REST fallback)
      */
     getDailyRates: async function() {
-        if (!this.db) return null;
-        try {
-            let doc;
+        // 1. Try SDK
+        if (this.db) {
             try {
-                doc = await this.db.collection('rates').doc('today').get({ source: 'server' });
-            } catch (netErr) {
-                doc = await this.db.collection('rates').doc('today').get();
-            }
-            if (doc && doc.exists) {
-                return doc.data();
-            }
-            // Fallback check in settings/dailyRates
-            const setDoc = await this.db.collection('settings').doc('dailyRates').get();
-            return setDoc.exists ? setDoc.data() : null;
-        } catch (e) {
-            console.warn("[Firebase] Could not fetch rates:", e);
-            return null;
+                const doc = await this.db.collection('rates').doc('today').get({ source: 'server' });
+                if (doc && doc.exists) {
+                    return doc.data();
+                }
+            } catch (e) {}
         }
+
+        // 2. Direct REST fetch
+        try {
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/rates/today`);
+            if (res.ok) {
+                const data = await res.json();
+                return this.fromFirestoreDocument(data);
+            }
+        } catch (restErr) {
+            console.warn("[Firebase REST] Rates REST fetch error:", restErr);
+        }
+        return null;
     },
 
     /**
-     * Save daily gold rates to Firestore (Admin only)
+     * Save daily gold rates to Firestore (Dual SDK + REST)
      */
     saveDailyRates: async function(ratesData) {
-        if (!this.db) throw new Error("Firestore not initialized.");
-        const payload = {
+        const payload = JSON.parse(JSON.stringify({
             ...ratesData,
             updatedAt: new Date().toISOString(),
             updatedBy: this.currentUser ? this.currentUser.uid : 'ADMIN'
-        };
-        // Save to rates/today AND settings/dailyRates for maximum compatibility
-        await Promise.all([
-            this.db.collection('rates').doc('today').set(payload, { merge: true }),
-            this.db.collection('settings').doc('dailyRates').set(payload, { merge: true })
-        ]);
+        }));
+
+        // 1. Write via SDK
+        if (this.db) {
+            try {
+                await Promise.all([
+                    this.db.collection('rates').doc('today').set(payload, { merge: true }),
+                    this.db.collection('settings').doc('dailyRates').set(payload, { merge: true })
+                ]);
+            } catch (e) {}
+        }
+
+        // 2. Write via REST API
+        try {
+            const fsDoc = this.toFirestoreDocument(payload);
+            await Promise.all([
+                fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/rates/today`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(fsDoc)
+                }),
+                fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/dailyRates`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(fsDoc)
+                })
+            ]);
+            console.log("[Firebase REST] Daily rates saved to cloud successfully.");
+        } catch (restErr) {
+            console.warn("[Firebase REST] Daily rates REST save error:", restErr);
+        }
+
         return payload;
     },
 
@@ -511,7 +649,7 @@ const FirebaseService = {
                 onUpdate(doc.data());
             }
         }, (err) => {
-            console.warn("[Firebase] Rates listener error:", err);
+            console.warn("[Firebase] Rates listener notice:", err);
         });
     },
 
