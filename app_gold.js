@@ -293,9 +293,14 @@ function setActiveSession(sess) {
 function isHeadOfficeSession() {
     if (!state || !state.currentSession) return false;
     const sess = state.currentSession;
-    const code = String(sess.code || "").trim();
+    const numOnly = String(sess.code || "").trim().replace(/\D/g, '');
     const name = String(sess.name || "").toUpperCase();
-    return (code === "99" || code === "099" || code === "00" || sess.isHO === true || name.includes("HEAD OFFICE") || name.includes("HO"));
+    
+    // Head office is code 99 / role admin / explicit HEAD OFFICE name
+    if (numOnly === "99" || numOnly === "099" || numOnly === "00" || numOnly === "0") return true;
+    if (sess.role === ROLES.ADMIN || sess.role === "admin") return true;
+    if (name.includes("HEAD OFFICE") || name.includes("મુખ્ય કચેરી")) return true;
+    return false;
 }
 
 function isBranchMatch(codeA, codeB) {
