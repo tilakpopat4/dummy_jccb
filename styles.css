@@ -2,29 +2,22 @@
 :root {
     --bg-primary: #f8fafc;
     --bg-secondary: #ffffff;
-    --bg-tertiary: #eaeaea;
-    --text-primary: #2d2d2d;
-    --text-secondary: #555555;
-    --text-muted: #888888;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
     
-    /* Banking Elegance Navy Blue (#003B5C) */
-    --primary: #003B5C;
-    --primary-dark: #00253a;
-    --primary-light: #004d77;
-    --primary-hover: #004b75;
-    --primary-glow: rgba(0, 59, 92, 0.2);
+    /* Banking Navy Blue */
+    --primary: #0f1c3f;
+    --primary-light: #1e293b;
+    --primary-hover: #1e3a8a;
+    --primary-glow: rgba(15, 28, 63, 0.15);
     
-    /* Soft Slate/Periwinkle Blue Accent (#9DABDA) */
-    --accent-blue: #9DABDA;
-    --accent-blue-light: #eef2fb;
-    --accent-blue-dark: #7a8cb8;
-    
-    /* Crisp Banking Gold (#F4C300) */
-    --gold: #F4C300;
-    --gold-dark: #cda400;
-    --gold-light: #fff5c2;
-    --gold-gradient: linear-gradient(135deg, #F4C300 0%, #e6b400 50%, #ffd426 100%);
-    --gold-glow: rgba(244, 195, 0, 0.35);
+    /* Gold Theme Colors */
+    --gold: #d4af37;
+    --gold-dark: #b8860b;
+    --gold-light: #f3e5ab;
+    --gold-gradient: linear-gradient(135deg, #f39c12 0%, #d4af37 50%, #f1c40f 100%);
+    --gold-glow: rgba(212, 175, 55, 0.3);
 
     /* UI State Colors */
     --success: #10b981;
@@ -33,17 +26,16 @@
     --danger: #ef4444;
     --danger-hover: #dc2626;
     
-    /* Borders & Shadows (#EAEAEA) */
-    --border-color: #eaeaea;
-    --border-dark: #d5dbe5;
+    /* Borders & Shadows */
+    --border-color: #e2e8f0;
     --border-radius-sm: 6px;
     --border-radius-md: 12px;
     --border-radius-lg: 20px;
     
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 12px -1px rgba(0, 59, 92, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-    --shadow-lg: 0 12px 24px -4px rgba(0, 59, 92, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-    --shadow-gold: 0 10px 20px -3px rgba(244, 195, 0, 0.25);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-gold: 0 10px 20px -3px rgba(212, 175, 55, 0.2);
     
     /* Fonts */
     --font-family: 'Outfit', 'Noto Sans Gujarati', sans-serif;
