@@ -2126,9 +2126,12 @@ function initLoanEntryForm() {
     // Membership toggle listener (Bank Member Status)
     if (isMemberSelect) {
         isMemberSelect.addEventListener("change", () => {
-            const isMem = (isMemberSelect.value.toLowerCase() === "yes");
+            const val = isMemberSelect.value;
+            const isMem = (val === "Yes");
+            const isStaff = (val === "Staff");
             if (memberNoGroup) memberNoGroup.style.display = isMem ? "block" : "none";
             if (!isMem && memberNoInput) memberNoInput.value = "";
+            toggleStaffChargeMode(isStaff);
             calculateAllCharges();
         });
     }
@@ -2572,11 +2575,67 @@ function getCustomChargesListForCurrentLoan(loanAmt, isMember, schemeSelectVal) 
     return customList;
 }
 
+function toggleStaffChargeMode(isStaff) {
+    const STAFF_EDITABLE_IDS = [
+        "charge-share-a", "charge-share-b", "charge-member-fee",
+        "charge-valuation", "charge-stamp", "charge-service",
+        "charge-document", "charge-insurance", "charge-cgst", "charge-sgst"
+    ];
+    STAFF_EDITABLE_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (isStaff) {
+            el.removeAttribute("readonly");
+            el.classList.remove("auto-calc-field");
+            el.style.background = "#fffbeb";
+            el.style.borderColor = "#f59e0b";
+            el.title = "Staff entry: manually editable";
+        } else {
+            el.setAttribute("readonly", true);
+            el.classList.add("auto-calc-field");
+            el.style.background = "";
+            el.style.borderColor = "";
+            el.title = "";
+        }
+    });
+    // Also unlock dynamic custom charge inputs
+    document.querySelectorAll("#dynamic-custom-charges-loan-grid input").forEach(el => {
+        if (isStaff) {
+            el.removeAttribute("readonly");
+            el.classList.remove("auto-calc-field");
+            el.style.background = "#fffbeb";
+            el.style.borderColor = "#f59e0b";
+        } else {
+            el.setAttribute("readonly", true);
+            el.classList.add("auto-calc-field");
+            el.style.background = "";
+            el.style.borderColor = "";
+        }
+    });
+    // Show/hide a staff banner on the deductions card
+    let banner = document.getElementById("staff-deductions-banner");
+    const card = document.querySelector(".section-card-deductions");
+    if (isStaff) {
+        if (!banner && card) {
+            banner = document.createElement("div");
+            banner.id = "staff-deductions-banner";
+            banner.style.cssText = "background:#fef3c7; border:1.5px solid #f59e0b; border-radius:6px; padding:7px 12px; margin-bottom:10px; font-size:12px; font-weight:700; color:#92400e; display:flex; align-items:center; gap:6px;";
+            banner.innerHTML = '<i class="fa-solid fa-unlock"></i> Staff Entry — Deduction fields are manually editable.';
+            const title = card.querySelector(".section-title");
+            if (title) title.insertAdjacentElement("afterend", banner);
+            else card.prepend(banner);
+        }
+    } else {
+        if (banner) banner.remove();
+    }
+}
+
 function calculateAllCharges() {
     const loanAmt = parseFloat(document.getElementById("loan-amount") ? document.getElementById("loan-amount").value || 0 : 0);
     const goldWeight = parseFloat(document.getElementById("gold-weight") ? document.getElementById("gold-weight").value || 0 : 0);
     const isMemberVal = document.getElementById("is-member") ? document.getElementById("is-member").value.toLowerCase() : "no";
     const isMember = (isMemberVal === "yes");
+    const isStaff = (isMemberVal === "staff");
     const schemeSelectVal = document.getElementById("loan-category-select") ? document.getElementById("loan-category-select").value : "auto";
 
     const valRateInput = document.getElementById("val-gold-rate-input");
@@ -2594,7 +2653,8 @@ function calculateAllCharges() {
     let memberFee = 0;
 
     if (loanAmt >= 50000) {
-        if (isMember) {
+        // Staff treated same as member (no extra fees)
+        if (isMember || isStaff) {
             shareA = 0;
             shareB = 0;
             memberFee = 0;
@@ -2741,18 +2801,38 @@ function calculateAllCharges() {
     const ltvRatio = marketValue > 0 ? ((loanAmt / marketValue) * 100).toFixed(2) : "0.00";
     const marginRatio = marketValue > 0 ? (100 - parseFloat(ltvRatio)).toFixed(2) : "100.00";
 
-    // Set UI Input values
-    if (document.getElementById("charge-share-a")) document.getElementById("charge-share-a").value = shareA;
-    if (document.getElementById("charge-share-b")) document.getElementById("charge-share-b").value = shareB;
-    if (document.getElementById("charge-member-fee")) document.getElementById("charge-member-fee").value = memberFee;
-    if (document.getElementById("charge-valuation")) document.getElementById("charge-valuation").value = valuationFee;
-    if (document.getElementById("charge-stamp")) document.getElementById("charge-stamp").value = stampDuty;
-    if (document.getElementById("charge-service")) document.getElementById("charge-service").value = serviceChg;
-    if (document.getElementById("charge-document")) document.getElementById("charge-document").value = docCharge;
-    if (document.getElementById("charge-insurance")) document.getElementById("charge-insurance").value = insurance;
-    if (document.getElementById("charge-cgst")) document.getElementById("charge-cgst").value = cgst;
-    if (document.getElementById("charge-sgst")) document.getElementById("charge-sgst").value = sgst;
-    if (document.getElementById("charge-total")) document.getElementById("charge-total").value = totalDeductions;
+    // For Staff mode: only set auto-calculated values if fields are still readonly
+    // (user may have manually overridden them)
+    const isStaffMode = isMemberVal === "staff";
+
+    function setIfReadonly(id, val) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (!isStaffMode || el.hasAttribute("readonly")) el.value = val;
+    }
+
+    setIfReadonly("charge-share-a", shareA);
+    setIfReadonly("charge-share-b", shareB);
+    setIfReadonly("charge-member-fee", memberFee);
+    setIfReadonly("charge-valuation", valuationFee);
+    setIfReadonly("charge-stamp", stampDuty);
+    setIfReadonly("charge-service", serviceChg);
+    setIfReadonly("charge-document", docCharge);
+    setIfReadonly("charge-insurance", insurance);
+    setIfReadonly("charge-cgst", cgst);
+    setIfReadonly("charge-sgst", sgst);
+
+    // Always recalculate total from actual field values (respects manual overrides)
+    const actualTotal = [
+        "charge-share-a", "charge-share-b", "charge-member-fee",
+        "charge-valuation", "charge-stamp", "charge-service",
+        "charge-document", "charge-insurance", "charge-cgst", "charge-sgst"
+    ].reduce((sum, id) => {
+        const el = document.getElementById(id);
+        return sum + (el ? parseFloat(el.value || 0) : 0);
+    }, 0) + customChargesTotal + manualAdj;
+
+    if (document.getElementById("charge-total")) document.getElementById("charge-total").value = isStaffMode ? actualTotal : totalDeductions;
 
     // Set Valuation Summary Displays
     const elRateDisp = document.getElementById("val-rate-display");
@@ -2831,10 +2911,10 @@ function submitLoanEntry() {
             return;
         }
 
-        // Validate Member ID if customer is a member
+        // Validate Member ID if customer is a member (not required for Staff)
         const isMemberSelect = document.getElementById("is-member");
-        const isMemberVal = isMemberSelect ? isMemberSelect.value.toLowerCase() : "no";
-        if (isMemberVal === "yes") {
+        const isMemberVal = isMemberSelect ? isMemberSelect.value : "No";
+        if (isMemberVal === "Yes") {
             const memberNoInput = document.getElementById("member-no");
             const memberNoVal = memberNoInput ? memberNoInput.value.trim() : "";
             if (!memberNoVal) {
@@ -2935,9 +3015,12 @@ function submitLoanEntry() {
         const rawAccountNo = (accountNoInput && accountNoInput.value.trim()) ? accountNoInput.value.trim() : generateNextAccountNo(branchCode, loanTypeCode);
         const accountNo = formatLoanAccountNo(rawAccountNo, branchCode, loanTypeCode);
 
-        const isMember = (document.getElementById("is-member") && document.getElementById("is-member").value.toLowerCase() === "yes");
+        const isMemberSelectEl = document.getElementById("is-member");
+        const isMemberStatus = isMemberSelectEl ? isMemberSelectEl.value : "No"; // "Yes", "No", or "Staff"
+        const isMember = (isMemberStatus === "Yes");
+        const isStaff = (isMemberStatus === "Staff");
 
-        const customChargesList = getCustomChargesListForCurrentLoan(loanAmt, isMember, loanTypeCode);
+        const customChargesList = getCustomChargesListForCurrentLoan(loanAmt, isMember || isStaff, loanTypeCode);
         const customChargesTotal = customChargesList.reduce((sum, item) => sum + (item.amount || 0), 0);
 
         const statusRadio = document.querySelector('input[name="loan-status"]:checked');
@@ -2954,7 +3037,7 @@ function submitLoanEntry() {
         const caste = document.getElementById("cust-caste") ? document.getElementById("cust-caste").value.trim() : "";
         const nomineeName = document.getElementById("cust-nominee-name") ? document.getElementById("cust-nominee-name").value.trim() : "";
         const nomineeRelation = document.getElementById("cust-nominee-relation") ? document.getElementById("cust-nominee-relation").value.trim() : "";
-        const memberNo = isMember && document.getElementById("member-no") ? document.getElementById("member-no").value.trim() : "";
+        const memberNo = (isMember || isStaff) && document.getElementById("member-no") ? document.getElementById("member-no").value.trim() : "";
 
         const loanObj = {
             id: isEditingExistingLoan && currentEditingLoanId ? currentEditingLoanId : ("GL-" + Date.now()),
@@ -2967,6 +3050,7 @@ function submitLoanEntry() {
             packetNo: packetNo,
             customerNo: custNo,
             isMember: isMember,
+            isStaff: isStaff,
             memberNo: memberNo,
             borrowerName: borrowerName,
             address: address,
@@ -3134,6 +3218,8 @@ function resetLoanEntryForm() {
     if (isMemberSelect) isMemberSelect.value = "No";
     const memberNoGroup = document.getElementById("member-no-group");
     if (memberNoGroup) memberNoGroup.style.display = "none";
+    // Re-lock charge fields (in case it was a Staff entry)
+    if (typeof toggleStaffChargeMode === "function") toggleStaffChargeMode(false);
 
     generateNextProposalNo();
     generateNextPacketNo();
@@ -3607,14 +3693,20 @@ function editLoanRecord(id) {
     document.getElementById("loan-branch").value = loan.branchCode || "99";
     document.getElementById("cust-no").value = loan.customerNo || "";
 
-    const isMem = (loan.isMember === true || loan.isMember === "Yes" || (loan.memberNo && loan.memberNo.trim() !== ""));
+    // Determine member status to restore
+    const isStaffLoan = (loan.isStaff === true);
+    const isMem = !isStaffLoan && (loan.isMember === true || loan.isMember === "Yes" || (loan.memberNo && loan.memberNo.trim() !== ""));
     const isMemberSelect = document.getElementById("is-member");
     const memberNoGroup = document.getElementById("member-no-group");
     const memberNoInput = document.getElementById("member-no");
 
-    if (isMemberSelect) isMemberSelect.value = isMem ? "Yes" : "No";
+    if (isMemberSelect) {
+        isMemberSelect.value = isStaffLoan ? "Staff" : (isMem ? "Yes" : "No");
+    }
     if (memberNoGroup) memberNoGroup.style.display = isMem ? "block" : "none";
     if (memberNoInput) memberNoInput.value = loan.memberNo || "";
+    // Unlock deduction fields for staff loans
+    if (typeof toggleStaffChargeMode === "function") toggleStaffChargeMode(isStaffLoan);
 
     document.getElementById("cust-name").value = loan.borrowerName || "";
     document.getElementById("cust-address").value = loan.address || "";
