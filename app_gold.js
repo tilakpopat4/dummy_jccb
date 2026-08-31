@@ -121,7 +121,8 @@ const DEFAULT_BRANCHES = [
     { code: "13", name: "13 BUS STAND BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
     { code: "14", name: "14 LATHI BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
     { code: "16", name: "16 AHMEDABAD BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "17", name: "17 RAJKOT BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" }
+    { code: "17", name: "17 RAJKOT BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
+    { code: "18", name: "18 ZANZARDA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" }
 ];
 
 // Product Schemes
@@ -2874,13 +2875,41 @@ function getBranchProposalSeed(branchCode) {
 }
 
 function getBranchFirst3Letters(branchCode) {
-    const branches = state.branches || DEFAULT_BRANCHES;
-    const raw = branchCode ? String(branchCode).trim() : (state.currentSession ? String(state.currentSession.code).trim() : "99");
+    const raw = branchCode ? String(branchCode).trim() : (state && state.currentSession ? String(state.currentSession.code).trim() : "99");
     const numOnly = raw.replace(/\D/g, '');
     const bCode2 = numOnly ? numOnly.padStart(2, '0') : "99";
 
+    const BRANCH_PREFIX_MAP = {
+        "01": "CBB",
+        "02": "JPB",
+        "03": "DPB",
+        "04": "KDR",
+        "05": "KSD",
+        "06": "VTL",
+        "07": "VTL",
+        "08": "GNB",
+        "09": "LIM",
+        "10": "MND",
+        "11": "VIS",
+        "12": "JAM",
+        "13": "STB",
+        "14": "LTH",
+        "16": "AHM",
+        "17": "RJT",
+        "18": "ZAN",
+        "99": "HO"
+    };
+
+    if (BRANCH_PREFIX_MAP[bCode2]) {
+        return BRANCH_PREFIX_MAP[bCode2];
+    }
+    if (BRANCH_PREFIX_MAP[raw]) {
+        return BRANCH_PREFIX_MAP[raw];
+    }
+
+    const branches = (state && state.branches) || DEFAULT_BRANCHES;
     const branchObj = branches.find(b => String(b.code).replace(/\D/g, '').padStart(2, '0') === bCode2 || String(b.code) === raw)
-                   || (state.currentSession && String(state.currentSession.code) === raw ? state.currentSession : null);
+                   || (state && state.currentSession && String(state.currentSession.code) === raw ? state.currentSession : null);
 
     let rawName = (branchObj && branchObj.name) ? branchObj.name : raw;
     let cleaned = rawName.replace(/^[0-9\s_-]+/, '').replace(/\bBRANCH\b/ig, '').trim();
@@ -2889,28 +2918,7 @@ function getBranchFirst3Letters(branchCode) {
     if (letters.length >= 3) {
         return letters.substring(0, 3);
     }
-
-    const BRANCH_PREFIX_MAP = {
-        "99": "HEA",
-        "01": "AZA",
-        "02": "JOS",
-        "03": "DOL",
-        "04": "KOD",
-        "05": "KES",
-        "06": "VAN",
-        "07": "MAN",
-        "08": "GAN",
-        "09": "LIM",
-        "10": "MEN",
-        "11": "VIS",
-        "12": "JAM",
-        "13": "BUS",
-        "14": "LAT",
-        "16": "AHM",
-        "17": "RAJ"
-    };
-
-    return BRANCH_PREFIX_MAP[bCode2] || (letters ? (letters + "XXX").substring(0, 3) : ("BR" + bCode2));
+    return letters ? (letters + "XXX").substring(0, 3) : ("BR" + bCode2);
 }
 
 function generateNextProposalNo(branchCode) {
