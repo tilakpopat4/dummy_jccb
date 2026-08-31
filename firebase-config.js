@@ -827,32 +827,58 @@ const FirebaseService = {
     // =================================================================
 
     /**
-     * Save branch seeds & settings to Firestore
+     * Save branch seeds & settings to Firestore (Dual SDK + REST)
      */
     saveSettings: async function(settingsData) {
-        if (!this.db) return;
-        await this.db.collection('settings').doc('branchSeeds').set({
+        const payload = JSON.parse(JSON.stringify({
             ...settingsData,
             updatedAt: new Date().toISOString()
-        }, { merge: true });
+        }));
+
+        if (this.db) {
+            try {
+                await this.db.collection('settings').doc('branchSeeds').set(payload, { merge: true });
+                console.log("[Firebase SDK] Settings saved to cloud.");
+            } catch (e) {}
+        }
+        try {
+            const fsDoc = this.toFirestoreDocument(payload);
+            await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/branchSeeds`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(fsDoc)
+            });
+        } catch (e) {}
     },
 
     /**
      * Get branch seeds & settings from Firestore
      */
     getSettings: async function() {
-        if (!this.db) return null;
         try {
-            const doc = await this.db.collection('settings').doc('branchSeeds').get();
-            return doc.exists ? doc.data() : null;
-        } catch (e) {
-            console.warn("[Firebase] Error fetching settings:", e);
-            return null;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/branchSeeds`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                const data = await res.json();
+                return this.fromFirestoreDocument(data);
+            }
+        } catch (e) {}
+
+        if (this.db) {
+            try {
+                const doc = await this.db.collection('settings').doc('branchSeeds').get();
+                return doc.exists ? doc.data() : null;
+            } catch (e) {}
         }
+        return null;
     },
 
     /**
-     * Realtime listener for branch settings
+     * Realtime listener for branch settings across all PCs
      */
     listenSettings: function(onUpdate) {
         if (!this.db) return () => {};
@@ -862,6 +888,260 @@ const FirebaseService = {
             }
         }, (err) => {
             console.warn("[Firebase] Settings snapshot error:", err);
+        });
+    },
+
+    // =================================================================
+    // RULES MASTER SYNC (BANK DEDUCTIONS, VALUATION SLABS, GST)
+    // =================================================================
+
+    /**
+     * Save Rules Master configurations to Firestore
+     */
+    saveRules: async function(rulesData) {
+        const payload = JSON.parse(JSON.stringify({
+            ...rulesData,
+            updatedAt: new Date().toISOString(),
+            updatedBy: this.currentUser ? this.currentUser.uid : 'ADMIN'
+        }));
+
+        if (this.db) {
+            try {
+                await this.db.collection('settings').doc('rulesMaster').set(payload, { merge: true });
+                console.log("[Firebase SDK] Rules Master saved to cloud.");
+            } catch (e) {}
+        }
+        try {
+            const fsDoc = this.toFirestoreDocument(payload);
+            await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/rulesMaster`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(fsDoc)
+            });
+        } catch (e) {}
+    },
+
+    /**
+     * Get Rules Master from Firestore
+     */
+    getRules: async function() {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/rulesMaster`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                const data = await res.json();
+                return this.fromFirestoreDocument(data);
+            }
+        } catch (e) {}
+
+        if (this.db) {
+            try {
+                const doc = await this.db.collection('settings').doc('rulesMaster').get();
+                return doc.exists ? doc.data() : null;
+            } catch (e) {}
+        }
+        return null;
+    },
+
+    /**
+     * Realtime listener for Rules Master
+     */
+    listenRules: function(onUpdate) {
+        if (!this.db) return () => {};
+        return this.db.collection('settings').doc('rulesMaster').onSnapshot((doc) => {
+            if (doc.exists && typeof onUpdate === 'function') {
+                onUpdate(doc.data());
+            }
+        }, (err) => {
+            console.warn("[Firebase] Rules listener error:", err);
+        });
+    },
+
+    // =================================================================
+    // BRANCHES, VALUERS & PRODUCTS MASTER SYNC
+    // =================================================================
+
+    /**
+     * Save all branches list to Firestore
+     */
+    saveBranchesList: async function(branchesList) {
+        const payload = {
+            list: branchesList,
+            updatedAt: new Date().toISOString()
+        };
+        if (this.db) {
+            try {
+                await this.db.collection('settings').doc('branchesList').set(payload, { merge: true });
+            } catch (e) {}
+        }
+        try {
+            const fsDoc = this.toFirestoreDocument(payload);
+            await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/branchesList`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(fsDoc)
+            });
+        } catch (e) {}
+    },
+
+    /**
+     * Get all branches list from Firestore
+     */
+    getBranchesList: async function() {
+        try {
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/branchesList`);
+            if (res.ok) {
+                const data = await res.json();
+                const parsed = this.fromFirestoreDocument(data);
+                if (parsed && Array.isArray(parsed.list)) return parsed.list;
+            }
+        } catch (e) {}
+
+        if (this.db) {
+            try {
+                const doc = await this.db.collection('settings').doc('branchesList').get();
+                if (doc.exists && doc.data().list) return doc.data().list;
+            } catch (e) {}
+        }
+        return null;
+    },
+
+    /**
+     * Realtime listener for Branches Master
+     */
+    listenBranches: function(onUpdate) {
+        if (!this.db) return () => {};
+        return this.db.collection('settings').doc('branchesList').onSnapshot((doc) => {
+            if (doc.exists && typeof onUpdate === 'function') {
+                const data = doc.data();
+                if (Array.isArray(data.list)) onUpdate(data.list);
+            }
+        }, (err) => {
+            console.warn("[Firebase] Branches listener error:", err);
+        });
+    },
+
+    /**
+     * Save all Valuers list to Firestore
+     */
+    saveValuersList: async function(valuersList) {
+        const payload = {
+            list: valuersList,
+            updatedAt: new Date().toISOString()
+        };
+        if (this.db) {
+            try {
+                await this.db.collection('settings').doc('valuersList').set(payload, { merge: true });
+            } catch (e) {}
+        }
+        try {
+            const fsDoc = this.toFirestoreDocument(payload);
+            await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/valuersList`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(fsDoc)
+            });
+        } catch (e) {}
+    },
+
+    /**
+     * Get all Valuers list from Firestore
+     */
+    getValuersList: async function() {
+        try {
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/valuersList`);
+            if (res.ok) {
+                const data = await res.json();
+                const parsed = this.fromFirestoreDocument(data);
+                if (parsed && Array.isArray(parsed.list)) return parsed.list;
+            }
+        } catch (e) {}
+
+        if (this.db) {
+            try {
+                const doc = await this.db.collection('settings').doc('valuersList').get();
+                if (doc.exists && doc.data().list) return doc.data().list;
+            } catch (e) {}
+        }
+        return null;
+    },
+
+    /**
+     * Realtime listener for Valuers Master
+     */
+    listenValuers: function(onUpdate) {
+        if (!this.db) return () => {};
+        return this.db.collection('settings').doc('valuersList').onSnapshot((doc) => {
+            if (doc.exists && typeof onUpdate === 'function') {
+                const data = doc.data();
+                if (Array.isArray(data.list)) onUpdate(data.list);
+            }
+        }, (err) => {
+            console.warn("[Firebase] Valuers listener error:", err);
+        });
+    },
+
+    /**
+     * Save all Product Schemes list to Firestore
+     */
+    saveProductsList: async function(productsList) {
+        const payload = {
+            list: productsList,
+            updatedAt: new Date().toISOString()
+        };
+        if (this.db) {
+            try {
+                await this.db.collection('settings').doc('productsList').set(payload, { merge: true });
+            } catch (e) {}
+        }
+        try {
+            const fsDoc = this.toFirestoreDocument(payload);
+            await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/productsList`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(fsDoc)
+            });
+        } catch (e) {}
+    },
+
+    /**
+     * Get all Product Schemes list from Firestore
+     */
+    getProductsList: async function() {
+        try {
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/settings/productsList`);
+            if (res.ok) {
+                const data = await res.json();
+                const parsed = this.fromFirestoreDocument(data);
+                if (parsed && Array.isArray(parsed.list)) return parsed.list;
+            }
+        } catch (e) {}
+
+        if (this.db) {
+            try {
+                const doc = await this.db.collection('settings').doc('productsList').get();
+                if (doc.exists && doc.data().list) return doc.data().list;
+            } catch (e) {}
+        }
+        return null;
+    },
+
+    /**
+     * Realtime listener for Product Schemes Master
+     */
+    listenProducts: function(onUpdate) {
+        if (!this.db) return () => {};
+        return this.db.collection('settings').doc('productsList').onSnapshot((doc) => {
+            if (doc.exists && typeof onUpdate === 'function') {
+                const data = doc.data();
+                if (Array.isArray(data.list)) onUpdate(data.list);
+            }
+        }, (err) => {
+            console.warn("[Firebase] Products listener error:", err);
         });
     },
 

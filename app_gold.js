@@ -465,7 +465,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.FirebaseService) {
         window.FirebaseService.init().then(() => {
             console.log("[Firebase] Central Cloud Database Initialized.");
-            // Listen for realtime gold rate changes
+            
+            // 1. Listen for realtime gold rate changes
             if (typeof window.FirebaseService.listenDailyRates === "function") {
                 window.FirebaseService.listenDailyRates((cloudRates) => {
                     if (cloudRates && (parseFloat(cloudRates.rate22K) > 0 || parseFloat(cloudRates.rate24K) > 0)) {
@@ -478,7 +479,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 });
             }
-            // Listen for realtime deleted loans across all devices
+
+            // 2. Listen for realtime deleted loans across all devices
             if (typeof window.FirebaseService.listenDeletedLoans === "function") {
                 window.FirebaseService.listenDeletedLoans((deletedId) => {
                     if (!deletedId) return;
@@ -505,14 +507,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
 
-            // Listen for realtime loan records
+            // 3. Listen for realtime loan records
             if (typeof window.FirebaseService.listenLoans === "function") {
                 window.FirebaseService.listenLoans(null, (cloudLoans) => {
                     if (Array.isArray(cloudLoans)) {
                         if (!state.loans) state.loans = [];
                         const deletedSet = new Set(state.deletedLoanIds || []);
 
-                        // Filter out loans that were deleted
                         const validCloudLoans = cloudLoans.filter(cl => {
                             const id = String(cl.id || cl.loanId || "").trim();
                             return id && !deletedSet.has(id);
@@ -532,7 +533,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             }
                         });
 
-                        // Retain recently created offline loans that are pending upload
                         state.loans.forEach(localLoan => {
                             const id = String(localLoan.id || localLoan.loanId || "").trim();
                             if (id && !seenIds.has(id) && !deletedSet.has(id)) {
@@ -550,6 +550,88 @@ document.addEventListener("DOMContentLoaded", () => {
                         renderDashboard();
                         renderRegisterTable();
                         if (typeof renderReportsTable === "function") renderReportsTable();
+                    }
+                });
+            }
+
+            // 4. Listen for realtime Branch Settings & Account/Packet Seeds
+            if (typeof window.FirebaseService.listenSettings === "function") {
+                window.FirebaseService.listenSettings((cloudSettings) => {
+                    if (cloudSettings && typeof cloudSettings === "object") {
+                        state.settings = { ...state.settings, ...cloudSettings };
+                        saveState();
+                        if (typeof renderBranchSettings === "function") {
+                            const branchSelect = document.getElementById("settings-branch-select");
+                            renderBranchSettings(branchSelect ? branchSelect.value : null);
+                        }
+                        const curBranch = document.getElementById("loan-branch") ? document.getElementById("loan-branch").value : (state.currentSession ? state.currentSession.code : "99");
+                        generateNextProposalNo(curBranch);
+                        generateNextPacketNo(curBranch);
+                        console.log("[Firebase] Realtime settings & seeds synced across PCs.");
+                    }
+                });
+            }
+
+            // 5. Listen for realtime Rules Master
+            if (typeof window.FirebaseService.listenRules === "function") {
+                window.FirebaseService.listenRules((cloudRules) => {
+                    if (cloudRules && typeof cloudRules === "object" && cloudRules.membership) {
+                        state.rules = { ...state.rules, ...cloudRules };
+                        saveState();
+                        calculateAllCharges();
+                        if (typeof renderRulesMaster === "function") renderRulesMaster();
+                        if (typeof renderCustomChargesTable === "function") renderCustomChargesTable();
+                        console.log("[Firebase] Realtime Rules Master synced across PCs.");
+                    }
+                });
+            }
+
+            // 6. Listen for realtime Branches Master (passwords & branch changes)
+            if (typeof window.FirebaseService.listenBranches === "function") {
+                window.FirebaseService.listenBranches((cloudBranches) => {
+                    if (Array.isArray(cloudBranches) && cloudBranches.length > 0) {
+                        state.branches = cloudBranches;
+                        saveState();
+                        if (typeof populateLoginBranches === "function") populateLoginBranches();
+                        if (typeof renderBranchMaster === "function") renderBranchMaster();
+                        if (typeof updateBranchContextUI === "function") updateBranchContextUI();
+                        console.log("[Firebase] Realtime Branches & Passwords synced across PCs.");
+                    }
+                });
+            }
+
+            // 7. Listen for realtime Valuers Master
+            if (typeof window.FirebaseService.listenValuers === "function") {
+                window.FirebaseService.listenValuers((cloudValuers) => {
+                    if (Array.isArray(cloudValuers) && cloudValuers.length > 0) {
+                        state.valuers = cloudValuers;
+                        saveState();
+                        if (typeof renderValuers === "function") renderValuers();
+                        console.log("[Firebase] Realtime Valuers Master synced across PCs.");
+                    }
+                });
+            }
+
+            // 8. Listen for realtime Product Schemes Master
+            if (typeof window.FirebaseService.listenProducts === "function") {
+                window.FirebaseService.listenProducts((cloudProducts) => {
+                    if (Array.isArray(cloudProducts) && cloudProducts.length > 0) {
+                        state.products = cloudProducts;
+                        saveState();
+                        if (typeof renderProductMaster === "function") renderProductMaster();
+                        console.log("[Firebase] Realtime Product Schemes synced across PCs.");
+                    }
+                });
+            }
+
+            // 9. Listen for realtime Customer Profiles
+            if (typeof window.FirebaseService.listenCustomers === "function") {
+                window.FirebaseService.listenCustomers((cloudCustomers) => {
+                    if (Array.isArray(cloudCustomers) && cloudCustomers.length > 0) {
+                        state.customers = cloudCustomers;
+                        saveState();
+                        if (typeof renderCustomerMasterList === "function") renderCustomerMasterList();
+                        console.log("[Firebase] Realtime Customers synced across PCs.");
                     }
                 });
             }
@@ -582,7 +664,57 @@ async function syncCloudData(isManual = false) {
             }
         }
 
-        // 2. Sync Deleted Loans catchup
+        // 2. Sync Settings & Branch Seeds
+        if (typeof window.FirebaseService.getSettings === "function") {
+            const fbSettings = await window.FirebaseService.getSettings();
+            if (fbSettings && typeof fbSettings === "object") {
+                state.settings = { ...state.settings, ...fbSettings };
+            } else if (state.settings && Object.keys(state.settings.branchSeeds || {}).length > 0) {
+                window.FirebaseService.saveSettings(state.settings).catch(() => {});
+            }
+        }
+
+        // 3. Sync Rules Master
+        if (typeof window.FirebaseService.getRules === "function") {
+            const fbRules = await window.FirebaseService.getRules();
+            if (fbRules && typeof fbRules === "object" && fbRules.membership) {
+                state.rules = { ...state.rules, ...fbRules };
+            } else if (state.rules && state.rules.membership) {
+                window.FirebaseService.saveRules(state.rules).catch(() => {});
+            }
+        }
+
+        // 4. Sync Branches List
+        if (typeof window.FirebaseService.getBranchesList === "function") {
+            const fbBranches = await window.FirebaseService.getBranchesList();
+            if (Array.isArray(fbBranches) && fbBranches.length > 0) {
+                state.branches = fbBranches;
+            } else if (Array.isArray(state.branches) && state.branches.length > 0) {
+                window.FirebaseService.saveBranchesList(state.branches).catch(() => {});
+            }
+        }
+
+        // 5. Sync Valuers List
+        if (typeof window.FirebaseService.getValuersList === "function") {
+            const fbValuers = await window.FirebaseService.getValuersList();
+            if (Array.isArray(fbValuers) && fbValuers.length > 0) {
+                state.valuers = fbValuers;
+            } else if (Array.isArray(state.valuers) && state.valuers.length > 0) {
+                window.FirebaseService.saveValuersList(state.valuers).catch(() => {});
+            }
+        }
+
+        // 6. Sync Products List
+        if (typeof window.FirebaseService.getProductsList === "function") {
+            const fbProducts = await window.FirebaseService.getProductsList();
+            if (Array.isArray(fbProducts) && fbProducts.length > 0) {
+                state.products = fbProducts;
+            } else if (Array.isArray(state.products) && state.products.length > 0) {
+                window.FirebaseService.saveProductsList(state.products).catch(() => {});
+            }
+        }
+
+        // 7. Sync Deleted Loans catchup
         if (typeof window.FirebaseService.getDeletedLoanIds === "function") {
             const cloudDeletedIds = await window.FirebaseService.getDeletedLoanIds();
             if (Array.isArray(cloudDeletedIds) && cloudDeletedIds.length > 0) {
@@ -596,7 +728,7 @@ async function syncCloudData(isManual = false) {
             }
         }
 
-        // 3. Sync Loans
+        // 8. Sync Loans
         const fbLoans = await window.FirebaseService.getLoans();
         const deletedSet = new Set(state.deletedLoanIds || []);
 
@@ -648,7 +780,7 @@ async function syncCloudData(isManual = false) {
 
         if (isManual) {
             const currentR = getActiveGoldRate22K();
-            showToast(`✅ Cloud Synced: 22K Rate ₹${currentR.toLocaleString("en-IN")} | Active Loans: ${state.loans ? state.loans.length : 0}`);
+            showToast(`✅ Cloud Synced: All Masters & Loans Live across PCs`);
         }
     } catch (e) {
         console.warn("[CloudSync] Background sync check notice:", e);
@@ -5151,6 +5283,11 @@ function initProductMaster() {
 
             renderProductMaster();
             showToast("Product Scheme saved successfully!");
+
+            // Sync Product Schemes to Cloud Firestore (Live across all PCs)
+            if (window.FirebaseService && typeof window.FirebaseService.saveProductsList === "function") {
+                window.FirebaseService.saveProductsList(state.products).catch(e => console.warn("[Firebase] Products sync error:", e));
+            }
         });
     }
 
@@ -5235,6 +5372,11 @@ function renderProductMaster() {
                 state.products = state.products.filter(x => String(x.id) !== String(id));
                 saveState();
                 renderProductMaster();
+
+                if (window.FirebaseService && typeof window.FirebaseService.saveProductsList === "function") {
+                    window.FirebaseService.saveProductsList(state.products).catch(e => console.warn("[Firebase] Products delete sync error:", e));
+                }
+
                 showToast("Product scheme removed.");
             }
         });
@@ -5683,6 +5825,11 @@ function initRulesMaster() {
             calculateAllCharges();
             renderRulesMaster();
             showToast("Banking & Deduction Rules successfully saved!");
+
+            // Sync Rules Master to Cloud Firestore (Live across all PCs)
+            if (window.FirebaseService && typeof window.FirebaseService.saveRules === "function") {
+                window.FirebaseService.saveRules(state.rules).catch(e => console.warn("[Firebase] Rules sync error:", e));
+            }
         });
     }
 
@@ -5700,6 +5847,10 @@ function initRulesMaster() {
                 calculateAllCharges();
                 renderRulesMaster();
                 showToast("Rules reset to default standard.");
+
+                if (window.FirebaseService && typeof window.FirebaseService.saveRules === "function") {
+                    window.FirebaseService.saveRules(state.rules).catch(e => console.warn("[Firebase] Rules reset sync error:", e));
+                }
             }
         });
     }
@@ -5799,6 +5950,10 @@ function initRulesMaster() {
             renderRulesMaster();
             closeModal();
             showToast("Custom Charge Rule saved successfully!");
+
+            if (window.FirebaseService && typeof window.FirebaseService.saveRules === "function") {
+                window.FirebaseService.saveRules(state.rules).catch(e => console.warn("[Firebase] Custom rules sync error:", e));
+            }
         });
     }
 }
@@ -5946,6 +6101,11 @@ function renderCustomChargesTable() {
                     saveState();
                     calculateAllCharges();
                     renderRulesMaster();
+
+                    if (window.FirebaseService && typeof window.FirebaseService.saveRules === "function") {
+                        window.FirebaseService.saveRules(state.rules).catch(e => console.warn("[Firebase] Rules toggle sync error:", e));
+                    }
+
                     showToast(`Charge "${item.nameEn}" is now ${item.active ? 'Active' : 'Inactive'}.`);
                 }
             });
@@ -5983,6 +6143,11 @@ function renderCustomChargesTable() {
                     saveState();
                     calculateAllCharges();
                     renderRulesMaster();
+
+                    if (window.FirebaseService && typeof window.FirebaseService.saveRules === "function") {
+                        window.FirebaseService.saveRules(state.rules).catch(e => console.warn("[Firebase] Rules delete sync error:", e));
+                    }
+
                     showToast("Custom charge deleted successfully.");
                 }
             });
