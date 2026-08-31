@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JCCB Gold | Central Management & Security Audit Portal</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="../management.css">
+</head>
+<body>
+
+    <!-- ==================== AUTHENTICATION OVERLAY ==================== -->
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="auth-modal">
+            <img src="../jccb-logo.png" alt="JCCB Logo" class="auth-modal-logo">
+            <h2>Management Console</h2>
+            <p>Enter Head Office Admin Passcode to access system audit logs, device presences & data backups.</p>
+            <form id="mgmt-auth-form">
+                <input type="password" id="mgmt-passcode" placeholder="••••••••" required autocomplete="current-password" autofocus>
+                <div id="mgmt-auth-error" class="auth-error hidden">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Invalid Administrator Passcode
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:12px;">
+                    <i class="fa-solid fa-lock-open"></i> Authenticate & Unlock
+                </button>
+            </form>
+            <div style="margin-top:16px;">
+                <a href="../index.html" style="font-size:12px; color:var(--text-muted); text-decoration:none;">
+                    <i class="fa-solid fa-arrow-left"></i> Return to Gold Loan Portal
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== HEADER ==================== -->
+    <header class="mgmt-header">
+        <div class="mgmt-brand">
+            <img src="../jccb-logo.png" alt="JCCB Logo" class="mgmt-logo">
+            <div class="mgmt-title">
+                <h1>The Junagadh Commercial Co-operative Bank Ltd.</h1>
+                <p>
+                    <span><i class="fa-solid fa-shield-halved text-gold"></i> Central Website Management & Security Audit Console</span>
+                    <span>•</span>
+                    <span id="mgmt-current-time">Loading...</span>
+                </p>
+            </div>
+        </div>
+        <div class="mgmt-header-actions">
+            <div class="live-indicator">
+                <span class="pulse-dot"></span>
+                <span id="mgmt-cloud-status">Cloud Live</span>
+            </div>
+            <a href="../index.html" class="btn btn-gold">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Gold Portal
+            </a>
+            <button id="btn-lock-mgmt" class="btn btn-outline-light" title="Lock Management Console">
+                <i class="fa-solid fa-lock"></i> Lock
+            </button>
+        </div>
+    </header>
+
+    <!-- ==================== MAIN CONTENT CONTAINER ==================== -->
+    <main class="mgmt-container">
+
+        <!-- Top Metadata & Health Statistics Grid -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <i class="fa-solid fa-tower-broadcast"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-label">Live Branches Online</div>
+                    <div class="stat-value" id="stat-active-devices">0</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-label">Total Loans Disbursed</div>
+                    <div class="stat-value" id="stat-total-loans">0</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon gold">
+                    <i class="fa-solid fa-coins"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-label">Total Disbursed Value</div>
+                    <div class="stat-value" id="stat-total-amount">₹ 0</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon purple">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-label">Registered Customers</div>
+                    <div class="stat-value" id="stat-total-customers">0</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-label">Audit Log Events</div>
+                    <div class="stat-value" id="stat-total-logs">0</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation Tabs -->
+        <nav class="mgmt-tabs">
+            <button class="tab-btn active" data-tab="tab-devices">
+                <i class="fa-solid fa-desktop"></i> Live Branches & Activated Devices
+                <span class="badge" id="badge-device-count">0</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-logs">
+                <i class="fa-solid fa-shield-halved"></i> Security & Operation Audit Logs
+                <span class="badge" id="badge-log-count">0</span>
+            </button>
+            <button class="tab-btn" data-tab="tab-export">
+                <i class="fa-solid fa-download"></i> Data Backup & CSV Export Center
+            </button>
+            <button class="tab-btn" data-tab="tab-metadata">
+                <i class="fa-solid fa-database"></i> System Metadata & Diagnostics
+            </button>
+        </nav>
+
+        <!-- ==================== TAB 1: LIVE BRANCHES & DEVICES ==================== -->
+        <section id="tab-devices" class="tab-panel active">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa-solid fa-network-wired text-primary"></i> Real-Time Connected Branches & Devices
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <span style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-arrows-rotate"></i> Auto-refreshes live via Firestore WebSockets</span>
+                        <button id="btn-refresh-sessions" class="btn btn-secondary btn-sm"><i class="fa-solid fa-sync"></i> Refresh</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="mgmt-table">
+                        <thead>
+                            <tr>
+                                <th style="text-align:center;">Status</th>
+                                <th>Branch</th>
+                                <th>Operator / User</th>
+                                <th>Client IP Address</th>
+                                <th>Device / Browser Platform</th>
+                                <th>First Login</th>
+                                <th>Last Active Heartbeat</th>
+                                <th style="text-align:center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="devices-tbody">
+                            <tr>
+                                <td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> Listening for active devices...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: AUDIT LOGS ==================== -->
+        <section id="tab-logs" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa-solid fa-list-check text-primary"></i> Security & Activity Audit Trail
+                    </div>
+                    <button id="btn-download-logs-quick" class="btn btn-gold">
+                        <i class="fa-solid fa-file-csv"></i> Download Logs (CSV)
+                    </button>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="filter-bar">
+                    <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:200px;">
+                        <i class="fa-solid fa-magnifying-glass" style="color:var(--text-muted);"></i>
+                        <input type="text" id="log-search-input" placeholder="Search keyword, borrower, loan ID, IP..." style="width:100%;">
+                    </div>
+                    <div>
+                        <select id="log-filter-action">
+                            <option value="">-- All Actions --</option>
+                            <option value="LOGIN">LOGIN</option>
+                            <option value="LOGOUT">LOGOUT</option>
+                            <option value="LOAN_SANCTION">LOAN_SANCTION</option>
+                            <option value="LOAN_DELETE">LOAN_DELETE</option>
+                            <option value="RATE_UPDATE">RATE_UPDATE</option>
+                            <option value="RULES_UPDATE">RULES_UPDATE</option>
+                            <option value="BRANCH_UPDATE">BRANCH_UPDATE</option>
+                            <option value="SETTINGS_UPDATE">SETTINGS_UPDATE</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select id="log-filter-branch">
+                            <option value="">-- All Branches --</option>
+                        </select>
+                    </div>
+                    <button id="btn-clear-log-filters" class="btn btn-secondary">
+                        <i class="fa-solid fa-rotate-left"></i> Reset Filters
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="mgmt-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Branch</th>
+                                <th>Operator</th>
+                                <th style="text-align:center;">Action</th>
+                                <th>Operation Details</th>
+                                <th>Client IP Address</th>
+                                <th>Device OS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-tbody">
+                            <tr>
+                                <td colspan="7" style="text-align:center; padding:24px; color:var(--text-muted);">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> Loading audit logs...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: DATA EXPORT & BACKUP ==================== -->
+        <section id="tab-export" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa-solid fa-file-export text-primary"></i> Complete Data & Logs Export Center
+                    </div>
+                    <span style="font-size:12px; color:var(--text-muted);">All CSV exports are encoded in UTF-8 BOM with proper Gujarati and English headers for Microsoft Excel compatibility.</span>
+                </div>
+
+                <div class="export-grid">
+                    <!-- Export Logs -->
+                    <div class="export-card">
+                        <div>
+                            <div class="export-card-head">
+                                <i class="fa-solid fa-shield-halved"></i>
+                                <div>
+                                    <h3>Security Audit Logs</h3>
+                                    <span style="font-size:11px; color:var(--text-muted);">Timestamped Activity Trail</span>
+                                </div>
+                            </div>
+                            <p>Download complete audit logs including action types, operator identities, branch codes, client IP addresses, and event details.</p>
+                        </div>
+                        <button id="btn-export-audit-csv" class="btn btn-gold" style="width:100%; justify-content:center;">
+                            <i class="fa-solid fa-file-csv"></i> Download Audit Logs (CSV)
+                        </button>
+                    </div>
+
+                    <!-- Export Loans -->
+                    <div class="export-card">
+                        <div>
+                            <div class="export-card-head">
+                                <i class="fa-solid fa-receipt"></i>
+                                <div>
+                                    <h3>Full Loans Register</h3>
+                                    <span style="font-size:11px; color:var(--text-muted);">All Branches Loan Portfolio</span>
+                                </div>
+                            </div>
+                            <p>Export full gold loan register records across all branches with borrower details, gold weights, valuation, and deductions.</p>
+                        </div>
+                        <button id="btn-export-loans-csv" class="btn btn-primary" style="width:100%; justify-content:center;">
+                            <i class="fa-solid fa-file-csv"></i> Download Loans Register (CSV)
+                        </button>
+                    </div>
+
+                    <!-- Export Customers -->
+                    <div class="export-card">
+                        <div>
+                            <div class="export-card-head">
+                                <i class="fa-solid fa-users"></i>
+                                <div>
+                                    <h3>Customer Directory</h3>
+                                    <span style="font-size:11px; color:var(--text-muted);">KYC & Borrower Profiles</span>
+                                </div>
+                            </div>
+                            <p>Download full customer master records with membership numbers, addresses, savings accounts, and contact information.</p>
+                        </div>
+                        <button id="btn-export-customers-csv" class="btn btn-primary" style="width:100%; justify-content:center;">
+                            <i class="fa-solid fa-file-csv"></i> Download Customers (CSV)
+                        </button>
+                    </div>
+
+                    <!-- Export Branches & Valuers -->
+                    <div class="export-card">
+                        <div>
+                            <div class="export-card-head">
+                                <i class="fa-solid fa-code-branch"></i>
+                                <div>
+                                    <h3>Branches & Valuers Master</h3>
+                                    <span style="font-size:11px; color:var(--text-muted);">Organizational Directory</span>
+                                </div>
+                            </div>
+                            <p>Download list of all 17+ branch offices, authorized valuer panel profiles, and active product schemes.</p>
+                        </div>
+                        <button id="btn-export-masters-csv" class="btn btn-primary" style="width:100%; justify-content:center;">
+                            <i class="fa-solid fa-file-csv"></i> Download Masters (CSV)
+                        </button>
+                    </div>
+
+                    <!-- Export Full JSON -->
+                    <div class="export-card" style="border-color:#F4C300;">
+                        <div>
+                            <div class="export-card-head">
+                                <i class="fa-solid fa-database" style="color:#d4a500;"></i>
+                                <div>
+                                    <h3>Complete System Database Backup</h3>
+                                    <span style="font-size:11px; color:var(--text-muted);">Full JSON Raw Snapshot</span>
+                                </div>
+                            </div>
+                            <p>Full raw database snapshot containing all collections, settings, rules, schemes, and logs for archival and disaster recovery.</p>
+                        </div>
+                        <button id="btn-export-full-json" class="btn btn-gold" style="width:100%; justify-content:center;">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Download Complete Backup (JSON)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: METADATA & DIAGNOSTICS ==================== -->
+        <section id="tab-metadata" class="tab-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa-solid fa-server text-primary"></i> Database Metadata & Cloud Health
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="mgmt-table">
+                        <thead>
+                            <tr>
+                                <th>Metric / Resource</th>
+                                <th>Value / Status</th>
+                                <th>Description / Health Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Cloud Firestore Endpoint</strong></td>
+                                <td><code>gold-jccb.firebaseapp.com</code></td>
+                                <td><span class="badge badge-live">Connected & Healthy</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Project ID</strong></td>
+                                <td><code>gold-jccb</code></td>
+                                <td>Central Production Multi-Tenant Cloud Database</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Synchronization Protocol</strong></td>
+                                <td><code>Dual WebChannel (WebSocket) + REST Fallback</code></td>
+                                <td>Zero-downtime resilient auto-syncing</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Active Application Version</strong></td>
+                                <td><code>v20260831_v10 (Enterprise Gold Core)</code></td>
+                                <td>Synced across Head Office and all branch terminals</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Chief Architect & Developer</strong></td>
+                                <td><strong>Rahul Popat</strong> (<a href="tel:+919898180810">+91 9898180810</a>)</td>
+                                <td>Technical In-Charge & System Administrator</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Firebase SDK (v10 Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    <script src="../firebase-config.js?v=20260831_v10"></script>
+    <script src="../management.js?v=20260831_v10"></script>
+</body>
+</html>

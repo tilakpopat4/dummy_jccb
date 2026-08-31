@@ -5,6 +5,13 @@
   },
   "hosting": {
     "public": ".",
+    "cleanUrls": true,
+    "rewrites": [
+      {
+        "source": "/management",
+        "destination": "/management/index.html"
+      }
+    ],
     "ignore": [
       "firebase.json",
       "firestore.rules",
