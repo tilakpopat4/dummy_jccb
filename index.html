@@ -11,7 +11,7 @@
     <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Style Sheet -->
-    <link rel="stylesheet" href="styles.css?v=20260831_v16">
+    <link rel="stylesheet" href="styles.css?v=20260831_v17">
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="jccb-logo.png">
     <link rel="shortcut icon" type="image/png" href="jccb-logo.png">
@@ -455,8 +455,8 @@
                                 <h3 class="section-title"><i class="fa-solid fa-user-shield"></i> 2. Customer Profile Details</h3>
                                 <div class="form-row two-col">
                                     <div class="form-group">
-                                        <label for="cust-no">Customer No</label>
-                                        <input type="text" id="cust-no" placeholder="Customer No">
+                                        <label for="cust-no">Customer No <span style="color:var(--danger,#dc2626);">*</span></label>
+                                        <input type="text" id="cust-no" placeholder="Customer No" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="cust-name">Customer Name</label>
@@ -1233,6 +1233,13 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
+                                    <label for="branch-short-name">Branch Short Name / Proposal Prefix <span style="color:var(--danger,#dc2626);">*</span></label>
+                                    <input type="text" id="branch-short-name" placeholder="e.g. CBB, VTL, JPB (max 5 chars)" maxlength="5" style="text-transform:uppercase;" required>
+                                    <small style="color:var(--text-secondary); font-size:11px; display:block; margin-top:4px;">
+                                        Used in Proposal No. — e.g. <code>CBB/2026/0001</code>. Keep it short (2–5 letters).
+                                    </small>
+                                </div>
+                                <div class="form-group">
                                     <label for="branch-password">Branch Login Password / પાસવર્ડ</label>
                                     <div style="display:flex; gap:8px;">
                                         <input type="text" id="branch-password" placeholder="e.g. Admin@123" value="Admin@123" required style="flex:1;">
@@ -1263,6 +1270,7 @@
                                         <tr>
                                             <th style="width:65px;">Code</th>
                                             <th>Branch Title</th>
+                                            <th style="width:80px;">Prefix</th>
                                             <th>Role (રોલ / હોદ્દો)</th>
                                             <th>Login Passcode</th>
                                             <th style="width:95px; text-align:center;">Action</th>
@@ -2491,7 +2499,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
-    <script src="firebase-config.js?v=20260831_v16"></script>
-    <script src="app_gold.js?v=20260831_v16"></script>
+    <script src="firebase-config.js?v=20260831_v17"></script>
+    <script src="app_gold.js?v=20260831_v17"></script>
 </body>
 </html>

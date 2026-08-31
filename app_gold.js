@@ -2823,6 +2823,14 @@ function submitLoanEntry() {
             return;
         }
 
+        const custNoInput = document.getElementById("cust-no");
+        const custNoVal = custNoInput ? custNoInput.value.trim() : "";
+        if (!custNoVal) {
+            alert("કૃપા કરીને ગ્રાહક નંબર (Customer No) દાખલ કરો. આ ફીલ્ડ ફરજિયાત છે.");
+            if (custNoInput) custNoInput.focus();
+            return;
+        }
+
         const nameInput = document.getElementById("cust-name");
         const borrowerName = nameInput ? nameInput.value.trim() : "";
         if (!borrowerName) {
@@ -3223,6 +3231,15 @@ function getBranchFirst3Letters(branchCode) {
     const numOnly = raw.replace(/\D/g, '');
     const bCode2 = numOnly ? numOnly.padStart(2, '0') : "99";
 
+    // 1. Check state.branches shortName first (editable from Head Office)
+    const branches = (state && state.branches) || DEFAULT_BRANCHES;
+    const branchObj = branches.find(b => String(b.code).replace(/\D/g, '').padStart(2, '0') === bCode2 || String(b.code) === raw)
+                   || (state && state.currentSession && String(state.currentSession.code) === raw ? state.currentSession : null);
+    if (branchObj && branchObj.shortName && branchObj.shortName.trim()) {
+        return branchObj.shortName.trim().toUpperCase();
+    }
+
+    // 2. Fall back to built-in prefix map
     const BRANCH_PREFIX_MAP = {
         "01": "CBB",
         "02": "JPB",
@@ -3251,10 +3268,7 @@ function getBranchFirst3Letters(branchCode) {
         return BRANCH_PREFIX_MAP[raw];
     }
 
-    const branches = (state && state.branches) || DEFAULT_BRANCHES;
-    const branchObj = branches.find(b => String(b.code).replace(/\D/g, '').padStart(2, '0') === bCode2 || String(b.code) === raw)
-                   || (state && state.currentSession && String(state.currentSession.code) === raw ? state.currentSession : null);
-
+    // 3. Derive from branch name
     let rawName = (branchObj && branchObj.name) ? branchObj.name : raw;
     let cleaned = rawName.replace(/^[0-9\s_-]+/, '').replace(/\bBRANCH\b/ig, '').trim();
     let letters = cleaned.replace(/[^A-Za-z]/g, '').toUpperCase();
@@ -5289,9 +5303,10 @@ function initBranchMaster() {
             const code = rawCode.padStart(2, "0");
             let name = document.getElementById("branch-name").value.trim().toUpperCase();
             const password = document.getElementById("branch-password") ? document.getElementById("branch-password").value.trim() : (code === "99" ? "Rahul#80810" : "Admin@123");
+            const shortNameRaw = document.getElementById("branch-short-name") ? document.getElementById("branch-short-name").value.trim().toUpperCase() : "";
 
-            if (!code || !name || !password) {
-                alert("Please fill all required branch fields.");
+            if (!code || !name || !password || !shortNameRaw) {
+                alert("Please fill all required branch fields including the Short Name / Proposal Prefix.");
                 return;
             }
 
@@ -5300,10 +5315,14 @@ function initBranchMaster() {
                 name = `${code} ${name}`;
             }
 
+            // Preserve existing fields (role, etc.) when editing
+            const existingBranch = state.branches.find(b => b.code === (editCode || code)) || {};
             const branchObj = {
+                ...existingBranch,
                 code: code,
                 name: name,
                 password: password,
+                shortName: shortNameRaw,
                 isHO: (code === "99")
             };
 
@@ -5363,6 +5382,8 @@ function resetBranchMasterForm() {
     if (passInput) passInput.value = "Admin@123";
     const roleSelect = document.getElementById("branch-role");
     if (roleSelect) roleSelect.value = "branch_manager";
+    const shortNameInput = document.getElementById("branch-short-name");
+    if (shortNameInput) shortNameInput.value = "";
 
     const titleEl = document.getElementById("branch-form-title");
     if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-code-branch"></i> Add New Branch Office';
@@ -5400,9 +5421,11 @@ function renderBranchMaster() {
         const branchRole = b.role || (b.isHO || b.code === "99" ? ROLES.ADMIN : ROLES.BRANCH_MANAGER);
         const roleBadge = getRoleBadgeHTML(branchRole);
 
+        const displayPrefix = b.shortName || getBranchFirst3Letters(b.code);
         tr.innerHTML = `
             <td><span class="badge badge-primary font-bold">${b.code}</span></td>
             <td><strong>${b.name}</strong> ${b.isHO ? '<span class="badge badge-gold" style="margin-left:5px; font-size:10px;">HO</span>' : ''}</td>
+            <td style="text-align:center;"><span class="badge badge-secondary" style="font-family:monospace; font-weight:700; font-size:12px;">${displayPrefix}</span></td>
             <td>${roleBadge}</td>
             <td>
                 <span class="branch-passcode-cell" style="font-family:monospace; background:#f1f5f9; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:600;">
@@ -5446,6 +5469,10 @@ function renderBranchMaster() {
             const roleSelect = document.getElementById("branch-role");
             if (roleSelect) {
                 roleSelect.value = b.role || (b.isHO || b.code === "99" ? ROLES.ADMIN : ROLES.BRANCH_MANAGER);
+            }
+            const shortNameInput = document.getElementById("branch-short-name");
+            if (shortNameInput) {
+                shortNameInput.value = b.shortName || getBranchFirst3Letters(b.code);
             }
 
             const titleEl = document.getElementById("branch-form-title");
