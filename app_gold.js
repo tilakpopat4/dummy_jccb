@@ -1,4 +1,4 @@
-// ==================== ROLE-BASED ACCESS CONTROL (RBAC) ENGINE ====================
+﻿// ==================== ROLE-BASED ACCESS CONTROL (RBAC) ENGINE ====================
 const ROLES = {
     ADMIN: "admin", // Head Office Super Admin (Full System Access)
     BRANCH_MANAGER: "branch_manager", // Branch Manager (Loan Entry, Customer Master, Branch Reports)
@@ -1640,6 +1640,7 @@ function initNavigation() {
 
             if (targetId === "dashboard-view") renderDashboard();
             if (targetId === "register-view") renderRegisterTable();
+            if (targetId === "pending-member-view") renderPendingMemberTable();
             if (targetId === "customer-master-view") renderCustomerMasterList();
             if (targetId === "valuer-master-view" && isHO) renderValuers();
             if (targetId === "gold-rate-master-view") renderGoldRateMaster();
@@ -1999,6 +2000,7 @@ function initDashboard() {
 }
 
 function renderDashboard() {
+    updatePendingMemberBadge();
     const isHO = isHeadOfficeSession();
     const userBranch = state.currentSession ? state.currentSession.code : "99";
 
@@ -8753,6 +8755,193 @@ function initReminders() {
 
     if (closeBtn) closeBtn.addEventListener("click", () => modal && modal.classList.add("hidden"));
     if (closeBtn2) closeBtn2.addEventListener("click", () => modal && modal.classList.add("hidden"));
+}
+
+// ==================== PENDING MEMBER ID LOGIC ====================
+
+function updatePendingMemberBadge() {
+    const badge = document.getElementById("pending-member-badge");
+    if (!badge) return;
+
+    const isHO = isHeadOfficeSession();
+    const userBranch = state.currentSession ? state.currentSession.code : "99";
+
+    const pendingLoans = (state.loans || []).filter(l => {
+        const isBranch = isHO || isBranchMatch(l.branchCode, userBranch);
+        const hasNoMemberNo = !l.memberNo || String(l.memberNo).trim() === "";
+        return isBranch && hasNoMemberNo;
+    });
+
+    const count = pendingLoans.length;
+    if (count > 0) {
+        badge.textContent = count;
+        badge.style.display = "inline-block";
+    } else {
+        badge.textContent = "";
+        badge.style.display = "none";
+    }
+}
+
+function renderPendingMemberTable() {
+    const tbody = document.getElementById("pending-member-tbody");
+    const emptyMsg = document.getElementById("pending-member-empty-msg");
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    const isHO = isHeadOfficeSession();
+    const userBranch = state.currentSession ? state.currentSession.code : "99";
+
+    let list = (state.loans || []).filter(l => {
+        const isBranch = isHO || isBranchMatch(l.branchCode, userBranch);
+        const hasNoMemberNo = !l.memberNo || String(l.memberNo).trim() === "";
+        return isBranch && hasNoMemberNo;
+    });
+
+    // Sort newest first
+    list = list.slice().sort((a, b) => {
+        const dateDiff = (b.date || "").localeCompare(a.date || "");
+        if (dateDiff !== 0) return dateDiff;
+        return (b.id || "").localeCompare(a.id || "");
+    });
+
+    updatePendingMemberBadge();
+
+    if (list.length === 0) {
+        if (emptyMsg) emptyMsg.classList.remove("hidden");
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;"><i class="fa-solid fa-check-circle" style="color:var(--success); font-size:18px; margin-right:6px;"></i> No pending member ID loans found.</td></tr>';
+        return;
+    } else {
+        if (emptyMsg) emptyMsg.classList.add("hidden");
+    }
+
+    list.forEach(loan => {
+        const tr = document.createElement("tr");
+        const accFmt = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
+        
+        tr.innerHTML = `
+            <td style="white-space:nowrap;"><strong>${formatDateDMY(loan.date)}</strong></td>
+            <td style="white-space:nowrap; text-align:center;"><span class="badge badge-primary">${loan.branchCode}</span></td>
+            <td style="white-space:nowrap;"><strong>${accFmt}</strong></td>
+            <td><strong>${loan.borrowerName}</strong>${loan.customerNo ? `<br><small style="color:var(--text-secondary);">Cust No: ${loan.customerNo}</small>` : ''}</td>
+            <td style="text-align:center; white-space:nowrap;">
+                <span class="badge" style="background:rgba(239,68,68,0.1); color:var(--danger); font-weight:700; border:1px solid rgba(239,68,68,0.2);">Pending</span>
+            </td>
+            <td style="min-width:180px;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <input type="text" class="pending-member-input form-control" id="pending-input-${loan.id}" placeholder="Enter Member ID" value="${loan.memberNo || ''}" style="padding:6px 10px; font-size:12.5px; border-radius:6px; border:1.5px solid var(--border-color); width:100%; max-width:180px; font-weight:600;">
+                </div>
+            </td>
+            <td style="text-align:center; white-space:nowrap;">
+                <button type="button" class="btn btn-sm btn-primary save-pending-member-btn" data-id="${loan.id}" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; font-size:12px; font-weight:700; border-radius:6px; cursor:pointer;">
+                    <i class="fa-solid fa-floppy-disk"></i> Update
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll(".save-pending-member-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const loanId = btn.getAttribute("data-id");
+            const input = document.getElementById(`pending-input-${loanId}`);
+            const memberVal = input ? input.value.trim() : "";
+            if (!memberVal) {
+                alert("Please enter a valid Member ID / સભાસદ નં. to update.");
+                if (input) input.focus();
+                return;
+            }
+            savePendingMemberNo(loanId, memberVal);
+        });
+    });
+}
+
+function savePendingMemberNo(loanId, memberNoVal) {
+    if (!loanId || !memberNoVal) return;
+
+    // 1. Update in state.loans
+    const loan = state.loans.find(l => l.id === loanId);
+    if (!loan) {
+        alert("Loan record not found!");
+        return;
+    }
+
+    loan.memberNo = memberNoVal.trim();
+    loan.isMember = true;
+    loan.updatedAt = new Date().toISOString();
+
+    // 2. Update / cascade to Customer Master (state.customers)
+    if (!state.customers) state.customers = [];
+    let custIdx = -1;
+    if (loan.customerNo) {
+        custIdx = state.customers.findIndex(c => c.customerNo === loan.customerNo);
+    }
+    if (custIdx === -1 && loan.borrowerName) {
+        custIdx = state.customers.findIndex(c => c.name && c.name.toLowerCase() === loan.borrowerName.toLowerCase());
+    }
+
+    let customerObj = null;
+    if (custIdx !== -1) {
+        state.customers[custIdx].memberNo = memberNoVal.trim();
+        state.customers[custIdx].isMember = true;
+        state.customers[custIdx].updatedAt = new Date().toISOString();
+        customerObj = state.customers[custIdx];
+    } else {
+        customerObj = {
+            id: "CUST-" + Date.now(),
+            customerNo: loan.customerNo || ("CUST-" + (state.customers.length + 1)),
+            name: loan.borrowerName,
+            address: loan.address || "",
+            mobile: loan.mobile || "",
+            savingsAc: loan.savingsAc || "",
+            dob: loan.dob || "",
+            age: loan.age || "",
+            occupation: loan.occupation || "",
+            religion: loan.religion || "",
+            caste: loan.caste || "",
+            nomineeName: loan.nomineeName || "",
+            nomineeRelation: loan.nomineeRelation || "",
+            isMember: true,
+            memberNo: memberNoVal.trim(),
+            photo: loan.customerPhoto || loan.photo || "",
+            customerPhoto: loan.customerPhoto || loan.photo || "",
+            updatedAt: new Date().toISOString()
+        };
+        state.customers.push(customerObj);
+    }
+
+    // 3. Save State locally
+    saveState();
+
+    // 4. Sync with Firebase Cloud
+    if (window.FirebaseService && typeof window.FirebaseService.saveLoan === "function") {
+        window.FirebaseService.saveLoan(loan).then(() => {
+            console.log("[Firebase] Loan member ID synced:", loan.id);
+        }).catch(e => console.warn("[Firebase] Loan sync error:", e));
+    }
+
+    if (customerObj && window.FirebaseService && typeof window.FirebaseService.saveCustomer === "function") {
+        window.FirebaseService.saveCustomer(customerObj).then(() => {
+            console.log("[Firebase] Customer Master member ID synced:", customerObj.customerNo);
+        }).catch(e => console.warn("[Firebase] Customer sync error:", e));
+    }
+
+    if (window.FirebaseService && typeof window.FirebaseService.logAuditEvent === "function") {
+        const accFmt = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
+        window.FirebaseService.logAuditEvent("MEMBER_ID_UPDATE", `Updated Member ID ${memberNoVal} for Loan ${accFmt} (${loan.borrowerName})`, {
+            branchCode: loan.branchCode,
+            loanId: loan.id,
+            memberNo: memberNoVal
+        });
+    }
+
+    showToast(`Member ID "${memberNoVal}" saved successfully for ${loan.borrowerName} and updated in Customer Master!`);
+
+    // 5. Re-render views
+    renderPendingMemberTable();
+    updatePendingMemberBadge();
+    if (typeof renderCustomerMasterList === "function") renderCustomerMasterList();
+    if (typeof renderRegisterTable === "function") renderRegisterTable();
 }
 
 // ==================== DOCUMENT PRINT GENERATION ====================
