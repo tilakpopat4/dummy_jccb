@@ -5482,18 +5482,43 @@ function initValuerMaster() {
     if (form) {
         form.addEventListener("submit", (e) => {
             e.preventDefault();
+            if (!isHeadOfficeSession()) {
+                alert("નવા સોની વેલ્યુઅર ઉમેરવા અથવા સુધારવાનો અધિકાર ફક્ત હેડ ઓફિસ (Head Office) પાસે છે.");
+                return;
+            }
+
             const editId = document.getElementById("edit-valuer-id") ? document.getElementById("edit-valuer-id").value : "";
             const name = document.getElementById("valuer-name").value.trim().toUpperCase();
             const mobile = document.getElementById("valuer-mobile").value.trim();
             const address = document.getElementById("valuer-address").value.trim();
             const savingsAc = document.getElementById("valuer-savings-ac").value.trim();
 
+            if (!name) {
+                alert("કૃપા કરીને વેલ્યુઅરનું પૂરું નામ દાખલ કરો.");
+                return;
+            }
+
+            if (!state.valuers) state.valuers = DEFAULT_VALUERS ? [...DEFAULT_VALUERS] : [];
+
+            let assignedId = editId;
+            if (!assignedId) {
+                let maxVNum = 0;
+                state.valuers.forEach(v => {
+                    const m = String(v.id || "").match(/\d+/);
+                    if (m) {
+                        const n = parseInt(m[0]);
+                        if (n > maxVNum) maxVNum = n;
+                    }
+                });
+                assignedId = "V" + String(maxVNum + 1).padStart(2, "0");
+            }
+
             const valuerObj = {
-                id: editId || ("V" + (state.valuers.length + 1).toString().padStart(2, "0")),
-                name,
+                id: assignedId,
+                name: name,
                 phone: mobile,
-                address,
-                savingsAc,
+                address: address,
+                savingsAc: savingsAc,
                 branch: state.currentSession ? state.currentSession.code : "99",
                 active: true
             };
@@ -5510,6 +5535,22 @@ function initValuerMaster() {
             }
 
             saveState();
+
+            // Instant sync to Cloud Firestore
+            if (window.FirebaseService && typeof window.FirebaseService.saveValuersList === "function") {
+                window.FirebaseService.saveValuersList(state.valuers).then(() => {
+                    console.log("[Firebase] Valuers synced successfully to Firestore");
+                }).catch(e => console.warn("[Firebase] Valuers cloud sync error:", e));
+            }
+
+            if (window.FirebaseService && typeof window.FirebaseService.logAuditEvent === "function") {
+                window.FirebaseService.logAuditEvent(editId ? "VALUER_UPDATED" : "VALUER_REGISTERED", `Valuer ${name} (${assignedId}) saved by Head Office`, {
+                    valuerId: assignedId,
+                    valuerName: name,
+                    operator: state.currentSession ? state.currentSession.name : "HEAD OFFICE"
+                });
+            }
+
             form.reset();
             if (document.getElementById("edit-valuer-id")) document.getElementById("edit-valuer-id").value = "";
             if (cancelBtn) cancelBtn.classList.add("hidden");
@@ -5517,7 +5558,7 @@ function initValuerMaster() {
             if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Register Valuer';
 
             renderValuers();
-            showToast("Valuer profile saved!");
+            showToast(`સોની વેલ્યુઅર ${name} સફળતાપૂર્વક સેવ થઈ ગયા છે!`);
         });
     }
 
@@ -5536,7 +5577,13 @@ function initValuerMaster() {
     }
 
     if (triggerExcelBtn && fileInput) {
-        triggerExcelBtn.addEventListener("click", () => fileInput.click());
+        triggerExcelBtn.addEventListener("click", () => {
+            if (!isHeadOfficeSession()) {
+                alert("વેલ્યુઅર ફાઇલ અપલોડ કરવાનો અધિકાર ફક્ત હેડ ઓફિસ (Head Office) પાસે છે.");
+                return;
+            }
+            fileInput.click();
+        });
         fileInput.addEventListener("change", (e) => {
             if (e.target.files && e.target.files[0]) {
                 importValuersFromExcel(e.target.files[0]);
@@ -5560,6 +5607,10 @@ function initValuerMaster() {
 }
 
 function importValuersFromExcel(file) {
+    if (!isHeadOfficeSession()) {
+        alert("વેલ્યુઅર લિસ્ટ અપલોડ કરવાનો અધિકાર ફક્ત હેડ ઓફિસ (Head Office) પાસે છે.");
+        return;
+    }
     if (typeof XLSX === "undefined") {
         alert("SheetJS library not loaded.");
         return;
@@ -5572,12 +5623,23 @@ function importValuersFromExcel(file) {
             const firstSheet = wb.Sheets[wb.SheetNames[0]];
             const json = XLSX.utils.sheet_to_json(firstSheet);
 
+            if (!state.valuers) state.valuers = DEFAULT_VALUERS ? [...DEFAULT_VALUERS] : [];
             let added = 0;
             json.forEach(row => {
                 const name = row["ValuerName"] || row["Name"] || row["વેલ્યુઅરનું નામ"];
                 if (name) {
+                    let maxVNum = 0;
+                    state.valuers.forEach(v => {
+                        const m = String(v.id || "").match(/\d+/);
+                        if (m) {
+                            const n = parseInt(m[0]);
+                            if (n > maxVNum) maxVNum = n;
+                        }
+                    });
+                    const assignedId = "V" + String(maxVNum + 1).padStart(2, "0");
+
                     state.valuers.push({
-                        id: "V" + Date.now() + Math.floor(Math.random() * 100),
+                        id: assignedId,
                         name: String(name).trim().toUpperCase(),
                         phone: String(row["Mobile"] || row["Phone"] || "").trim(),
                         address: String(row["Address"] || "").trim(),
@@ -5590,8 +5652,11 @@ function importValuersFromExcel(file) {
             });
 
             saveState();
+            if (window.FirebaseService && typeof window.FirebaseService.saveValuersList === "function") {
+                window.FirebaseService.saveValuersList(state.valuers).catch(e => console.warn("[Firebase] Valuers cloud sync error:", e));
+            }
             renderValuers();
-            alert(`Successfully imported ${added} valuers from file.`);
+            alert(`સફળ! ${added} સોની વેલ્યુઅર્સ સફળતાપૂર્વક ઇમ્પોર્ટ થઈ ગયા છે.`);
         } catch (err) {
             alert("Error parsing excel: " + err.message);
         }
@@ -5602,25 +5667,42 @@ function importValuersFromExcel(file) {
 function renderValuers() {
     const tbody = document.getElementById("valuer-list-tbody") || document.getElementById("valuer-master-tbody");
     const selectValuer = document.getElementById("valuer-select") || document.getElementById("loan-valuer-name");
+    const reportValuerSelect = document.getElementById("report-filter-valuer");
     const countSpan = document.getElementById("valuer-total-count");
     const search = document.getElementById("search-valuer-input") ? document.getElementById("search-valuer-input").value.toLowerCase().trim() : "";
+    const isHO = isHeadOfficeSession();
 
-    if (countSpan) countSpan.textContent = state.valuers ? state.valuers.length : 0;
+    if (!state.valuers) state.valuers = DEFAULT_VALUERS ? [...DEFAULT_VALUERS] : [];
+    if (countSpan) countSpan.textContent = state.valuers.length;
 
     if (selectValuer) {
+        const curVal = selectValuer.value;
         selectValuer.innerHTML = '<option value="">-- Select Valuer --</option>';
         state.valuers.forEach(v => {
             const opt = document.createElement("option");
             opt.value = v.name;
             opt.textContent = `${v.name} (${v.phone || "-"})`;
+            if (v.name === curVal) opt.selected = true;
             selectValuer.appendChild(opt);
+        });
+    }
+
+    if (reportValuerSelect) {
+        const curVal = reportValuerSelect.value;
+        reportValuerSelect.innerHTML = '<option value="">-- All Valuers --</option>';
+        state.valuers.forEach(v => {
+            const opt = document.createElement("option");
+            opt.value = v.name;
+            opt.textContent = `${v.name} (${v.phone || "-"})`;
+            if (v.name === curVal) opt.selected = true;
+            reportValuerSelect.appendChild(opt);
         });
     }
 
     if (!tbody) return;
     tbody.innerHTML = "";
 
-    let list = state.valuers || [];
+    let list = state.valuers;
     if (search) {
         list = list.filter(v => 
             (v.name && v.name.toLowerCase().includes(search)) ||
@@ -5638,52 +5720,66 @@ function renderValuers() {
     list.forEach(v => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td><strong>${v.name}</strong></td>
+            <td><strong>${v.name}</strong> <span class="badge badge-primary" style="font-size:10px; margin-left:4px;">${v.id || ''}</span></td>
             <td>${v.phone || "-"}</td>
             <td>${v.address || "-"}</td>
-            <td><span class="badge badge-primary">${v.savingsAc || "-"}</span></td>
+            <td><span class="badge badge-secondary">${v.savingsAc || "-"}</span></td>
             <td style="white-space:nowrap; text-align:center;">
-                <button class="btn-icon-blue edit-valuer-btn" title="Edit Valuer" data-id="${v.id}"><i class="fa-solid fa-pen-to-square"></i></button>
-                <button class="btn-icon-red delete-valuer-btn" title="Delete Valuer" data-id="${v.id}"><i class="fa-solid fa-trash-can"></i></button>
+                ${isHO ? `
+                    <button type="button" class="btn-icon-blue edit-valuer-btn" title="Edit Valuer" data-id="${v.id}"><i class="fa-solid fa-pen-to-square"></i></button>
+                    <button type="button" class="btn-icon-red delete-valuer-btn" title="Delete Valuer" data-id="${v.id}"><i class="fa-solid fa-trash-can"></i></button>
+                ` : '<span class="badge badge-gold" style="font-size:10px;">HO Managed</span>'}
             </td>
         `;
         tbody.appendChild(tr);
     });
 
-    tbody.querySelectorAll(".edit-valuer-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const id = btn.getAttribute("data-id");
-            const v = state.valuers.find(x => x.id === id);
-            if (!v) return;
+    if (isHO) {
+        tbody.querySelectorAll(".edit-valuer-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const id = btn.getAttribute("data-id");
+                const v = state.valuers.find(x => x.id === id);
+                if (!v) return;
 
-            document.getElementById("edit-valuer-id").value = v.id;
-            document.getElementById("valuer-name").value = v.name || "";
-            document.getElementById("valuer-mobile").value = v.phone || "";
-            document.getElementById("valuer-address").value = v.address || "";
-            document.getElementById("valuer-savings-ac").value = v.savingsAc || "";
+                document.getElementById("edit-valuer-id").value = v.id;
+                document.getElementById("valuer-name").value = v.name || "";
+                document.getElementById("valuer-mobile").value = v.phone || "";
+                document.getElementById("valuer-address").value = v.address || "";
+                document.getElementById("valuer-savings-ac").value = v.savingsAc || "";
 
-            const cancelBtn = document.getElementById("valuer-cancel-edit-btn");
-            if (cancelBtn) cancelBtn.classList.remove("hidden");
-            const saveBtn = document.getElementById("valuer-save-btn");
-            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Valuer';
+                const cancelBtn = document.getElementById("valuer-cancel-edit-btn");
+                if (cancelBtn) cancelBtn.classList.remove("hidden");
+                const saveBtn = document.getElementById("valuer-save-btn");
+                if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Valuer';
 
-            const form = document.getElementById("valuer-master-form");
-            if (form) form.scrollIntoView({ behavior: "smooth" });
+                const form = document.getElementById("valuer-master-form");
+                if (form) form.scrollIntoView({ behavior: "smooth" });
+            });
         });
-    });
 
-    tbody.querySelectorAll(".delete-valuer-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const id = btn.getAttribute("data-id");
-            const v = state.valuers.find(x => x.id === id);
-            if (v && confirm(`Are you sure you want to delete valuer ${v.name}?`)) {
-                state.valuers = state.valuers.filter(x => x.id !== id);
-                saveState();
-                renderValuers();
-                showToast("Valuer record removed.");
-            }
+        tbody.querySelectorAll(".delete-valuer-btn").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const id = btn.getAttribute("data-id");
+                const v = state.valuers.find(x => x.id === id);
+                if (v && confirm(`શું તમે ખરેખર સોની વેલ્યુઅર ${v.name} નું પ્રોફાઇલ કાઢી નાખવા માંગો છો?`)) {
+                    state.valuers = state.valuers.filter(x => x.id !== id);
+                    saveState();
+                    if (window.FirebaseService && typeof window.FirebaseService.saveValuersList === "function") {
+                        window.FirebaseService.saveValuersList(state.valuers).catch(e => console.warn("[Firebase] Valuers cloud sync error:", e));
+                    }
+                    if (window.FirebaseService && typeof window.FirebaseService.logAuditEvent === "function") {
+                        window.FirebaseService.logAuditEvent("VALUER_DELETED", `Valuer ${v.name} (${v.id}) deleted by Head Office`, {
+                            valuerId: v.id,
+                            valuerName: v.name,
+                            operator: state.currentSession ? state.currentSession.name : "HEAD OFFICE"
+                        });
+                    }
+                    renderValuers();
+                    showToast("Valuer profile removed.");
+                }
+            });
         });
-    });
+    }
 }
 
 // ==================== MASTERS: PRODUCT MASTER ====================
