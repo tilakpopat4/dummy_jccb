@@ -1,4 +1,4 @@
-﻿// ==================== ROLE-BASED ACCESS CONTROL (RBAC) ENGINE ====================
+// ==================== ROLE-BASED ACCESS CONTROL (RBAC) ENGINE ====================
 const ROLES = {
     ADMIN: "admin", // Head Office Super Admin (Full System Access)
     BRANCH_MANAGER: "branch_manager", // Branch Manager (Loan Entry, Customer Master, Branch Reports)
@@ -8565,12 +8565,13 @@ function renderPendingMemberTable() {
     const isHO = isHeadOfficeSession();
     const userBranch = state.currentSession ? state.currentSession.code : "99";
 
-    // Setup branch filter options for Head Office
+    // Setup branch filter options exclusively for Head Office
     const branchContainer = document.getElementById("pending-branch-filter-container");
     const branchFilter = document.getElementById("pending-branch-filter");
     if (isHO && branchContainer && branchFilter) {
-        branchContainer.style.display = "block";
-        if (branchFilter.options.length <= 1) {
+        branchContainer.style.display = "flex";
+        if (branchFilter.options.length <= 1 || (state.branches && branchFilter.options.length - 1 !== state.branches.length)) {
+            const currentSelected = branchFilter.value;
             branchFilter.innerHTML = '<option value="">-- All Branches --</option>';
             (state.branches || []).forEach(b => {
                 const opt = document.createElement("option");
@@ -8578,9 +8579,11 @@ function renderPendingMemberTable() {
                 opt.textContent = b.name;
                 branchFilter.appendChild(opt);
             });
+            if (currentSelected) branchFilter.value = currentSelected;
         }
     } else if (branchContainer) {
         branchContainer.style.display = "none";
+        if (branchFilter) branchFilter.value = "";
     }
 
     const searchVal = document.getElementById("pending-search-input") ? document.getElementById("pending-search-input").value.toLowerCase().trim() : "";
