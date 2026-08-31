@@ -6642,6 +6642,62 @@ function initSettings() {
         });
     }
 
+    const resetBranchSeedsBtn = document.getElementById("btn-reset-branch-seeds-zero");
+    if (resetBranchSeedsBtn) {
+        resetBranchSeedsBtn.addEventListener("click", () => {
+            const isHO = isHeadOfficeSession();
+            const branchSelect = document.getElementById("settings-branch-select");
+            const currentCode = state.currentSession ? state.currentSession.code : "99";
+            const selectedBranch = !isHO ? currentCode : (branchSelect ? branchSelect.value : currentCode);
+            const numOnly = String(selectedBranch).replace(/\D/g, '');
+            const bCode2 = numOnly ? numOnly.padStart(2, '0') : "99";
+            const bCode3 = numOnly ? numOnly.padStart(3, '0') : "099";
+            const bCode1 = numOnly ? String(parseInt(numOnly)) : "99";
+
+            const branchObj = (state.branches || DEFAULT_BRANCHES).find(b => String(b.code).replace(/\D/g, '').padStart(2, '0') === bCode2) || { name: selectedBranch };
+
+            if (confirm(`શું તમે ખરેખર ${branchObj.name} ના બધા એકાઉન્ટ નંબર, પેકેટ નંબર અને પ્રપોઝલ નંબર 0 (Fresh / Brand New) કરવા માંગો છો?`)) {
+                if (!state.settings) state.settings = {};
+                if (!state.settings.branchSeeds) state.settings.branchSeeds = {};
+
+                const cleanZeroSeeds = {
+                    accountSeeds: {
+                        "3725": 0,
+                        "3524": 0,
+                        "3527": 0,
+                        "3553": 0,
+                        "GW-3725": 0,
+                        "GD-3524": 0,
+                        "GNA-3527": 0,
+                        "GOD-3553": 0
+                    },
+                    lastPacketNo: 0,
+                    lastProposalNo: 0
+                };
+
+                state.settings.branchSeeds[bCode2] = cleanZeroSeeds;
+                state.settings.branchSeeds[bCode3] = cleanZeroSeeds;
+                state.settings.branchSeeds[selectedBranch] = cleanZeroSeeds;
+                state.settings.branchSeeds[bCode1] = cleanZeroSeeds;
+
+                saveState();
+                renderBranchSettings(selectedBranch);
+
+                if (window.FirebaseService && window.FirebaseService.isInitialized && typeof window.FirebaseService.saveSettings === "function") {
+                    window.FirebaseService.saveSettings(state.settings).catch(e => console.warn("[Firebase] Settings cloud sync error:", e));
+                }
+
+                updateLoanAmountLogic();
+                const curBranch = document.getElementById("loan-branch") ? document.getElementById("loan-branch").value : (state.currentSession ? state.currentSession.code : "99");
+                generateNextPacketNo(curBranch);
+                generateNextProposalNo(curBranch);
+
+                showToast(`શાખા ${branchObj.name} ના તમામ નંબર સફળતાપૂર્વક 0 (Fresh) કરી દેવામાં આવ્યા છે!`);
+                alert(`શાખા ${branchObj.name} ના તમામ નંબર 0 (Fresh) કરી દેવામાં આવ્યા છે.\nનવો આવનાર પેકેટ નંબર: 1\nનવો પ્રપોઝલ નંબર: CBB/2026/0001\nનવો ખાતા નંબર: 001-3725-00000001`);
+            }
+        });
+    }
+
     if (resetBtn) {
         resetBtn.addEventListener("click", () => {
             if (confirm("CRITICAL WARNING: This will permanently delete ALL loans and custom data. Are you sure?")) {
@@ -9301,7 +9357,8 @@ function generatePage2ValuationReportHTML(loan, ltv, isPageBreak = true) {
     const sanctionedAmt = Math.round(parseFloat(loan.sanctionedAmount || 0));
     const amountInWords = numberToGujaratiWords(sanctionedAmt);
     const cleanBranch = getCleanBranchName(loan.branchName);
-    const marketRate24k = parseFloat(loan.goldRate24K || (state.goldRates && state.goldRates["24K"]) || 0);
+    const activeHORate = getActiveGoldRate22K();
+    const effectiveGoldRate = parseFloat(loan.goldRate22K || loan.goldRate || (state.goldRates && (state.goldRates["22K"] || state.goldRates["24K"])) || activeHORate || 72000);
     const ornamentPhotoSrc = loan.ornamentPhoto || loan.goldPhoto || "";
 
     let rowsHtml = "";
@@ -9407,7 +9464,7 @@ function generatePage2ValuationReportHTML(loan, ltv, isPageBreak = true) {
 
         <!-- Center Gold Market Rate Line -->
         <div style="text-align:center; font-size:13.5px; font-weight:800; margin:2px 0 5px 0; color:#000000; letter-spacing:0.3px;">
-            આજનો બજાર ભાવ રૂ. <strong>${marketRate24k.toLocaleString("en-IN")}</strong>/- ૧૦ ગ્રામ શુદ્ધ સોનાનો
+            આજનો બજાર ભાવ રૂ. <strong>${effectiveGoldRate.toLocaleString("en-IN")}</strong>/- ૧૦ ગ્રામ શુદ્ધ સોનાનો
         </div>
 
         <!-- Section Title -->
@@ -9544,7 +9601,8 @@ function generatePage3ReceiptsHTML(loan, isPageBreak = true) {
     const pageBreakClass = isPageBreak ? "print-page-break" : "";
     const sanctionedAmt = Math.round(parseFloat(loan.sanctionedAmount || 0));
     const cleanBranch = getCleanBranchName(loan.branchName);
-    const marketRate24k = parseFloat(loan.goldRate24K || (state.goldRates && state.goldRates["24K"]) || 0);
+    const activeHORate = getActiveGoldRate22K();
+    const effectiveGoldRate = parseFloat(loan.goldRate22K || loan.goldRate || (state.goldRates && (state.goldRates["22K"] || state.goldRates["24K"])) || activeHORate || 72000);
     const custPhotoSrc = loan.customerPhoto || loan.photo || "";
     const ornamentPhotoSrc = loan.ornamentPhoto || loan.goldPhoto || "";
 
@@ -9659,7 +9717,7 @@ function generatePage3ReceiptsHTML(loan, isPageBreak = true) {
 
         <!-- Center Gold Market Rate Line -->
         <div style="text-align:center; font-size:13px; font-weight:800; margin:2px 0 5px 0; color:#000000; letter-spacing:0.3px;">
-            આજનો બજાર ભાવ રૂ. <strong>${marketRate24k.toLocaleString("en-IN")}</strong>/- ૧૦ ગ્રામ શુદ્ધ સોનાનો
+            આજનો બજાર ભાવ રૂ. <strong>${effectiveGoldRate.toLocaleString("en-IN")}</strong>/- ૧૦ ગ્રામ શુદ્ધ સોનાનો
         </div>
 
         <!-- Section Title -->
