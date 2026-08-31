@@ -11,7 +11,7 @@
     <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Style Sheet -->
-    <link rel="stylesheet" href="styles.css?v=20260831_v17">
+    <link rel="stylesheet" href="styles.css?v=20260831_v18">
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="jccb-logo.png">
     <link rel="shortcut icon" type="image/png" href="jccb-logo.png">
@@ -517,13 +517,16 @@
                                 <h3 class="section-title"><i class="fa-solid fa-coins"></i> 3. Loan Details</h3>
                                 <div class="form-row two-col">
                                     <div class="form-group">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
-                                            <label for="loan-amount" style="margin-bottom: 0; font-size: 11.5px; font-weight: 700; color: #334155;">Sanction Amount (₹)</label>
-                                            <label for="loan-compulsory-od" style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; color: #b45309; cursor: pointer; text-transform: none; margin-bottom: 0; user-select: none;">
-                                                <input type="checkbox" id="loan-compulsory-od" style="width: 14px; height: 14px; margin: 0; cursor: pointer; accent-color: #d97706;"> (Compulsary OD ?)
+                                        <label for="loan-amount">Sanction Amount (₹)</label>
+                                        <input type="number" id="loan-amount" placeholder="e.g. 150000" min="100" required>
+                                        <div class="compulsory-od-wrapper">
+                                            <label for="loan-compulsory-od" class="compulsory-od-card">
+                                                <input type="checkbox" id="loan-compulsory-od" class="compulsory-od-checkbox">
+                                                <span class="compulsory-od-text">
+                                                    <i class="fa-solid fa-bolt" style="color: #d97706; font-size: 15px;"></i> (Compulsary OD ?)
+                                                </span>
                                             </label>
                                         </div>
-                                        <input type="number" id="loan-amount" placeholder="e.g. 150000" min="100" required>
                                     </div>
                                     <div class="form-group">
                                         <label for="loan-purpose">Loan Purpose / હેતુ</label>

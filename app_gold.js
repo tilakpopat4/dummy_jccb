@@ -2256,6 +2256,11 @@ function updateLoanAmountLogic() {
 
     const compulsoryOdCheckbox = document.getElementById("loan-compulsory-od");
     const isCompulsoryOD = !!(compulsoryOdCheckbox && compulsoryOdCheckbox.checked);
+    const odCard = document.querySelector(".compulsory-od-card");
+    if (odCard) {
+        if (isCompulsoryOD) odCard.classList.add("active");
+        else odCard.classList.remove("active");
+    }
 
     const amt = parseFloat(amtInput ? amtInput.value || 0 : 0);
 
