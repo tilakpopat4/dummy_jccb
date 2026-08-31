@@ -1,4 +1,4 @@
-// ==================== INITIAL SEED DATA ====================
+﻿// ==================== INITIAL SEED DATA ====================
 const INITIAL_BRANCHES = [
     { code: "99", name: "HEAD OFFICE" },
     { code: "01", name: "AZADCHOWK BRANCH" },
@@ -3201,7 +3201,7 @@ function printVoucher(loanId, format) {
                         </p>
                         
                         <p style="text-indent:20px; margin:0 0 5px 0;">
-                            "આ સાથે સામેલ વેલ્યુએશન રિપોર્ટ મુજબના મારી માલિકીના સોનાનાં દાગીનાની જામીનગીરી ઉપર રૂ. <strong>${parseFloat(loan.loanAmount).toLocaleString("en-IN")}/-</strong>, નું આપની બેંકમાંથી ધિરાણ <strong>${loan.loanPurpose || "-"}</strong>, ના હેતુ માટે મેળવવા માટે અરજી કરું છું. આથી હું તમો બેંકને ખાતરી અને બાંહેધરી આપું છું કે બેંકને જામીનગીરીમાં આપેલ દાગીના મારી સ્વતંત્ર માલિકીના છે. મેં બેંકના સોનાના દાગીનાની જામીનગીરી પર ધિરાણના નિયમો વાંચ્યા છે જે મને કબુલ-મંજુર છે. વધુમાં હું કબુલ રાખું છું કે રિઝર્વ બેંક ઓફ ઇન્ડિયાની વખ�                    <!-- Location, Date (Left) and Borrower Signature (Right) -->
+                            "આ સાથે સામેલ વેલ્યુએશન રિપોર્ટ મુજબના મારી માલિકીના સોનાનાં દાગીનાની જામીનગીરી ઉપર રૂ. <strong>${parseFloat(loan.loanAmount).toLocaleString("en-IN")}/-</strong>, નું આપની બેંકમાંથી ધિરાણ <strong>${loan.loanPurpose || "-"}</strong>, ના હેતુ માટે મેળવવા માટે અરજી કરું છું. આથી હું તમો બેંકને ખાતરી અને બાંહેધરી આપું છું કે બેંકને જામીનગીરીમાં આપેલ દાગીના મારી સ્વતંત્ર માલિકીના છે. મેં બેંકના સોનાના દાગીનાની જામીનગીરી પર ધિરાણના નિયમો વાંચ્યા છે જે મને કબુલ-મંજુર છે. વધુમાં હું કબુલ રાખું છું કે રિઝર્વ બેંક ઓફ ઇન્ડિયાની વખ�                    <!-- Location, Date (Left) and Borrower Signature (Right) -->
                     <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:15px; font-size:13.5px;">
                         <div style="text-align:left; font-weight:700; line-height:1.4;">
                             <div>સ્થળઃ- ${loan.branchName}</div>
@@ -3823,7 +3823,7 @@ function printVoucher(loanId, format) {
                             </tr>
                             <tr style="border-bottom:1px solid #000000;">
                                 <td style="border-right:1.5px solid #000000; padding:3px 6px; font-weight:700;">Annual Percentage Rate (APR)</td>
-                                <td style="padding:3px 6px;">${interestRateClean}%</td>
+                                <td style="padding:3px 6px;">${(parseFloat(interestRateClean) + 1).toFixed(2)}%</td>
                             </tr>
                             <tr style="border-bottom:1px solid #000000;">
                                 <td style="border-right:1.5px solid #000000; padding:3px 6px; font-weight:700;">Interest Recovery</td>
@@ -3976,7 +3976,7 @@ function printVoucher(loanId, format) {
                             </tr>
                             <tr style="border-bottom:1px solid #000000;">
                                 <td style="border-right:1.5px solid #000000; padding:3px 6px; font-weight:700;">Annual Percentage Rate (APR)</td>
-                                <td style="padding:3px 6px;">${interestRateClean}%</td>
+                                <td style="padding:3px 6px;">${(parseFloat(interestRateClean) + 1).toFixed(2)}%</td>
                             </tr>
                             <tr style="border-bottom:1px solid #000000;">
                                 <td style="border-right:1.5px solid #000000; padding:3px 6px; font-weight:700;">Interest Recovery Frequency</td>
@@ -4117,7 +4117,7 @@ function printVoucher(loanId, format) {
                             </tr>
                             <tr style="border-bottom:1px solid #000000;">
                                 <td style="border-right:1.5px solid #000000; padding:3px 6px; font-weight:700;">Annual Percentage Rate (APR)</td>
-                                <td style="padding:3px 6px;">${interestRateClean}%</td>
+                                <td style="padding:3px 6px;">${(parseFloat(interestRateClean) + 1).toFixed(2)}%</td>
                             </tr>
                             <tr style="border-bottom:1px solid #000000;">
                                 <td style="border-right:1.5px solid #000000; padding:3px 6px; font-weight:700;">Repayment Frequency</td>
@@ -4321,7 +4321,7 @@ function printVoucher(loanId, format) {
                         </tr>
                         <tr style="border-bottom:1px solid #000000;">
                             <td style="border-right:1.5px solid #000000; padding:3px 6px; font-weight:700;">Annual Percentage Rate (APR)</td>
-                            <td style="padding:3px 6px;">${interestRateClean}%</td>
+                            <td style="padding:3px 6px;">${(parseFloat(interestRateClean) + 1).toFixed(2)}%</td>
                         </tr>
                         <tr style="border-bottom:1px solid #000000;">
                             <td style="border-right:1.5px solid #000000; padding:3px 6px; font-weight:700;">Repayment Frequency</td>
@@ -4469,7 +4469,7 @@ function printVoucher(loanId, format) {
                         </tr>
                         <tr style="border-bottom:1px solid #000000;">
                             <td style="border-right:1.5px solid #000000; padding:3px 6px; font-weight:700;">Annual Percentage Rate (APR)</td>
-                            <td style="padding:3px 6px;">${interestRateClean}%</td>
+                            <td style="padding:3px 6px;">${(parseFloat(interestRateClean) + 1).toFixed(2)}%</td>
                         </tr>
                         <tr style="border-bottom:1px solid #000000;">
                             <td style="border-right:1.5px solid #000000; padding:3px 6px; font-weight:700;">Repayment Frequency</td>
@@ -4609,7 +4609,7 @@ function printVoucher(loanId, format) {
                         </tr>
                         <tr style="border-bottom:1px solid #000000;">
                             <td style="border-right:1.5px solid #000000; padding:4px 8px; font-weight:700;">Annual Percentage Rate (APR)</td>
-                            <td style="padding:4px 8px;">${interestRateClean}%</td>
+                            <td style="padding:4px 8px;">${(parseFloat(interestRateClean) + 1).toFixed(2)}%</td>
                         </tr>
                         <tr style="border-bottom:1px solid #000000;">
                             <td style="border-right:1.5px solid #000000; padding:4px 8px; font-weight:700;">Interest Recovery</td>

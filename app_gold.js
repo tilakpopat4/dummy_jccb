@@ -9996,7 +9996,7 @@ function generatePage4KFSHTML(loan, ltv, isPageBreak = false) {
     const goldWt = finalNetWeight;
     const grossWt = finalGrossWeight;
     const interestRate = parseFloat(loan.interestRate || 11.50).toFixed(2);
-    const aprRate = interestRate;
+    const aprRate = (parseFloat(interestRate) + 1).toFixed(2);
 
     const srvFee = Math.round(parseFloat(loan.serviceCharge || 0));
     const valFee = Math.round(parseFloat(loan.valuerFee || 0));

@@ -1,4 +1,4 @@
-// ==================== CONFIGURATION AND CONSTANTS ====================
+﻿// ==================== CONFIGURATION AND CONSTANTS ====================
 const INITIAL_BRANCHES = [
     { code: "01", name: "MAIN BRANCH" },
     { code: "02", name: "STATION ROAD BRANCH" },
@@ -3270,7 +3270,7 @@ function generatePage3CustomerReceiptHTML(loan, gujWords, valuer, isPageBreak = 
             </table>
 
             <p style="font-size:10.5px; line-height:1.35; text-align:justify; margin:2px 0 3px 0;">
-                ઉપરોક્ત વિગતે મેં બેંકને ગીરો આપેલ સોનાના દાગીના અસલ સ્થિતિમાં પરત મળ્યાં છે તે બદલ હું આ પહોંચમાં મારી સહી કરી આપ�        return `
+                ઉપરોક્ત વિગતે મેં બેંકને ગીરો આપેલ સોનાના દાગીના અસલ સ્થિતિમાં પરત મળ્યાં છે તે બદલ હું આ પહોંચમાં મારી સહી કરી આપ�        return `
         <div class="print-page print-voucher print-requisition-form ${pageBreakClass}" style="width:100%; box-sizing:border-box; font-family:'Outfit', 'Segoe UI', Arial, sans-serif; color:#000000; line-height:1.25; background-color:#ffffff; font-size:9.2px;">
             
             <!-- Bank Header with Logo on Left -->
@@ -3346,7 +3346,7 @@ function generatePage3CustomerReceiptHTML(loan, gujWords, valuer, isPageBreak = 
                     </tr>
                     <tr>
                         <td style="border:1px solid #000; padding:2.2px 6px; font-weight:700;">Annual Percentage Rate (APR)</td>
-                        <td style="border:1px solid #000; padding:2.2px 6px; font-weight:700;">${intRate} (Approx. as per Total Cost of Credit)</td>
+                        <td style="border:1px solid #000; padding:2.2px 6px; font-weight:700;">${(parseFloat((intRate || "0").replace("%","").trim()) + 1).toFixed(2)}% (Approx. as per Total Cost of Credit)</td>
                     </tr>
                     <tr>
                         <td style="border:1px solid #000; padding:2.2px 6px; font-weight:700;">Repayment Frequency</td>
@@ -3626,7 +3626,7 @@ function generatePage3CustomerReceiptHTML(loan, gujWords, valuer, isPageBreak = 
                     </tr>
                     <tr>
                         <td style="border:1px solid #000; padding:2.2px 6px; font-weight:700;">Annual Percentage Rate (APR)</td>
-                        <td style="border:1px solid #000; padding:2.2px 6px; font-weight:700;">${intRate} (Approx. as per Total Cost of Credit)</td>
+                        <td style="border:1px solid #000; padding:2.2px 6px; font-weight:700;">${(parseFloat((intRate || "0").replace("%","").trim()) + 1).toFixed(2)}% (Approx. as per Total Cost of Credit)</td>
                     </tr>
                     <tr>
                         <td style="border:1px solid #000; padding:2.2px 6px; font-weight:700;">Interest Recovery</td>
