@@ -2586,11 +2586,12 @@ function calculateAllCharges() {
     const rules = state.rules || DEFAULT_RULES;
 
     // 1. Membership & Share Rules:
+    // If sanction amount is < 50000, Share A & Share B must strictly be 0
     let shareA = 0;
     let shareB = 0;
     let memberFee = 0;
 
-    if (loanAmt > 0) {
+    if (loanAmt >= 50000) {
         if (isMember) {
             shareA = 0;
             shareB = 0;
@@ -2607,6 +2608,10 @@ function calculateAllCharges() {
                 memberFee = parseFloat(rules.membership?.memberFee ?? 25);
             }
         }
+    } else {
+        shareA = 0;
+        shareB = 0;
+        memberFee = 0;
     }
 
     // 2. Valuation Fee Slabs:
