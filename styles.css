@@ -3560,3 +3560,44 @@ input.admin-editable:focus, select.admin-editable:focus {
     text-align: center;
 }
 
+/* ==================== PENDING MEMBER ID TABLE STYLING ==================== */
+#pending-member-table {
+    width: 100% !important;
+    min-width: 1050px !important;
+    border-collapse: collapse !important;
+}
+
+#pending-member-table th {
+    background: #f8fafc !important;
+    color: #475569 !important;
+    padding: 12px 16px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border-bottom: 1.5px solid #e2e8f0 !important;
+    vertical-align: middle !important;
+}
+
+#pending-member-table td {
+    padding: 13px 16px !important;
+    vertical-align: middle !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    font-size: 13px !important;
+}
+
+#pending-member-table tbody tr {
+    transition: background-color 0.15s ease !important;
+}
+
+#pending-member-table tbody tr:hover {
+    background-color: #f8fafc !important;
+}
+
+.pending-member-input:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12) !important;
+    outline: none !important;
+    background-color: #ffffff !important;
+}
+

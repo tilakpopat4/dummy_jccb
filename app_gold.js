@@ -8539,6 +8539,170 @@ function importCompleteRestoreExcel(file) {
     reader.readAsArrayBuffer(file);
 }
 
+function initPendingMemberView() {
+    const searchInput = document.getElementById("pending-search-input");
+    if (searchInput && !searchInput.dataset.initialized) {
+        searchInput.dataset.initialized = "true";
+        searchInput.addEventListener("input", () => renderPendingMemberTable());
+    }
+
+    const branchFilter = document.getElementById("pending-branch-filter");
+    if (branchFilter && !branchFilter.dataset.initialized) {
+        branchFilter.dataset.initialized = "true";
+        branchFilter.addEventListener("change", () => renderPendingMemberTable());
+    }
+}
+
+function renderPendingMemberTable() {
+    initPendingMemberView();
+
+    const tbody = document.getElementById("pending-member-tbody");
+    const emptyMsg = document.getElementById("pending-member-empty-msg");
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    const isHO = isHeadOfficeSession();
+    const userBranch = state.currentSession ? state.currentSession.code : "99";
+
+    // Setup branch filter options for Head Office
+    const branchContainer = document.getElementById("pending-branch-filter-container");
+    const branchFilter = document.getElementById("pending-branch-filter");
+    if (isHO && branchContainer && branchFilter) {
+        branchContainer.style.display = "block";
+        if (branchFilter.options.length <= 1) {
+            branchFilter.innerHTML = '<option value="">-- All Branches --</option>';
+            (state.branches || []).forEach(b => {
+                const opt = document.createElement("option");
+                opt.value = b.code;
+                opt.textContent = b.name;
+                branchFilter.appendChild(opt);
+            });
+        }
+    } else if (branchContainer) {
+        branchContainer.style.display = "none";
+    }
+
+    const searchVal = document.getElementById("pending-search-input") ? document.getElementById("pending-search-input").value.toLowerCase().trim() : "";
+    const filterBranchVal = (isHO && branchFilter) ? branchFilter.value : "";
+
+    // Base list of pending loans
+    let list = (state.loans || []).filter(l => {
+        const isBranch = isHO ? (!filterBranchVal || isBranchMatch(l.branchCode, filterBranchVal)) : isBranchMatch(l.branchCode, userBranch);
+        const hasNoMemberNo = !l.memberNo || String(l.memberNo).trim() === "";
+        return isBranch && hasNoMemberNo;
+    });
+
+    // Apply Search Filter
+    if (searchVal) {
+        list = list.filter(l => {
+            const accFmt = formatLoanAccountNo(l.accountNo, l.branchCode, l.loanType).toLowerCase();
+            const bName = (l.borrowerName || "").toLowerCase();
+            const cNo = (l.customerNo || "").toLowerCase();
+            const pNo = (l.packetNo || "").toLowerCase();
+            const sAc = (l.savingsAc || "").toLowerCase();
+            return bName.includes(searchVal) || accFmt.includes(searchVal) || cNo.includes(searchVal) || pNo.includes(searchVal) || sAc.includes(searchVal);
+        });
+    }
+
+    // Sort newest first
+    list = list.slice().sort((a, b) => {
+        const dateDiff = (b.date || "").localeCompare(a.date || "");
+        if (dateDiff !== 0) return dateDiff;
+        return (b.id || "").localeCompare(a.id || "");
+    });
+
+    // Update Counter badge & status pill
+    updatePendingMemberBadge();
+    const countPillText = document.getElementById("pending-count-text");
+    if (countPillText) {
+        countPillText.textContent = `${list.length} Loan${list.length === 1 ? '' : 's'} Pending`;
+    }
+
+    if (list.length === 0) {
+        if (emptyMsg) emptyMsg.classList.remove("hidden");
+        return;
+    } else {
+        if (emptyMsg) emptyMsg.classList.add("hidden");
+    }
+
+    list.forEach(loan => {
+        const tr = document.createElement("tr");
+        const accFmt = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
+        const sancAmt = parseFloat(loan.sanctionedAmount || loan.loanAmount || 0);
+        
+        tr.innerHTML = `
+            <td style="white-space:nowrap;">
+                <span style="font-weight:700; color:#1e293b; font-size:13px;">${formatDateDMY(loan.date)}</span>
+            </td>
+            <td style="white-space:nowrap; text-align:center;">
+                <span class="badge badge-primary" style="font-weight:700; padding:4px 8px; border-radius:6px; font-size:11.5px;">${loan.branchCode}</span>
+            </td>
+            <td style="white-space:nowrap;">
+                <div style="font-weight:800; font-family:monospace; font-size:13px; color:#0f172a; letter-spacing:0.3px;">${accFmt}</div>
+                <div style="margin-top:2px;"><span class="badge badge-gold" style="font-size:10.5px; padding:2px 6px; border-radius:4px;">${loan.loanType || "GW-3725"}</span></div>
+            </td>
+            <td>
+                <div style="font-weight:800; font-size:13.5px; color:#0f172a; margin-bottom:3px;">${loan.borrowerName}</div>
+                <div style="font-size:11.5px; color:#64748b; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    ${loan.customerNo ? `<span><i class="fa-solid fa-user-tag" style="color:#94a3b8; font-size:11px;"></i> <strong>${loan.customerNo}</strong></span>` : ''}
+                    ${loan.mobile ? `<span><i class="fa-solid fa-phone" style="color:#94a3b8; font-size:11px;"></i> ${loan.mobile}</span>` : ''}
+                    ${loan.savingsAc ? `<span><i class="fa-solid fa-building-columns" style="color:#94a3b8; font-size:11px;"></i> SB: ${loan.savingsAc}</span>` : ''}
+                </div>
+            </td>
+            <td style="text-align:right; white-space:nowrap;">
+                <span style="font-weight:800; font-size:13.5px; color:#0f172a;">₹ ${sancAmt.toLocaleString("en-IN")}</span>
+            </td>
+            <td style="text-align:center; white-space:nowrap;">
+                <span class="badge" style="background:rgba(245,158,11,0.12); color:#b45309; border:1px solid rgba(245,158,11,0.25); font-weight:700; padding:4px 9px; border-radius:6px; font-size:11px; display:inline-flex; align-items:center; gap:4px;">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Pending
+                </span>
+            </td>
+            <td style="min-width:200px;">
+                <div style="position:relative; display:flex; align-items:center; width:100%; max-width:210px;">
+                    <i class="fa-solid fa-id-card" style="position:absolute; left:10px; color:#94a3b8; font-size:12px; pointer-events:none;"></i>
+                    <input type="text" class="pending-member-input form-control" id="pending-input-${loan.id}" placeholder="e.g. MEM-4050" value="${loan.memberNo || ''}" style="width:100%; height:36px; padding:6px 10px 6px 30px; font-size:12.5px; font-weight:600; border-radius:6px; border:1.5px solid #cbd5e1; background:#ffffff; transition:all 0.2s;">
+                </div>
+            </td>
+            <td style="text-align:center; white-space:nowrap;">
+                <button type="button" class="btn btn-primary save-pending-member-btn" data-id="${loan.id}" style="height:36px; padding:0 14px; font-size:12px; font-weight:700; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 2px 4px rgba(37,99,235,0.2); cursor:pointer;">
+                    <i class="fa-solid fa-check"></i> Update
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll(".save-pending-member-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const loanId = btn.getAttribute("data-id");
+            const input = document.getElementById(`pending-input-${loanId}`);
+            const memberVal = input ? input.value.trim() : "";
+            if (!memberVal) {
+                alert("Please enter a valid Member ID / સભાસદ નં. to update.");
+                if (input) input.focus();
+                return;
+            }
+            savePendingMemberNo(loanId, memberVal);
+        });
+    });
+
+    tbody.querySelectorAll(".pending-member-input").forEach(inp => {
+        inp.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                const loanId = inp.id.replace("pending-input-", "");
+                const memberVal = inp.value.trim();
+                if (!memberVal) {
+                    alert("Please enter a valid Member ID / સભાસદ નં. to update.");
+                    inp.focus();
+                    return;
+                }
+                savePendingMemberNo(loanId, memberVal);
+            }
+        });
+    });
+}
+
 // ==================== IMAGE COMPRESSOR & PHOTO UPLOAD ====================
 function compressImageFile(file, maxDim = 800, quality = 0.85) {
     return new Promise((resolve) => {

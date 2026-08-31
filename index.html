@@ -1081,31 +1081,58 @@
                 <!-- PENDING MEMBER ID VIEW -->
                 <section id="pending-member-view" class="tab-content hidden">
                     <div class="view-header">
-                        <h2><i class="fa-solid fa-clock"></i> Pending Member ID</h2>
-                        <p>Loans requiring a Member ID update</p>
+                        <h2><i class="fa-solid fa-id-card-clip text-gold"></i> Pending Member ID Register</h2>
+                        <p>Track, manage, and update membership numbers for active gold loan accounts</p>
                     </div>
 
-                    <div class="card" style="padding: 0;">
+                    <!-- Search & Filter Card -->
+                    <div class="card" style="margin-bottom: 18px; padding: 14px 18px; border-radius: 10px; border: 1px solid var(--border-color); background: #ffffff;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 12px; flex: 1; min-width: 280px;">
+                                <div style="position: relative; width: 100%; max-width: 400px;">
+                                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 13px;"></i>
+                                    <input type="text" id="pending-search-input" placeholder="Search by Borrower Name, Account, Cust No..." style="width: 100%; padding: 8px 12px 8px 34px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 13px; font-weight: 500;">
+                                </div>
+                                <div id="pending-branch-filter-container" style="display: none;">
+                                    <select id="pending-branch-filter" style="padding: 8px 12px; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 13px; font-weight: 600;">
+                                        <option value="">-- All Branches --</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span id="pending-count-pill" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 20px; font-size: 12.5px; font-weight: 700;">
+                                    <i class="fa-solid fa-circle-exclamation"></i> <span id="pending-count-text">0 Loans Pending</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Table Card -->
+                    <div class="card" style="padding: 0; overflow: hidden; border-radius: 10px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);">
                         <div class="table-responsive">
-                            <table class="data-table">
+                            <table class="table table-hover table-striped" id="pending-member-table">
                                 <thead>
                                     <tr>
-                                        <th>Date</th>
-                                        <th style="text-align:center;">Branch</th>
-                                        <th>Account No</th>
-                                        <th>Borrower Name</th>
-                                        <th style="text-align:center;">Is Member</th>
-                                        <th>Member ID</th>
-                                        <th style="text-align:center;">Action</th>
+                                        <th style="width: 110px;">Loan Date</th>
+                                        <th style="width: 80px; text-align: center;">Branch</th>
+                                        <th style="width: 160px;">Account No</th>
+                                        <th style="min-width: 220px;">Borrower Details</th>
+                                        <th style="width: 140px; text-align: right;">Sanction Amt</th>
+                                        <th style="width: 110px; text-align: center;">Status</th>
+                                        <th style="min-width: 200px;">Assign Member ID</th>
+                                        <th style="width: 120px; text-align: center;">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="pending-member-tbody">
                                     <!-- Populated dynamically via JS -->
                                 </tbody>
                             </table>
-                            <div id="pending-member-empty-msg" class="empty-state hidden">
-                                <i class="fa-solid fa-check-circle" style="font-size: 40px; color: var(--success); margin-bottom: 10px;"></i>
-                                <p>No pending member IDs found.</p>
+                            <div id="pending-member-empty-msg" class="empty-state hidden" style="padding: 50px 20px; text-align: center;">
+                                <div style="width: 60px; height: 60px; background: rgba(34, 197, 94, 0.12); color: #16a34a; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 26px; margin-bottom: 12px;">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                </div>
+                                <h3 style="font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 5px 0;">All Member IDs are Up to Date!</h3>
+                                <p style="font-size: 13px; color: #64748b; margin: 0;">No gold loans require a Member ID update.</p>
                             </div>
                         </div>
                     </div>
