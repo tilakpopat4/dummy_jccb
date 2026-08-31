@@ -2116,8 +2116,23 @@ function initLoanEntryForm() {
         });
     }
 
+    const compulsoryOdCheckbox = document.getElementById("loan-compulsory-od");
+    if (compulsoryOdCheckbox) {
+        compulsoryOdCheckbox.addEventListener("change", () => {
+            updateLoanAmountLogic();
+            calculateAllCharges();
+        });
+    }
+
     if (loanCatSelect) {
         loanCatSelect.addEventListener("change", () => {
+            if (compulsoryOdCheckbox) {
+                if (loanCatSelect.value === "3553" || loanCatSelect.value === "GOD-3553") {
+                    compulsoryOdCheckbox.checked = true;
+                } else if (loanCatSelect.value === "3527" || loanCatSelect.value === "GNA-3527") {
+                    compulsoryOdCheckbox.checked = false;
+                }
+            }
             updateLoanAmountLogic();
             calculateAllCharges();
         });
@@ -2239,6 +2254,9 @@ function updateLoanAmountLogic() {
     const branchEl = document.getElementById("loan-branch");
     const branchCode = branchEl && branchEl.value ? branchEl.value : (state.currentSession ? state.currentSession.code : "99");
 
+    const compulsoryOdCheckbox = document.getElementById("loan-compulsory-od");
+    const isCompulsoryOD = !!(compulsoryOdCheckbox && compulsoryOdCheckbox.checked);
+
     const amt = parseFloat(amtInput ? amtInput.value || 0 : 0);
 
     if (wordsInput) {
@@ -2253,10 +2271,31 @@ function updateLoanAmountLogic() {
         if (rateDisplay) rateDisplay.value = "";
         if (emiContainer) emiContainer.style.display = "none";
         if (catSelect) catSelect.style.display = "none";
-        selectedProdCode = "3725";
+        selectedProdCode = isCompulsoryOD ? "3553" : "3725";
+    } else if (isCompulsoryOD) {
+        // Compulsary Overdraft (GOD-3553) selected by user
+        if (catSelect) {
+            catSelect.style.display = "inline-block";
+            catSelect.value = "3553";
+        }
+        if (emiContainer) emiContainer.style.display = "none";
+
+        selectedProdCode = "3553";
+        const matchedProd = products.find(p => p.code.includes("3553")) || {
+            code: "GOD-3553",
+            name: "Gold Loan above ₹200,000 (Overdraft) (GOD-3553)",
+            rate: 11.50
+        };
+
+        const rate = parseFloat(matchedProd.rate || 11.50).toFixed(2);
+        if (catDisplay) catDisplay.value = `${matchedProd.code} - ${matchedProd.name || matchedProd.code}`;
+        if (rateDisplay) rateDisplay.value = `${rate}%`;
     } else if (amt <= 200000) {
         // Automatically find matching product from Product Master based on amount
-        if (catSelect) catSelect.style.display = "none";
+        if (catSelect) {
+            catSelect.style.display = "none";
+            catSelect.value = "auto";
+        }
         if (emiContainer) emiContainer.style.display = "none";
 
         const matchedProd = products.find(p => {
@@ -2637,6 +2676,8 @@ function calculateAllCharges() {
     const isMember = (isMemberVal === "yes");
     const isStaff = (isMemberVal === "staff");
     const schemeSelectVal = document.getElementById("loan-category-select") ? document.getElementById("loan-category-select").value : "auto";
+    const compulsoryOdCheckbox = document.getElementById("loan-compulsory-od");
+    const isCompulsoryOD = !!(compulsoryOdCheckbox && compulsoryOdCheckbox.checked);
 
     const valRateInput = document.getElementById("val-gold-rate-input");
     const goldRatePer10g = (valRateInput && parseFloat(valRateInput.value) > 0) ? parseFloat(valRateInput.value) : getActiveGoldRate22K();
@@ -2752,7 +2793,7 @@ function calculateAllCharges() {
         }
 
         // Scheme 3553 extra fee (₹300)
-        const isScheme3553 = (schemeSelectVal === "3553" || schemeSelectVal === "GOD-3553" || (typeof selectedProdCode !== "undefined" && String(selectedProdCode).includes("3553")));
+        const isScheme3553 = (isCompulsoryOD || schemeSelectVal === "3553" || schemeSelectVal === "GOD-3553" || (typeof selectedProdCode !== "undefined" && String(selectedProdCode).includes("3553")));
         if (isScheme3553) {
             stampDuty += s3553Fee;
         }
@@ -2764,7 +2805,7 @@ function calculateAllCharges() {
     const dynamicContainer = document.getElementById("dynamic-custom-charges-loan-grid");
     if (dynamicContainer) dynamicContainer.innerHTML = "";
 
-    const customList = getCustomChargesListForCurrentLoan(loanAmt, isMember, schemeSelectVal);
+    const customList = getCustomChargesListForCurrentLoan(loanAmt, isMember, isCompulsoryOD ? "GOD-3553" : schemeSelectVal);
     customList.forEach(item => {
         customChargesTotal += item.amount;
         if (item.gstApplicable && item.amount > 0) {
@@ -2980,16 +3021,18 @@ function submitLoanEntry() {
         // Determine loan type code dynamically from Product Master
         const products = state.products || DEFAULT_PRODUCTS;
         const catSelectVal = document.getElementById("loan-category-select") ? document.getElementById("loan-category-select").value : "auto";
+        const compulsoryOdCheckbox = document.getElementById("loan-compulsory-od");
+        const isCompulsoryOD = !!(compulsoryOdCheckbox && compulsoryOdCheckbox.checked);
         let loanTypeCode = "GW-3725";
         let interestRateVal = 11.50;
 
-        if (loanAmt > 200000) {
-            if (catSelectVal === "3553" || catSelectVal === "GOD-3553") {
-                loanTypeCode = "GOD-3553";
-            } else {
-                loanTypeCode = "GNA-3527";
-            }
-            const matchedProd = products.find(p => p.code.includes(loanTypeCode.split("-")[1])) || products.find(p => p.code === loanTypeCode);
+        if (isCompulsoryOD || catSelectVal === "3553" || catSelectVal === "GOD-3553") {
+            loanTypeCode = "GOD-3553";
+            const matchedProd = products.find(p => p.code.includes("3553")) || products.find(p => p.code === "GOD-3553");
+            if (matchedProd) interestRateVal = parseFloat(matchedProd.rate || 11.50);
+        } else if (loanAmt > 200000) {
+            loanTypeCode = "GNA-3527";
+            const matchedProd = products.find(p => p.code.includes("3527")) || products.find(p => p.code === "GNA-3527");
             if (matchedProd) interestRateVal = parseFloat(matchedProd.rate || 11.50);
         } else {
             const matchedProd = products.find(p => {
@@ -3064,6 +3107,7 @@ function submitLoanEntry() {
             nomineeName: nomineeName,
             nomineeRelation: nomineeRelation,
             valuerName: valuerName,
+            isCompulsoryOD: isCompulsoryOD,
             loanType: loanTypeCode,
             interestRate: interestRateVal,
             sanctionedAmount: loanAmt,
@@ -3213,6 +3257,9 @@ function resetLoanEntryForm() {
 
     const catSelect = document.getElementById("loan-category-select");
     if (catSelect) catSelect.value = "auto";
+
+    const compulsoryOdCheckbox = document.getElementById("loan-compulsory-od");
+    if (compulsoryOdCheckbox) compulsoryOdCheckbox.checked = false;
 
     const isMemberSelect = document.getElementById("is-member");
     if (isMemberSelect) isMemberSelect.value = "No";
@@ -3726,12 +3773,14 @@ function editLoanRecord(id) {
     document.getElementById("loan-purpose").value = loan.purpose || "";
 
     const catSelect = document.getElementById("loan-category-select");
+    const is3553Loan = !!(loan.isCompulsoryOD || (loan.loanType || "").includes("3553"));
     if (catSelect) {
-        if ((loan.loanType || "").includes("3553")) {
-            catSelect.value = "3553";
-        } else {
-            catSelect.value = "3527";
-        }
+        catSelect.value = is3553Loan ? "3553" : "3527";
+    }
+
+    const compulsoryOdCheckbox = document.getElementById("loan-compulsory-od");
+    if (compulsoryOdCheckbox) {
+        compulsoryOdCheckbox.checked = is3553Loan;
     }
 
     if (document.getElementById("loan-emi-amount")) {
