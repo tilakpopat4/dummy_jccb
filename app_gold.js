@@ -2978,6 +2978,22 @@ function submitLoanEntry() {
             return;
         }
 
+        const nomineeNameInput = document.getElementById("cust-nominee-name");
+        const nomineeNameVal = nomineeNameInput ? nomineeNameInput.value.trim() : "";
+        if (!nomineeNameVal) {
+            alert("વારસદારનું નામ (Nominee Name) ફરજિયાત છે. કૃપા કરી વારસદારનું નામ દાખલ કરો.");
+            if (nomineeNameInput) nomineeNameInput.focus();
+            return;
+        }
+
+        const nomineeRelationInput = document.getElementById("cust-nominee-relation");
+        const nomineeRelationVal = nomineeRelationInput ? nomineeRelationInput.value.trim() : "";
+        if (!nomineeRelationVal) {
+            alert("વારસદાર સાથેનો સંબંધ (Nominee Relation) પસંદ કરવો ફરજિયાત છે.");
+            if (nomineeRelationInput) nomineeRelationInput.focus();
+            return;
+        }
+
         const goldWeightInput = document.getElementById("gold-weight");
         const goldWeight = parseFloat(goldWeightInput ? goldWeightInput.value || 0 : 0);
         if (goldWeight <= 0) {
@@ -3265,6 +3281,9 @@ function resetLoanEntryForm() {
 
     const compulsoryOdCheckbox = document.getElementById("loan-compulsory-od");
     if (compulsoryOdCheckbox) compulsoryOdCheckbox.checked = false;
+
+    const nomRelSelect = document.getElementById("cust-nominee-relation");
+    if (nomRelSelect) nomRelSelect.value = "";
 
     const isMemberSelect = document.getElementById("is-member");
     if (isMemberSelect) isMemberSelect.value = "No";
@@ -3770,7 +3789,29 @@ function editLoanRecord(id) {
     document.getElementById("cust-religion").value = loan.religion || "";
     document.getElementById("cust-caste").value = loan.caste || "";
     document.getElementById("cust-nominee-name").value = loan.nomineeName || "";
-    document.getElementById("cust-nominee-relation").value = loan.nomineeRelation || "";
+    const nomRelEl = document.getElementById("cust-nominee-relation");
+    if (nomRelEl) {
+        const rVal = (loan.nomineeRelation || "").trim().toUpperCase();
+        if (rVal) {
+            let found = false;
+            for (let opt of nomRelEl.options) {
+                if (opt.value.toUpperCase() === rVal) {
+                    nomRelEl.value = opt.value;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                const newOpt = document.createElement("option");
+                newOpt.value = rVal;
+                newOpt.textContent = rVal;
+                nomRelEl.appendChild(newOpt);
+                nomRelEl.value = rVal;
+            }
+        } else {
+            nomRelEl.value = "";
+        }
+    }
     document.getElementById("valuer-select").value = loan.valuerName || "";
     document.getElementById("loan-amount").value = loan.sanctionedAmount || "";
     document.getElementById("loan-ac-no").value = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
@@ -6386,7 +6427,29 @@ function renderCustomerMasterList() {
             document.getElementById("m-cust-mobile").value = c.mobile || "";
 
             if (document.getElementById("m-cust-nominee-name")) document.getElementById("m-cust-nominee-name").value = c.nomineeName || "";
-            if (document.getElementById("m-cust-nominee-relation")) document.getElementById("m-cust-nominee-relation").value = c.nomineeRelation || "";
+            const mNomRelEl = document.getElementById("m-cust-nominee-relation");
+            if (mNomRelEl) {
+                const rVal = String(c.nomineeRelation || "").trim().toUpperCase();
+                if (rVal) {
+                    let found = false;
+                    for (let opt of mNomRelEl.options) {
+                        if (opt.value.toUpperCase() === rVal) {
+                            mNomRelEl.value = opt.value;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        const newOpt = document.createElement("option");
+                        newOpt.value = rVal;
+                        newOpt.textContent = rVal;
+                        mNomRelEl.appendChild(newOpt);
+                        mNomRelEl.value = rVal;
+                    }
+                } else {
+                    mNomRelEl.value = "";
+                }
+            }
 
             const photoPreview = document.getElementById("m-cust-photo-preview");
             if (photoPreview) {
@@ -6448,6 +6511,33 @@ function initCustomerAutofill() {
                 document.getElementById("cust-religion").value = cust.religion || "";
                 document.getElementById("cust-caste").value = cust.caste || "";
                 document.getElementById("cust-mobile").value = cust.mobile || "";
+
+                if (document.getElementById("cust-nominee-name")) {
+                    document.getElementById("cust-nominee-name").value = cust.nomineeName || "";
+                }
+                const nomRelEl = document.getElementById("cust-nominee-relation");
+                if (nomRelEl) {
+                    const rVal = String(cust.nomineeRelation || "").trim().toUpperCase();
+                    if (rVal) {
+                        let found = false;
+                        for (let opt of nomRelEl.options) {
+                            if (opt.value.toUpperCase() === rVal) {
+                                nomRelEl.value = opt.value;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            const newOpt = document.createElement("option");
+                            newOpt.value = rVal;
+                            newOpt.textContent = rVal;
+                            nomRelEl.appendChild(newOpt);
+                            nomRelEl.value = rVal;
+                        }
+                    } else {
+                        nomRelEl.value = "";
+                    }
+                }
 
                 const isMem = (cust.memberNo && cust.memberNo.trim() !== "");
                 const isMemberSelect = document.getElementById("is-member");
