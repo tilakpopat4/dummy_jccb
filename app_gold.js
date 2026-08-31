@@ -2855,7 +2855,19 @@ function submitLoanEntry() {
         const valRateInput = document.getElementById("val-gold-rate-input");
         const goldRate22K = (valRateInput && parseFloat(valRateInput.value) > 0) ? parseFloat(valRateInput.value) : getActiveGoldRate22K();
         const goldRate24K = Math.round(goldRate22K * (24 / 22));
-        const marketValue = Math.round(goldWeight * (goldRate22K / 10));
+
+        const ornList = getOrnamentsTableJSON();
+        let totalOrnamentsVal = 0;
+        let calcNetGoldWeight = 0;
+        let calcGrossGoldWeight = 0;
+        if (ornList.length > 0) {
+            ornList.forEach(orn => {
+                totalOrnamentsVal += Math.round(parseFloat(orn.marketVal || 0));
+                calcNetGoldWeight += parseFloat(orn.netGm || 0) + (parseFloat(orn.netMg || 0) / 1000);
+                calcGrossGoldWeight += parseFloat(orn.grossGm || 0) + (parseFloat(orn.grossMg || 0) / 1000);
+            });
+        }
+        const marketValue = totalOrnamentsVal > 0 ? totalOrnamentsVal : Math.round(goldWeight * (goldRate22K / 10));
 
         // Determine loan type code dynamically from Product Master
         const products = state.products || DEFAULT_PRODUCTS;
@@ -2944,26 +2956,8 @@ function submitLoanEntry() {
             interestRate: interestRateVal,
             sanctionedAmount: loanAmt,
             valuationAmount: marketValue,
-            goldWeight: (() => {
-                const ornList = getOrnamentsTableJSON();
-                let calcNet = 0;
-                if (ornList.length > 0) {
-                    ornList.forEach(orn => {
-                        calcNet += parseFloat(orn.netGm || 0) + (parseFloat(orn.netMg || 0) / 1000);
-                    });
-                }
-                return calcNet > 0 ? calcNet.toFixed(3) : parseFloat(goldWeight || 0).toFixed(3);
-            })(),
-            grossWeight: (() => {
-                const ornList = getOrnamentsTableJSON();
-                let calcGross = 0;
-                if (ornList.length > 0) {
-                    ornList.forEach(orn => {
-                        calcGross += parseFloat(orn.grossGm || 0) + (parseFloat(orn.grossMg || 0) / 1000);
-                    });
-                }
-                return calcGross > 0 ? calcGross.toFixed(3) : parseFloat(goldWeight || 0).toFixed(3);
-            })(),
+            goldWeight: calcNetGoldWeight > 0 ? calcNetGoldWeight.toFixed(3) : parseFloat(goldWeight || 0).toFixed(3),
+            grossWeight: calcGrossGoldWeight > 0 ? calcGrossGoldWeight.toFixed(3) : parseFloat(goldWeight || 0).toFixed(3),
             purpose: document.getElementById("loan-purpose") ? (document.getElementById("loan-purpose").value.trim() || "Personal / Business Use") : "Personal / Business Use",
             emiAmount: parseFloat(document.getElementById("loan-emi-amount") ? document.getElementById("loan-emi-amount").value || 0 : 0),
             installments: parseInt(document.getElementById("loan-installments") ? document.getElementById("loan-installments").value || 36 : 36),
@@ -8821,9 +8815,9 @@ function generateSingleSanctionLetterCard(loan, copyTag, copyTitleGujarati) {
             ornamentsValSum += Math.round(parseFloat(orn.marketVal || 0));
         });
     }
-    const valuationAmt = parseFloat(loan.valuationAmount || 0) > 0 
-        ? Math.round(parseFloat(loan.valuationAmount)) 
-        : (ornamentsValSum > 0 ? ornamentsValSum : 0);
+    const valuationAmt = ornamentsValSum > 0 
+        ? ornamentsValSum 
+        : (parseFloat(loan.valuationAmount || 0) > 0 ? Math.round(parseFloat(loan.valuationAmount)) : 0);
 
     const shareA = parseFloat(loan.shareA || 0);
     const shareB = parseFloat(loan.shareB || 0);
