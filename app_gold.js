@@ -105,24 +105,24 @@ const LOGO_SRC = "jccb-logo.png";
 
 // Bank Branches
 const DEFAULT_BRANCHES = [
-    { code: "99", name: "99 HEAD OFFICE", role: ROLES.ADMIN, isHO: true, password: "Rahul#80810" },
-    { code: "01", name: "01 AZADCHOWK BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "02", name: "02 JOSHIPARA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "03", name: "03 DOLATPARA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "04", name: "04 KODINAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "05", name: "05 KESHOD BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "06", name: "06 VANTHALI BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "07", name: "07 MANAVADAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "08", name: "08 GANDHINAGAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "09", name: "09 LIMBDI BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "10", name: "10 MENDARDA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "11", name: "11 VISAVADAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "12", name: "12 JAMNAGAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "13", name: "13 BUS STAND BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "14", name: "14 LATHI BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "16", name: "16 AHMEDABAD BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "17", name: "17 RAJKOT BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" },
-    { code: "18", name: "18 ZANZARDA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123" }
+    { code: "99", name: "99 HEAD OFFICE", role: ROLES.ADMIN, isHO: true, password: "Rahul#80810", isDefaultPassword: false, passwordChanged: true },
+    { code: "01", name: "01 AZADCHOWK BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "02", name: "02 JOSHIPARA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "03", name: "03 DOLATPARA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "04", name: "04 KODINAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "05", name: "05 KESHOD BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "06", name: "06 VANTHALI BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "07", name: "07 MANAVADAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "08", name: "08 GANDHINAGAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "09", name: "09 LIMBDI BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "10", name: "10 MENDARDA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "11", name: "11 VISAVADAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "12", name: "12 JAMNAGAR BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "13", name: "13 BUS STAND BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "14", name: "14 LATHI BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "16", name: "16 AHMEDABAD BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "17", name: "17 RAJKOT BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false },
+    { code: "18", name: "18 ZANZARDA BRANCH", role: ROLES.BRANCH_MANAGER, isHO: false, password: "Admin@123", isDefaultPassword: true, passwordChanged: false }
 ];
 
 // Product Schemes
@@ -440,6 +440,7 @@ document.addEventListener("DOMContentLoaded", () => {
     safeRun(initRulesMaster, "initRulesMaster");
     safeRun(initCustomerMaster, "initCustomerMaster");
     safeRun(initSettings, "initSettings");
+    safeRun(initMandatoryPasswordModal, "initMandatoryPasswordModal");
     safeRun(initBackupRestore, "initBackupRestore");
     safeRun(initImageCropper, "initImageCropper");
     safeRun(initReminders, "initReminders");
@@ -926,6 +927,19 @@ function initAuth() {
                 localStorage.setItem("jccb_device_session_id", freshSessionId);
                 localStorage.setItem("jccb_session_login_time", new Date().toISOString());
 
+                // Check if branch password is default / requires mandatory first-time password change
+                const isDefaultPass = (branchCode !== "99") && (
+                    password === "Admin@123" ||
+                    branchObj.password === "Admin@123" ||
+                    branchObj.isDefaultPassword === true ||
+                    !branchObj.passwordChanged
+                );
+
+                if (isDefaultPass) {
+                    promptMandatoryPasswordChange(branchObj);
+                    return;
+                }
+
                 showApp();
                 showToast(`સ્વાગત છે! ${branchObj.name} લૉગઇન સફળ.`);
 
@@ -1000,22 +1014,200 @@ function initAuth() {
     }, 30000);
 
     if (state.currentSession) {
-        showApp();
-        if (window.FirebaseService && typeof window.FirebaseService.updateDeviceHeartbeat === "function") {
-            window.FirebaseService.updateDeviceHeartbeat({
-                branchCode: state.currentSession.code,
-                branchName: state.currentSession.name,
-                operator: state.currentSession.name
-            }).then(res => {
-                if (res && res.terminated) {
-                    triggerRemoteForceDisconnect();
-                } else {
-                    setupDeviceKillswitchListener();
-                }
-            });
+        const curBranch = state.currentSession;
+        const isDefaultPass = (curBranch.code !== "99") && (
+            curBranch.password === "Admin@123" ||
+            curBranch.isDefaultPassword === true ||
+            !curBranch.passwordChanged
+        );
+        if (isDefaultPass) {
+            promptMandatoryPasswordChange(curBranch);
+        } else {
+            showApp();
+            if (window.FirebaseService && typeof window.FirebaseService.updateDeviceHeartbeat === "function") {
+                window.FirebaseService.updateDeviceHeartbeat({
+                    branchCode: curBranch.code,
+                    branchName: curBranch.name,
+                    operator: curBranch.name
+                }).then(res => {
+                    if (res && res.terminated) {
+                        triggerRemoteForceDisconnect();
+                    } else {
+                        setupDeviceKillswitchListener();
+                    }
+                });
+            }
         }
     } else {
         showLogin();
+    }
+}
+
+function promptMandatoryPasswordChange(branchObj) {
+    const modal = document.getElementById("mandatory-password-modal");
+    const label = document.getElementById("mandatory-branch-name-label");
+    const currPassInp = document.getElementById("mandatory-current-pass");
+    const newPassInp = document.getElementById("mandatory-new-pass");
+    const confPassInp = document.getElementById("mandatory-confirm-pass");
+    const errBox = document.getElementById("mandatory-password-error");
+    const errText = document.getElementById("mandatory-error-text");
+
+    if (label) label.textContent = `શાખા: ${branchObj.name} (${branchObj.code})`;
+    if (currPassInp) currPassInp.value = "";
+    if (newPassInp) newPassInp.value = "";
+    if (confPassInp) confPassInp.value = "";
+    if (errBox) {
+        errBox.classList.add("hidden");
+        errBox.style.display = "none";
+    }
+
+    if (modal) {
+        modal.classList.remove("hidden");
+        modal.style.display = "flex";
+    }
+
+    const appContainer = document.getElementById("app-container");
+    if (appContainer) {
+        appContainer.classList.add("hidden");
+        appContainer.style.display = "none";
+    }
+    const loginContainer = document.getElementById("login-container");
+    if (loginContainer) {
+        loginContainer.classList.add("hidden");
+        loginContainer.style.display = "none";
+    }
+}
+
+function initMandatoryPasswordModal() {
+    const form = document.getElementById("mandatory-password-form");
+    const logoutBtn = document.getElementById("btn-mandatory-logout");
+    const errBox = document.getElementById("mandatory-password-error");
+    const errText = document.getElementById("mandatory-error-text");
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+            const modal = document.getElementById("mandatory-password-modal");
+            if (modal) {
+                modal.classList.add("hidden");
+                modal.style.display = "none";
+            }
+            state.currentSession = null;
+            setActiveSession(null);
+            saveState();
+            showLogin();
+        });
+    }
+
+    if (form) {
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const currPass = document.getElementById("mandatory-current-pass").value.trim();
+            const newPass = document.getElementById("mandatory-new-pass").value.trim();
+            const confPass = document.getElementById("mandatory-confirm-pass").value.trim();
+
+            const curBranch = state.currentSession;
+            if (!curBranch) {
+                showLogin();
+                return;
+            }
+
+            const expectedPass = curBranch.password || "Admin@123";
+            if (currPass !== expectedPass) {
+                if (errBox && errText) {
+                    errBox.classList.remove("hidden");
+                    errBox.style.display = "block";
+                    errText.textContent = "વર્તમાન ડિફોલ્ટ પાસવર્ડ ખોટો છે! (Incorrect current password)";
+                }
+                return;
+            }
+
+            if (newPass === "Admin@123" || newPass.toLowerCase() === "admin") {
+                if (errBox && errText) {
+                    errBox.classList.remove("hidden");
+                    errBox.style.display = "block";
+                    errText.textContent = "નવો પાસવર્ડ 'Admin@123' ન હોઈ શકે. કૃપા કરીને તમારો પોતાનો સુરક્ષિત પાસવર્ડ બનાવો.";
+                }
+                return;
+            }
+
+            if (newPass.length < 6) {
+                if (errBox && errText) {
+                    errBox.classList.remove("hidden");
+                    errBox.style.display = "block";
+                    errText.textContent = "પાસવર્ડ ઓછામાં ઓછો ૬ અક્ષરનો હોવો જરૂરી છે (Min 6 characters required).";
+                }
+                return;
+            }
+
+            if (newPass !== confPass) {
+                if (errBox && errText) {
+                    errBox.classList.remove("hidden");
+                    errBox.style.display = "block";
+                    errText.textContent = "નવા પાસવર્ડ અને કન્ફર્મ પાસવર્ડ મેળ ખાતા નથી (Passwords do not match).";
+                }
+                return;
+            }
+
+            // Update Branch Password in State & DB
+            curBranch.password = newPass;
+            curBranch.isDefaultPassword = false;
+            curBranch.passwordChanged = true;
+            curBranch.passwordChangedAt = new Date().toISOString();
+
+            const idx = state.branches.findIndex(b => b.code === curBranch.code);
+            if (idx !== -1) {
+                state.branches[idx].password = newPass;
+                state.branches[idx].isDefaultPassword = false;
+                state.branches[idx].passwordChanged = true;
+                state.branches[idx].passwordChangedAt = new Date().toISOString();
+            }
+
+            saveState();
+
+            // Cloud Firestore Sync (Update branch record and branch list)
+            if (window.FirebaseService) {
+                if (typeof window.FirebaseService.saveBranch === "function") {
+                    window.FirebaseService.saveBranch({
+                        branchCode: curBranch.code,
+                        branchName: curBranch.name,
+                        password: newPass,
+                        isDefaultPassword: false,
+                        passwordChanged: true,
+                        passwordChangedAt: new Date().toISOString(),
+                        isHeadOffice: (curBranch.code === "99"),
+                        isActive: true
+                    }).catch(e => console.warn("Cloud branch password save warning:", e));
+                }
+                if (typeof window.FirebaseService.saveBranchesList === "function") {
+                    window.FirebaseService.saveBranchesList(state.branches).catch(e => console.warn("Cloud branches master sync warning:", e));
+                }
+                if (typeof window.FirebaseService.logAuditEvent === "function") {
+                    window.FirebaseService.logAuditEvent("MANDATORY_PASSWORD_CHANGED", `Branch ${curBranch.name} (${curBranch.code}) successfully changed password from default`, {
+                        branchCode: curBranch.code,
+                        branchName: curBranch.name,
+                        operator: curBranch.name
+                    });
+                }
+                if (typeof window.FirebaseService.updateDeviceHeartbeat === "function") {
+                    window.FirebaseService.updateDeviceHeartbeat({
+                        branchCode: curBranch.code,
+                        branchName: curBranch.name,
+                        operator: curBranch.name
+                    });
+                }
+                setupDeviceKillswitchListener();
+            }
+
+            const modal = document.getElementById("mandatory-password-modal");
+            if (modal) {
+                modal.classList.add("hidden");
+                modal.style.display = "none";
+            }
+
+            showApp();
+            showToast(`સફળ! ${curBranch.name} નો નવો પાસવર્ડ સફળતાપૂર્વક સેટ થઈ ગયો છે.`);
+            alert(`સૂચના: ${curBranch.name} નો નવો પાસવર્ડ સેટ થઈ ગયો છે.\nહવેથી આ શાખામાં ફક્ત તમારા આ નવા પાસવર્ડથી જ લૉગઇન થઈ શકશે.\nપાસવર્ડ ભૂલી ગયા હોવ તો હેડ ઓફિસ (Head Office) નો સંપર્ક કરવો.`);
+        });
     }
 }
 

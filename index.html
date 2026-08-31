@@ -2348,6 +2348,62 @@
         </div>
     </div>
 
+    <!-- ==================== MANDATORY FIRST-TIME PASSWORD CHANGE MODAL ==================== -->
+    <div id="mandatory-password-modal" class="modal hidden" style="z-index: 999999; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); display: none; position: fixed; inset: 0; align-items: center; justify-content: center;">
+        <div class="modal-content" style="max-width: 480px; width: 92%; border-top: 4px solid var(--gold); border-radius: 12px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); padding: 24px; background: #ffffff;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <div style="width: 56px; height: 56px; background: rgba(244, 195, 0, 0.15); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+                    <i class="fa-solid fa-key text-gold" style="font-size: 26px;"></i>
+                </div>
+                <h2 style="margin: 0 0 6px 0; color: var(--primary); font-size: 20px; font-weight: 800;">ફરજિયાત પાસવર્ડ બદલો</h2>
+                <span style="font-size: 13px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase;">MANDATORY PASSWORD CHANGE</span>
+            </div>
+
+            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 12px 14px; margin-bottom: 20px;">
+                <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #334155;">
+                    <strong id="mandatory-branch-name-label" style="color: var(--primary);">શાખા:</strong> આપની શાખાનો વર્તમાન પાસવર્ડ ડિફોલ્ટ છે. સુરક્ષાના નિયમ મુજબ પ્રથમ લૉગઇન વખતે આપનો નવો ગોપનીય પાસવર્ડ બનાવવો ફરજિયાત છે.
+                </p>
+            </div>
+
+            <form id="mandatory-password-form">
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label for="mandatory-current-pass" style="font-size: 13px; font-weight: 700;">
+                        <i class="fa-solid fa-lock"></i> વર્તમાન ડિફોલ્ટ પાસવર્ડ (Current Default Password)
+                    </label>
+                    <input type="password" id="mandatory-current-pass" placeholder="Admin@123" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border-color); font-size: 14px;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label for="mandatory-new-pass" style="font-size: 13px; font-weight: 700;">
+                        <i class="fa-solid fa-shield-halved"></i> નવો ગોપનીય પાસવર્ડ (New Strong Password)
+                    </label>
+                    <input type="password" id="mandatory-new-pass" placeholder="ઓછામાં ઓછા ૬ અક્ષર (Min 6 chars)" required minlength="6" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border-color); font-size: 14px;">
+                    <small style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 3px;">નવો પાસવર્ડ 'Admin@123' જેવો સામાન્ય ન હોવો જોઈએ.</small>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label for="mandatory-confirm-pass" style="font-size: 13px; font-weight: 700;">
+                        <i class="fa-solid fa-check-double"></i> નવા પાસવર્ડની પુષ્ટિ (Confirm New Password)
+                    </label>
+                    <input type="password" id="mandatory-confirm-pass" placeholder="ફરીથી નવો પાસવર્ડ લખો" required minlength="6" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border-color); font-size: 14px;">
+                </div>
+
+                <div id="mandatory-password-error" class="auth-error hidden" style="background: #fee2e2; color: #991b1b; border: 1px solid #f87171; border-radius: 6px; padding: 10px; font-size: 12.5px; margin-bottom: 16px; display: none;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> <span id="mandatory-error-text">ક્ષતિ આવી છે</span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button type="submit" id="btn-save-mandatory-password" class="btn btn-gold btn-block" style="padding: 12px; font-size: 15px; font-weight: 800; justify-content: center; width: 100%;">
+                        <i class="fa-solid fa-floppy-disk"></i> નવો પાસવર્ડ સેવ કરો & પ્રવેશો (Set Password & Login)
+                    </button>
+                    <button type="button" id="btn-mandatory-logout" class="btn btn-secondary btn-block" style="padding: 10px; font-size: 13px; justify-content: center; width: 100%;">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i> લૉગઆઉટ કરો (Cancel & Logout)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         if (typeof XLSX === "undefined") {
