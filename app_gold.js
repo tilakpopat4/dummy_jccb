@@ -10651,6 +10651,33 @@ function generatePage4KFSHTML(loan, ltv, isPageBreak = false) {
     const groName = (loan.grievanceOfficer && loan.grievanceOfficer.trim()) ? loan.grievanceOfficer.trim() : (document.getElementById("grievance-officer") ? document.getElementById("grievance-officer").value.trim() : "Amrutlal Valjibhai Chavda");
     const groDisplay = groName;
 
+    // Resolve real item-wise Gold Purity description from ornamentsTable or loan data (<item> (__K))
+    let ornListForPurity = loan.ornamentsTable;
+    if (typeof ornListForPurity === "string") {
+        try {
+            ornListForPurity = JSON.parse(ornListForPurity);
+        } catch (e) {
+            ornListForPurity = [];
+        }
+    }
+    const purityItems = [];
+    if (Array.isArray(ornListForPurity) && ornListForPurity.length > 0) {
+        ornListForPurity.forEach((orn, idx) => {
+            const rawName = (orn.name || orn.itemName || orn.description || "").trim();
+            const pVal = (orn.purity || "22").toString().replace(/[^\d.]/g, "") || "22";
+            if (rawName) {
+                purityItems.push(`${rawName} (${pVal}K)`);
+            } else if (orn.grossGm || orn.netGm || orn.marketVal) {
+                purityItems.push(`Item ${idx + 1} (${pVal}K)`);
+            }
+        });
+    }
+    const purityDisplay = purityItems.length > 0
+        ? purityItems.join(", ")
+        : (loan.ornamentsDescription || loan.ornamentsDesc
+            ? `${(loan.ornamentsDescription || loan.ornamentsDesc).trim()} (${(loan.purity || "22").toString().replace(/[^\d.]/g, "") || "22"}K)`
+            : `${(loan.purity || "22").toString().replace(/[^\d.]/g, "") || "22"} Karat (${(loan.purity || "22").toString().replace(/[^\d.]/g, "") || "22"}K)`);
+
     // 1. Overdraft Facility KFS (Scheme 3553 / GOD-3553)
     if (isOverdraftScheme) {
         const maturityDate = getMaturityDate(loan.date, 12);
@@ -10771,7 +10798,7 @@ function generatePage4KFSHTML(loan, ltv, isPageBreak = false) {
                     </tr>
                     <tr>
                         <td style="border:1px solid #000; padding:2.5px 6px; font-weight:700;">Purity of Gold</td>
-                        <td style="border:1px solid #000; padding:2.5px 6px;">22 Karat (916)</td>
+                        <td style="border:1px solid #000; padding:2.5px 6px;">${purityDisplay}</td>
                     </tr>
                     <tr>
                         <td style="border:1px solid #000; padding:2.5px 6px; font-weight:700;">Loan-to-Value (LTV)</td>
@@ -10967,7 +10994,7 @@ function generatePage4KFSHTML(loan, ltv, isPageBreak = false) {
                     </tr>
                     <tr>
                         <td style="border:1px solid #000; padding:3.5px 8px; font-weight:700;">Purity of Gold</td>
-                        <td style="border:1px solid #000; padding:3.5px 8px;">22 Karat (916)</td>
+                        <td style="border:1px solid #000; padding:3.5px 8px;">${purityDisplay}</td>
                     </tr>
                     <tr>
                         <td style="border:1px solid #000; padding:3.5px 8px; font-weight:700;">Loan-to-Value (LTV)</td>
@@ -11158,7 +11185,7 @@ function generatePage4KFSHTML(loan, ltv, isPageBreak = false) {
                 </tr>
                 <tr>
                     <td style="border:1px solid #000; padding:3.5px 6px; font-weight:700;">Purity of Gold</td>
-                    <td style="border:1px solid #000; padding:3.5px 6px;">22 Karat (916)</td>
+                    <td style="border:1px solid #000; padding:3.5px 6px;">${purityDisplay}</td>
                 </tr>
                 <tr>
                     <td style="border:1px solid #000; padding:3.5px 6px; font-weight:700;">Loan-to-Value (LTV)</td>

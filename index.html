@@ -11,7 +11,7 @@
     <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Style Sheet -->
-    <link rel="stylesheet" href="styles.css?v=20260831_v18">
+    <link rel="stylesheet" href="styles.css?v=20260831_v19">
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="jccb-logo.png">
     <link rel="shortcut icon" type="image/png" href="jccb-logo.png">
@@ -71,7 +71,7 @@
             
             <form id="login-form">
                 <div class="form-group">
-                    <label for="login-branch"><i class="fa-solid fa-code-branch"></i> Select Branch</label>
+                    <label for="login-branch" class="required-label"><i class="fa-solid fa-code-branch"></i> Select Branch</label>
                     <select id="login-branch" required>
                         <option value="99">99 HEAD OFFICE</option>
                         <option value="01">01 AZADCHOWK BRANCH</option>
@@ -94,7 +94,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="login-password"><i class="fa-solid fa-lock"></i> Password</label>
+                    <label for="login-password" class="required-label"><i class="fa-solid fa-lock"></i> Password</label>
                     <div class="password-input-wrapper">
                         <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
                         <button type="button" id="toggle-password-btn" class="icon-button">
@@ -398,7 +398,7 @@
                                 <h3 class="section-title"><i class="fa-solid fa-circle-info"></i> 1. Basic Details</h3>
                                 <div class="form-row two-col">
                                     <div class="form-group">
-                                        <label for="loan-branch">Branch / શાખા</label>
+                                        <label for="loan-branch" class="required-label">Branch / શાખા</label>
                                         <select id="loan-branch" required style="font-weight:600;"></select>
                                     </div>
                                     <div class="form-group">
@@ -408,7 +408,7 @@
                                 </div>
                                 <div class="form-row two-col">
                                     <div class="form-group">
-                                        <label for="loan-date">Loan Date</label>
+                                        <label for="loan-date" class="required-label">Loan Date</label>
                                         <input type="date" id="loan-date" required>
                                     </div>
                                     <div class="form-group">
@@ -425,7 +425,7 @@
                                 </div>
                                 <div class="form-row two-col">
                                     <div class="form-group">
-                                        <label for="is-member">Member Status</label>
+                                        <label for="is-member" class="required-label">Member Status</label>
                                         <select id="is-member" required style="cursor:pointer; font-weight:600;">
                                             <option value="No">No (સભાસદ નથી)</option>
                                             <option value="Yes">Yes (સભાસદ છે)</option>
@@ -433,7 +433,7 @@
                                         </select>
                                     </div>
                                     <div class="form-group" id="member-no-group" style="display:none;">
-                                        <label for="member-no">Member ID / સભાસદ નં. <span style="color:var(--danger,#dc2626);">*</span></label>
+                                        <label for="member-no" class="required-label">Member ID / સભાસદ નં.</label>
                                         <input type="text" id="member-no" placeholder="Member ID">
                                     </div>
                                 </div>
@@ -443,7 +443,7 @@
                                         <input type="number" id="packet-no" placeholder="Auto" readonly class="auto-calc-field" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="valuer-select">Soni Valuer</label>
+                                        <label for="valuer-select" class="required-label">Soni Valuer</label>
                                         <select id="valuer-select" required>
                                             <option value="">-- Select Valuer --</option>
                                         </select>
@@ -456,57 +456,57 @@
                                 <h3 class="section-title"><i class="fa-solid fa-user-shield"></i> 2. Customer Profile Details</h3>
                                 <div class="form-row two-col">
                                     <div class="form-group">
-                                        <label for="cust-no">Customer No <span style="color:var(--danger,#dc2626);">*</span></label>
+                                        <label for="cust-no" class="required-label">Customer No</label>
                                         <input type="text" id="cust-no" placeholder="Customer No" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="cust-name">Customer Name</label>
+                                        <label for="cust-name" class="required-label">Customer Name</label>
                                         <input type="text" id="cust-name" placeholder="Full Name" required>
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="cust-address">Address</label>
+                                    <label for="cust-address" class="required-label">Address</label>
                                     <textarea id="cust-address" placeholder="Full Address" rows="1" required style="resize: vertical;"></textarea>
                                 </div>
                                 <div class="form-row three-col">
                                     <div class="form-group">
-                                        <label for="cust-savings-ac">Savings A/c No</label>
+                                        <label for="cust-savings-ac" class="required-label">Savings A/c No</label>
                                         <input type="text" id="cust-savings-ac" placeholder="Savings A/c" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="cust-dob">Birth Date</label>
+                                        <label for="cust-dob" class="required-label">Birth Date</label>
                                         <input type="date" id="cust-dob" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="cust-age">Age</label>
+                                        <label for="cust-age" class="required-label">Age</label>
                                         <input type="number" id="cust-age" placeholder="Age" readonly class="auto-calc-field" required min="1" max="120">
                                     </div>
                                 </div>
                                 <div class="form-row three-col">
                                     <div class="form-group">
-                                        <label for="cust-occupation">Occupation</label>
+                                        <label for="cust-occupation" class="required-label">Occupation</label>
                                         <input type="text" id="cust-occupation" placeholder="Occupation" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="cust-religion">Religion</label>
+                                        <label for="cust-religion" class="required-label">Religion</label>
                                         <input type="text" id="cust-religion" placeholder="Religion" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="cust-caste">Caste</label>
+                                        <label for="cust-caste" class="required-label">Caste</label>
                                         <input type="text" id="cust-caste" placeholder="Caste" required>
                                     </div>
                                 </div>
                                 <div class="form-row three-col">
                                     <div class="form-group">
-                                        <label for="cust-mobile">Mobile No</label>
+                                        <label for="cust-mobile" class="required-label">Mobile No</label>
                                         <input type="tel" id="cust-mobile" placeholder="10 Digits" required pattern="[0-9]{10}">
                                     </div>
                                     <div class="form-group">
-                                        <label for="cust-nominee-name">Nominee Name *</label>
+                                        <label for="cust-nominee-name" class="required-label">Nominee Name</label>
                                         <input type="text" id="cust-nominee-name" placeholder="Nominee Name" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="cust-nominee-relation">Relation *</label>
+                                        <label for="cust-nominee-relation" class="required-label">Relation</label>
                                         <select id="cust-nominee-relation" required>
                                             <option value="">-- Select Relation --</option>
                                             <option value="SPOUSE">SPOUSE</option>
@@ -532,7 +532,8 @@
                                             <option value="AUNT">AUNT</option>
                                             <option value="COUSIN">COUSIN</option>
                                             <option value="LEGAL GUARDIAN">LEGAL GUARDIAN</option>
-                                            <option value="OTHER">OTHER</option>
+                                            <option value="FRIEND">FRIEND</option>
+                                            <option value="RELATIVE">RELATIVE</option>
                                         </select>
                                     </div>
                                 </div>
@@ -543,7 +544,7 @@
                                 <h3 class="section-title"><i class="fa-solid fa-coins"></i> 3. Loan Details</h3>
                                 <div class="form-row two-col">
                                     <div class="form-group">
-                                        <label for="loan-amount">Sanction Amount (₹)</label>
+                                        <label for="loan-amount" class="required-label">Sanction Amount (₹)</label>
                                         <input type="number" id="loan-amount" placeholder="e.g. 150000" min="100" required>
                                         <div class="compulsory-od-wrapper">
                                             <label for="loan-compulsory-od" class="compulsory-od-card">
@@ -555,7 +556,7 @@
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label for="loan-purpose">Loan Purpose / હેતુ</label>
+                                        <label for="loan-purpose" class="required-label">Loan Purpose / હેતુ</label>
                                         <input type="text" id="loan-purpose" placeholder="e.g. Personal Use" required>
                                     </div>
                                 </div>
@@ -1195,11 +1196,11 @@
 
                             <form id="gold-rate-master-form" style="margin-top: 15px;">
                                 <div class="form-group">
-                                    <label for="m-gold-rate-date">Date (તારીખ)</label>
+                                    <label for="m-gold-rate-date" class="required-label">Date (તારીખ)</label>
                                     <input type="date" id="m-gold-rate-date" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="m-gold-rate-val">22K Gold Market Rate / 10g (૨૨ કેરેટ સોનાનો ભાવ રૂ. પ્રતિ ૧૦ ગ્રામ)</label>
+                                    <label for="m-gold-rate-val" class="required-label">22K Gold Market Rate / 10g (૨૨ કેરેટ સોનાનો ભાવ રૂ. પ્રતિ ૧૦ ગ્રામ)</label>
                                     <div class="rate-input-group" style="display:flex; align-items:center;">
                                         <span class="currency-symbol" style="padding: 10px 14px; background: #e2e8f0; border: 1.5px solid #cbd5e1; border-right: none; border-radius: 6px 0 0 6px; font-weight: bold;">₹</span>
                                         <input type="number" id="m-gold-rate-val" placeholder="e.g. 72000" min="1000" required style="border-radius: 0 6px 6px 0;">
@@ -1251,15 +1252,15 @@
                             <form id="branch-master-form">
                                 <input type="hidden" id="edit-branch-code">
                                 <div class="form-group">
-                                    <label for="branch-code">Branch Code / શાખા કોડ</label>
+                                    <label for="branch-code" class="required-label">Branch Code / શાખા કોડ</label>
                                     <input type="text" id="branch-code" placeholder="e.g. 18" required maxlength="5">
                                 </div>
                                 <div class="form-group">
-                                    <label for="branch-name">Branch Title / શાખાનું નામ</label>
+                                    <label for="branch-name" class="required-label">Branch Title / શાખાનું નામ</label>
                                     <input type="text" id="branch-name" placeholder="e.g. SURAT BRANCH" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="branch-role">Assigned System Role / યુઝર રોલ</label>
+                                    <label for="branch-role" class="required-label">Assigned System Role / યુઝર રોલ</label>
                                     <select id="branch-role" required style="font-weight:600;">
                                         <option value="admin">👑 Head Office Admin (Super Admin - Full Access)</option>
                                         <option value="branch_manager" selected>🏢 Branch Manager (શાખા મેનેજર - Loan Entry, Reports, Vouchers)</option>
@@ -1268,14 +1269,14 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label for="branch-short-name">Branch Short Name / Proposal Prefix <span style="color:var(--danger,#dc2626);">*</span></label>
+                                    <label for="branch-short-name" class="required-label">Branch Short Name / Proposal Prefix</label>
                                     <input type="text" id="branch-short-name" placeholder="e.g. CBB, VTL, JPB (max 5 chars)" maxlength="5" style="text-transform:uppercase;" required>
                                     <small style="color:var(--text-secondary); font-size:11px; display:block; margin-top:4px;">
                                         Used in Proposal No. — e.g. <code>CBB/2026/0001</code>. Keep it short (2–5 letters).
                                     </small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="branch-password">Branch Login Password / પાસવર્ડ</label>
+                                    <label for="branch-password" class="required-label">Branch Login Password / પાસવર્ડ</label>
                                     <div style="display:flex; gap:8px;">
                                         <input type="text" id="branch-password" placeholder="e.g. Admin@123" value="Admin@123" required style="flex:1;">
                                         <button type="button" class="btn btn-secondary-sm" id="btn-default-branch-pass" title="Reset to default password" style="white-space:nowrap;">Default</button>
@@ -1347,19 +1348,19 @@
                             <form id="valuer-master-form">
                                 <input type="hidden" id="edit-valuer-id">
                                 <div class="form-group">
-                                    <label for="valuer-name">Valuer Full Name / વેલ્યુઅરનું પૂરું નામ</label>
+                                    <label for="valuer-name" class="required-label">Valuer Full Name / વેલ્યુઅરનું પૂરું નામ</label>
                                     <input type="text" id="valuer-name" placeholder="e.g. Soni Ramjibhai Pragjibhai" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="valuer-mobile">Mobile Number (10 digit) / મોબાઇલ</label>
+                                    <label for="valuer-mobile" class="required-label">Mobile Number (10 digit) / મોબાઇલ</label>
                                     <input type="tel" id="valuer-mobile" placeholder="9876543210" required pattern="[0-9]{10}">
                                 </div>
                                 <div class="form-group">
-                                    <label for="valuer-address">Address / સરનામું</label>
+                                    <label for="valuer-address" class="required-label">Address / સરનામું</label>
                                     <input type="text" id="valuer-address" placeholder="Zaveri Bazar, Junagadh" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="valuer-savings-ac">Savings Bank Account No / સેવીંગ ખાતા નં.</label>
+                                    <label for="valuer-savings-ac" class="required-label">Savings Bank Account No / સેવીંગ ખાતા નં.</label>
                                     <input type="text" id="valuer-savings-ac" placeholder="Enter Savings A/c No" required>
                                 </div>
                                 <div style="display:flex; gap:10px; margin-top:15px;">
@@ -1414,7 +1415,7 @@
                                 
                                 <div class="form-row two-col" style="margin-bottom:12px;">
                                     <div class="form-group">
-                                        <label for="m-cust-no">Customer No / ગ્રાહક નં.</label>
+                                        <label for="m-cust-no" class="required-label">Customer No / ગ્રાહક નં.</label>
                                         <input type="text" id="m-cust-no" placeholder="e.g. CUST-1001" required>
                                     </div>
                                     <div class="form-group">
@@ -1432,57 +1433,57 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="m-cust-name">Customer Name / ગ્રાહકનું પૂરું નામ</label>
+                                    <label for="m-cust-name" class="required-label">Customer Name / ગ્રાહકનું પૂરું નામ</label>
                                     <input type="text" id="m-cust-name" placeholder="Full Name" required>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="m-cust-address">Address / રહેઠાણનું સરનામું</label>
+                                    <label for="m-cust-address" class="required-label">Address / રહેઠાણનું સરનામું</label>
                                     <input type="text" id="m-cust-address" placeholder="Residential Address" required>
                                 </div>
 
                                 <div class="form-row three-col">
                                     <div class="form-group">
-                                        <label for="m-cust-savings-ac">Savings A/c No / સેવીંગ ખાતા નં.</label>
+                                        <label for="m-cust-savings-ac" class="required-label">Savings A/c No / સેવીંગ ખાતા નં.</label>
                                         <input type="text" id="m-cust-savings-ac" placeholder="Account No" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="m-cust-dob">Birth Date / જન્મ તારીખ</label>
+                                        <label for="m-cust-dob" class="required-label">Birth Date / જન્મ તારીખ</label>
                                         <input type="date" id="m-cust-dob" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="m-cust-age">Age / ઉંમર (વર્ષ)</label>
+                                        <label for="m-cust-age" class="required-label">Age / ઉંમર (વર્ષ)</label>
                                         <input type="number" id="m-cust-age" placeholder="Auto" readonly class="auto-calc-field" required min="1" max="120">
                                     </div>
                                 </div>
 
                                 <div class="form-row three-col">
                                     <div class="form-group">
-                                        <label for="m-cust-occupation">Occupation / ધંધો</label>
+                                        <label for="m-cust-occupation" class="required-label">Occupation / ધંધો</label>
                                         <input type="text" id="m-cust-occupation" placeholder="ધંધો" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="m-cust-religion">Religion / ધર્મ</label>
+                                        <label for="m-cust-religion" class="required-label">Religion / ધર્મ</label>
                                         <input type="text" id="m-cust-religion" placeholder="ધર્મ" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="m-cust-caste">Caste / જ્ઞાતિ</label>
+                                        <label for="m-cust-caste" class="required-label">Caste / જ્ઞાતિ</label>
                                         <input type="text" id="m-cust-caste" placeholder="જ્ઞાતિ" required>
                                     </div>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="m-cust-mobile">Mobile Number / મોબાઇલ નં.</label>
+                                    <label for="m-cust-mobile" class="required-label">Mobile Number / મોબાઇલ નં.</label>
                                     <input type="tel" id="m-cust-mobile" placeholder="10 Digit Number" required pattern="[0-9]{10}">
                                 </div>
 
                                 <div class="form-row two-col">
                                     <div class="form-group">
-                                        <label for="m-cust-nominee-name">Nominee Name / વારસદારનું નામ</label>
+                                        <label for="m-cust-nominee-name" class="required-label">Nominee Name / વારસદારનું નામ</label>
                                         <input type="text" id="m-cust-nominee-name" placeholder="Nominee Name" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="m-cust-nominee-relation">Nominee Relation / સંબંધ *</label>
+                                        <label for="m-cust-nominee-relation" class="required-label">Nominee Relation / સંબંધ</label>
                                         <select id="m-cust-nominee-relation" required>
                                             <option value="">-- Select Relation --</option>
                                             <option value="SPOUSE">SPOUSE</option>
@@ -1508,7 +1509,8 @@
                                             <option value="AUNT">AUNT</option>
                                             <option value="COUSIN">COUSIN</option>
                                             <option value="LEGAL GUARDIAN">LEGAL GUARDIAN</option>
-                                            <option value="OTHER">OTHER</option>
+                                            <option value="FRIEND">FRIEND</option>
+                                            <option value="RELATIVE">RELATIVE</option>
                                         </select>
                                     </div>
                                 </div>
@@ -1576,23 +1578,23 @@
                             <form id="product-master-form">
                                 <input type="hidden" id="edit-product-id">
                                 <div class="form-group">
-                                    <label for="prod-code">Product Code (Scheme Header)</label>
+                                    <label for="prod-code" class="required-label">Product Code (Scheme Header)</label>
                                     <input type="text" id="prod-code" placeholder="e.g. GW-3725" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="prod-min-amt">Minimum Amount (₹)</label>
+                                    <label for="prod-min-amt" class="required-label">Minimum Amount (₹)</label>
                                     <input type="number" id="prod-min-amt" value="0" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="prod-max-amt">Maximum Amount (₹)</label>
+                                    <label for="prod-max-amt" class="required-label">Maximum Amount (₹)</label>
                                     <input type="number" id="prod-max-amt" placeholder="e.g. 100000" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="prod-interest-rate">Interest Rate (Fix %)</label>
+                                    <label for="prod-interest-rate" class="required-label">Interest Rate (Fix %)</label>
                                     <input type="number" id="prod-interest-rate" placeholder="e.g. 11.50" step="0.01" min="0" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="prod-desc">Description Title</label>
+                                    <label for="prod-desc" class="required-label">Description Title</label>
                                     <input type="text" id="prod-desc" placeholder="e.g. Gold Loan Scheme under 50K" required>
                                 </div>
                                 <button type="submit" id="product-save-btn" class="btn btn-primary btn-block">
@@ -2561,6 +2563,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
     <script src="firebase-config.js?v=20260831_v17"></script>
-    <script src="app_gold.js?v=20260831_v18"></script>
+    <script src="app_gold.js?v=20260831_v19"></script>
 </body>
 </html>

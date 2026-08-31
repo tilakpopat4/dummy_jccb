@@ -1391,6 +1391,33 @@ input[readonly] {
     box-shadow: 0 0 0 3.5px rgba(22, 163, 74, 0.25) !important;
 }
 
+/* Required Field Labels — Red */
+.required-label,
+.compulsory-label,
+label.required,
+.form-group:has(> input[required]:not([readonly]):not([type="checkbox"]):not([type="radio"])) > label,
+.form-group:has(> select[required]) > label,
+.form-group:has(> textarea[required]) > label,
+.form-group:has(> .rate-input-group > input[required]) > label,
+.form-group:has(> div > input[required]:not([readonly])) > label {
+    color: #dc2626 !important;
+    font-weight: 700;
+}
+
+.required-label::after,
+.compulsory-label::after,
+label.required::after,
+.form-group:has(> input[required]:not([readonly]):not([type="checkbox"]):not([type="radio"])) > label:not(.required-label)::after,
+.form-group:has(> select[required]) > label:not(.required-label)::after,
+.form-group:has(> textarea[required]) > label:not(.required-label)::after,
+.form-group:has(> .rate-input-group > input[required]) > label:not(.required-label)::after,
+.form-group:has(> div > input[required]:not([readonly])) > label:not(.required-label)::after {
+    content: " *";
+    color: #dc2626;
+    font-weight: 900;
+    font-size: 0.9em;
+}
+
 /* Compulsory OD Checkbox Highlight */
 .compulsory-od-wrapper {
     margin-top: 6px;

@@ -563,3 +563,27 @@ body {
         overflow-x: auto;
     }
 }
+
+/* Required / Compulsory Field Labels — Red */
+.required-label,
+.compulsory-label,
+label.required,
+.form-group:has(> input[required]) > label,
+.form-group:has(> select[required]) > label,
+.form-group:has(> textarea[required]) > label {
+    color: var(--danger, #dc2626) !important;
+    font-weight: 700;
+}
+
+.required-label::after,
+.compulsory-label::after,
+label.required::after,
+.form-group:has(> input[required]) > label:not(.required-label)::after,
+.form-group:has(> select[required]) > label:not(.required-label)::after,
+.form-group:has(> textarea[required]) > label:not(.required-label)::after {
+    content: " *";
+    color: var(--danger, #dc2626);
+    font-weight: 900;
+    font-size: 0.9em;
+}
+
