@@ -920,6 +920,24 @@ function initAuth() {
                 document.getElementById("login-password").value = "";
                 showApp();
                 showToast(`સ્વાગત છે! ${branchObj.name} લૉગઇન સફળ.`);
+
+                // Log audit event and update live presence heartbeat
+                if (window.FirebaseService) {
+                    if (typeof window.FirebaseService.logAuditEvent === "function") {
+                        window.FirebaseService.logAuditEvent("LOGIN", `User logged into ${branchObj.name} (${branchObj.code})`, {
+                            branchCode: branchObj.code,
+                            branchName: branchObj.name,
+                            operator: branchObj.name
+                        });
+                    }
+                    if (typeof window.FirebaseService.updateDeviceHeartbeat === "function") {
+                        window.FirebaseService.updateDeviceHeartbeat({
+                            branchCode: branchObj.code,
+                            branchName: branchObj.name,
+                            operator: branchObj.name
+                        });
+                    }
+                }
             } else {
                 if (errorAlert) {
                     errorAlert.classList.remove("hidden");
@@ -932,6 +950,11 @@ function initAuth() {
     if (logoutBtn) {
         logoutBtn.addEventListener("click", async () => {
             if (confirm("Are you sure you want to log out? (શું તમે ખરેખર લૉગઆઉટ કરવા માંગો છો?)")) {
+                if (window.FirebaseService && typeof window.FirebaseService.logAuditEvent === "function") {
+                    window.FirebaseService.logAuditEvent("LOGOUT", `User logged out from ${state.currentSession ? state.currentSession.name : 'Session'}`, {
+                        branchCode: state.currentSession ? state.currentSession.code : '99'
+                    });
+                }
                 if (state.gdrive && state.gdrive.connected && state.gdrive.syncOnLogout !== false) {
                     try {
                         showToast("Google Drive માં બેકઅપ સિંક થઈ રહ્યો છે...");
@@ -949,8 +972,26 @@ function initAuth() {
         });
     }
 
+    // Continuous 30-second live device presence heartbeat
+    setInterval(() => {
+        if (state.currentSession && window.FirebaseService && typeof window.FirebaseService.updateDeviceHeartbeat === "function") {
+            window.FirebaseService.updateDeviceHeartbeat({
+                branchCode: state.currentSession.code,
+                branchName: state.currentSession.name,
+                operator: state.currentSession.name
+            });
+        }
+    }, 30000);
+
     if (state.currentSession) {
         showApp();
+        if (window.FirebaseService && typeof window.FirebaseService.updateDeviceHeartbeat === "function") {
+            window.FirebaseService.updateDeviceHeartbeat({
+                branchCode: state.currentSession.code,
+                branchName: state.currentSession.name,
+                operator: state.currentSession.name
+            });
+        }
     } else {
         showLogin();
     }
@@ -1558,6 +1599,13 @@ function setDailyGoldRate(val, targetDate = null) {
         }).then(() => {
             console.log("[Firebase] Daily rate synced to cloud Firestore successfully:", rate22);
         }).catch(e => console.error("[Firebase] Daily rate cloud sync error:", e));
+
+        if (typeof window.FirebaseService.logAuditEvent === "function") {
+            window.FirebaseService.logAuditEvent("RATE_UPDATE", `Updated 22K Gold Rate to ₹${rate22.toLocaleString("en-IN")}/10g (24K: ₹${rate24.toLocaleString("en-IN")})`, {
+                rate22K: rate22,
+                rate24K: rate24
+            });
+        }
     }
 
     showToast(`તા. ${formatDateDMY(date)} નો ૨૨ કેરેટ સોનાનો ભાવ ₹${rate22.toLocaleString("en-IN")}/10g સેવ થયો છે.`);
@@ -2670,6 +2718,15 @@ function submitLoanEntry() {
             if (custData && typeof window.FirebaseService.saveCustomer === "function") {
                 window.FirebaseService.saveCustomer(custData).catch(e => console.warn("[Firebase] Customer profile cloud sync error:", e));
             }
+
+            if (typeof window.FirebaseService.logAuditEvent === "function") {
+                const accFmt = formatLoanAccountNo(loanObj.accountNo, loanObj.branchCode, loanObj.loanType);
+                window.FirebaseService.logAuditEvent("LOAN_SANCTION", `Sanctioned Loan ${accFmt} for ₹${Number(loanObj.loanAmount || 0).toLocaleString("en-IN")} to ${loanObj.borrowerName || "Borrower"}`, {
+                    branchCode: loanObj.branchCode,
+                    loanId: loanObj.id,
+                    amount: loanObj.loanAmount
+                });
+            }
         }
 
         // Switch active tab view to Register Tab immediately
@@ -2816,6 +2873,46 @@ function getBranchProposalSeed(branchCode) {
     return parseInt(branchConfig.lastProposalNo || 0) || 0;
 }
 
+function getBranchFirst3Letters(branchCode) {
+    const branches = state.branches || DEFAULT_BRANCHES;
+    const raw = branchCode ? String(branchCode).trim() : (state.currentSession ? String(state.currentSession.code).trim() : "99");
+    const numOnly = raw.replace(/\D/g, '');
+    const bCode2 = numOnly ? numOnly.padStart(2, '0') : "99";
+
+    const branchObj = branches.find(b => String(b.code).replace(/\D/g, '').padStart(2, '0') === bCode2 || String(b.code) === raw)
+                   || (state.currentSession && String(state.currentSession.code) === raw ? state.currentSession : null);
+
+    let rawName = (branchObj && branchObj.name) ? branchObj.name : raw;
+    let cleaned = rawName.replace(/^[0-9\s_-]+/, '').replace(/\bBRANCH\b/ig, '').trim();
+    let letters = cleaned.replace(/[^A-Za-z]/g, '').toUpperCase();
+
+    if (letters.length >= 3) {
+        return letters.substring(0, 3);
+    }
+
+    const BRANCH_PREFIX_MAP = {
+        "99": "HEA",
+        "01": "AZA",
+        "02": "JOS",
+        "03": "DOL",
+        "04": "KOD",
+        "05": "KES",
+        "06": "VAN",
+        "07": "MAN",
+        "08": "GAN",
+        "09": "LIM",
+        "10": "MEN",
+        "11": "VIS",
+        "12": "JAM",
+        "13": "BUS",
+        "14": "LAT",
+        "16": "AHM",
+        "17": "RAJ"
+    };
+
+    return BRANCH_PREFIX_MAP[bCode2] || (letters ? (letters + "XXX").substring(0, 3) : ("BR" + bCode2));
+}
+
 function generateNextProposalNo(branchCode) {
     const input = document.getElementById("unique-proposal-no");
     const rawBranch = branchCode ? String(branchCode).trim() : (document.getElementById("loan-branch") ? document.getElementById("loan-branch").value : (state.currentSession ? state.currentSession.code : "99"));
@@ -2830,7 +2927,12 @@ function generateNextProposalNo(branchCode) {
     });
 
     const nextNo = baseSeed + branchLoans.length + 1;
-    const proposalStr = "GL-P-" + bCode3 + "-" + String(nextNo).padStart(4, "0");
+    const branchLetters = getBranchFirst3Letters(rawBranch || bCode2);
+    const currentYear = new Date().getFullYear();
+    const serialFormatted = String(nextNo).padStart(4, "0");
+
+    // Format: <branch first 3 letters>/<current year>/<serial No.> (દા.ત. AZA/2026/0001)
+    const proposalStr = `${branchLetters}/${currentYear}/${serialFormatted}`;
     if (input) input.value = proposalStr;
     return proposalStr;
 }
@@ -3254,6 +3356,13 @@ function deleteLoanRecord(id) {
             window.FirebaseService.deleteLoan(targetId)
                 .then(() => console.log("[Firebase] Loan permanently deleted:", targetId))
                 .catch(e => console.warn("[Firebase] Loan delete cloud notice:", e));
+
+            if (typeof window.FirebaseService.logAuditEvent === "function") {
+                window.FirebaseService.logAuditEvent("LOAN_DELETE", `Deleted loan ${accFormatted} for borrower ${borrower} (Amount: ₹${Number(loan.loanAmount || 0).toLocaleString("en-IN")})`, {
+                    branchCode: loan.branchCode,
+                    loanId: targetId
+                });
+            }
         }
 
         showToast("લોન એન્ટ્રી ડિલીટ થઈ ગઈ છે. (Loan entry deleted.)");
@@ -6440,11 +6549,14 @@ function renderBranchSettings(targetBranch = null) {
         return lBranch === numOnly || lBranch === bCode2 || lBranch === bCode3;
     }).length;
 
+    const branchLetters = getBranchFirst3Letters(selectedBranch || bCode2);
+    const currentYear = new Date().getFullYear();
     const nextPacketNo = parseInt(curPacketVal || 0) + branchLoanCount + 1;
     const nextProposalNo = parseInt(curProposalVal || 0) + branchLoanCount + 1;
+    const proposalFormatted = `${branchLetters}/${currentYear}/${String(nextProposalNo).padStart(4, '0')}`;
 
     if (packetHint) packetHint.innerHTML = `આવનાર નવો પેકેટ નંબર: <strong>${nextPacketNo}</strong> (શાખામાં કુલ લોન: ${branchLoanCount})`;
-    if (proposalHint) proposalHint.innerHTML = `આવનાર નવો પ્રપોઝલ નંબર: <strong>GL-P-${bCode3}-${String(nextProposalNo).padStart(4, '0')}</strong>`;
+    if (proposalHint) proposalHint.innerHTML = `આવનાર નવો પ્રપોઝલ / સીરીયલ નંબર: <strong>${proposalFormatted}</strong>`;
 
     if (packetInp) {
         packetInp.oninput = () => {
@@ -6456,7 +6568,7 @@ function renderBranchSettings(targetBranch = null) {
     if (proposalInp) {
         proposalInp.oninput = () => {
             const nextProp = (parseInt(proposalInp.value || 0)) + branchLoanCount + 1;
-            if (proposalHint) proposalHint.innerHTML = `આવનાર નવો પ્રપોઝલ નંબર: <strong>GL-P-${bCode3}-${String(nextProp).padStart(4, '0')}</strong>`;
+            if (proposalHint) proposalHint.innerHTML = `આવનાર નવો પ્રપોઝલ / સીરીયલ નંબર: <strong>${branchLetters}/${currentYear}/${String(nextProp).padStart(4, '0')}</strong>`;
         };
     }
 }

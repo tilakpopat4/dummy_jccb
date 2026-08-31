@@ -1146,6 +1146,207 @@ const FirebaseService = {
     },
 
     // =================================================================
+    // SECURITY AUDIT LOGS & CLIENT IP TRACKING
+    // =================================================================
+
+    /**
+     * Get or resolve client IP address
+     */
+    getClientIp: async function() {
+        if (this._cachedIp) return this._cachedIp;
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const res = await fetch("https://api.ipify.org?format=json", { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.ip) {
+                    this._cachedIp = data.ip;
+                    return data.ip;
+                }
+            }
+        } catch (e) {}
+        this._cachedIp = "Local / Office Network";
+        return this._cachedIp;
+    },
+
+    /**
+     * Record an audit event with timestamp, branch, operator, IP, and device metadata
+     */
+    logAuditEvent: async function(action, details, metadata = {}) {
+        try {
+            const ip = await this.getClientIp();
+            const logId = `LOG_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+            const payload = {
+                id: logId,
+                action: String(action || 'ACTION').toUpperCase(),
+                details: String(details || ''),
+                branchCode: metadata.branchCode || (window.state?.currentSession?.code) || '99',
+                branchName: metadata.branchName || (window.state?.currentSession?.name) || 'Head Office',
+                operator: metadata.operator || (window.state?.currentSession?.name || 'ADMIN'),
+                ip: ip,
+                userAgent: navigator.userAgent || '',
+                platform: navigator.platform || '',
+                timestamp: new Date().toISOString(),
+                timestampMs: Date.now(),
+                ...metadata
+            };
+
+            if (this.db) {
+                try {
+                    await this.db.collection('audit_logs').doc(logId).set(payload);
+                } catch (e) {}
+            }
+            try {
+                const fsDoc = this.toFirestoreDocument(payload);
+                await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/audit_logs/${logId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(fsDoc)
+                });
+            } catch (e) {}
+
+            return payload;
+        } catch (err) {
+            console.warn("[Firebase] logAuditEvent notice:", err);
+            return null;
+        }
+    },
+
+    /**
+     * Get recent audit logs from Firestore
+     */
+    getAuditLogs: async function(limit = 200) {
+        if (this.db) {
+            try {
+                const snapshot = await this.db.collection('audit_logs').orderBy('timestampMs', 'desc').limit(limit).get();
+                const logs = [];
+                snapshot.forEach(doc => logs.push({ id: doc.id, ...doc.data() }));
+                if (logs.length > 0) return logs;
+            } catch (e) {}
+        }
+        try {
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/audit_logs?pageSize=${limit}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.documents && Array.isArray(data.documents)) {
+                    return data.documents.map(d => this.fromFirestoreDocument(d)).sort((a, b) => (b.timestampMs || 0) - (a.timestampMs || 0));
+                }
+            }
+        } catch (e) {}
+        return [];
+    },
+
+    /**
+     * Realtime listener for security audit logs
+     */
+    listenAuditLogs: function(onUpdate, limit = 200) {
+        if (!this.db) return () => {};
+        try {
+            return this.db.collection('audit_logs').orderBy('timestampMs', 'desc').limit(limit).onSnapshot((snapshot) => {
+                const logs = [];
+                snapshot.forEach(doc => logs.push({ id: doc.id, ...doc.data() }));
+                if (typeof onUpdate === 'function') onUpdate(logs);
+            }, (err) => {
+                console.warn("[Firebase] Audit logs listener error:", err);
+            });
+        } catch (e) {
+            return () => {};
+        }
+    },
+
+    // =================================================================
+    // ACTIVE DEVICE HEARTBEAT & LIVE BRANCH PRESENCE
+    // =================================================================
+
+    /**
+     * Update device heartbeat ping with IP and session details
+     */
+    updateDeviceHeartbeat: async function(sessionInfo = {}) {
+        try {
+            let sessionId = localStorage.getItem("jccb_device_session_id");
+            if (!sessionId) {
+                sessionId = `DEV_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                localStorage.setItem("jccb_device_session_id", sessionId);
+            }
+
+            const ip = await this.getClientIp();
+            const payload = {
+                sessionId: sessionId,
+                branchCode: sessionInfo.branchCode || (window.state?.currentSession?.code) || '99',
+                branchName: sessionInfo.branchName || (window.state?.currentSession?.name) || 'Head Office',
+                operator: sessionInfo.operator || (window.state?.currentSession?.name) || 'Operator',
+                ip: ip,
+                userAgent: navigator.userAgent || '',
+                platform: navigator.platform || '',
+                screenWidth: window.screen ? window.screen.width : 0,
+                screenHeight: window.screen ? window.screen.height : 0,
+                loginTime: sessionInfo.loginTime || localStorage.getItem("jccb_session_login_time") || new Date().toISOString(),
+                lastPing: new Date().toISOString(),
+                lastPingMs: Date.now(),
+                isOnline: true
+            };
+
+            if (!localStorage.getItem("jccb_session_login_time")) {
+                localStorage.setItem("jccb_session_login_time", payload.loginTime);
+            }
+
+            if (this.db) {
+                try {
+                    await this.db.collection('active_sessions').doc(sessionId).set(payload, { merge: true });
+                } catch (e) {}
+            }
+            try {
+                const fsDoc = this.toFirestoreDocument(payload);
+                await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/active_sessions/${sessionId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(fsDoc)
+                });
+            } catch (e) {}
+
+            return payload;
+        } catch (err) {
+            return null;
+        }
+    },
+
+    /**
+     * Realtime listener for active branches and connected devices
+     */
+    listenActiveSessions: function(onUpdate) {
+        if (!this.db) return () => {};
+        try {
+            return this.db.collection('active_sessions').onSnapshot((snapshot) => {
+                const sessions = [];
+                snapshot.forEach(doc => sessions.push({ id: doc.id, ...doc.data() }));
+                if (typeof onUpdate === 'function') onUpdate(sessions);
+            }, (err) => {
+                console.warn("[Firebase] Active sessions listener error:", err);
+            });
+        } catch (e) {
+            return () => {};
+        }
+    },
+
+    /**
+     * Terminate or remove an active session
+     */
+    deleteActiveSession: async function(sessionId) {
+        if (this.db) {
+            try {
+                await this.db.collection('active_sessions').doc(sessionId).delete();
+            } catch (e) {}
+        }
+        try {
+            await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/active_sessions/${sessionId}`, {
+                method: "DELETE"
+            });
+        } catch (e) {}
+    },
+
+    // =================================================================
     // CLOUD STORAGE UPLOADS (ORNAMENTS & KYC)
     // =================================================================
 
