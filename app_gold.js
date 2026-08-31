@@ -1,4 +1,4 @@
-// ==================== ROLE-BASED ACCESS CONTROL (RBAC) ENGINE ====================
+﻿// ==================== ROLE-BASED ACCESS CONTROL (RBAC) ENGINE ====================
 const ROLES = {
     ADMIN: "admin", // Head Office Super Admin (Full System Access)
     BRANCH_MANAGER: "branch_manager", // Branch Manager (Loan Entry, Customer Master, Branch Reports)
@@ -8907,18 +8907,18 @@ async function print3in1Voucher(loan) {
 // ==================== SANCTION LETTER (2-COPIES: CUSTOMER & BANK COPY) ====================
 
 function generateSingleSanctionLetterCard(loan, copyTag, copyTitleGujarati) {
-    const sanctionedAmt = Math.round(parseFloat(loan.sanctionedAmount || 0));
+    const sanctionedAmt = parseFloat(loan.sanctionedAmount || 0);
     
     // 1. Resolve exact original loan valuation recorded at sanction time
     let ornamentsValSum = 0;
     if (loan.ornamentsTable && Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0) {
         loan.ornamentsTable.forEach(orn => {
-            ornamentsValSum += Math.round(parseFloat(orn.marketVal || 0));
+            ornamentsValSum += parseFloat(orn.marketVal || 0);
         });
     }
     const valuationAmt = ornamentsValSum > 0 
         ? ornamentsValSum 
-        : (parseFloat(loan.valuationAmount || 0) > 0 ? Math.round(parseFloat(loan.valuationAmount)) : 0);
+        : (parseFloat(loan.valuationAmount || 0) > 0 ? parseFloat(loan.valuationAmount) : 0);
 
     const shareA = parseFloat(loan.shareA || 0);
     const shareB = parseFloat(loan.shareB || 0);
@@ -8932,7 +8932,7 @@ function generateSingleSanctionLetterCard(loan, copyTag, copyTitleGujarati) {
     const sgst = parseFloat(loan.sgst || 0);
     const customChargesTotal = parseFloat(loan.customChargesTotal || 0);
     const otherCharges = parseFloat(loan.otherCharges || 0);
-    const totalDeductions = Math.round(parseFloat(loan.totalDeductions || (shareA + shareB + memberFee + valuerFee + stampDuty + serviceCharge + docCharges + insurance + cgst + sgst + customChargesTotal + otherCharges)));
+    const totalDeductions = parseFloat(loan.totalDeductions || (shareA + shareB + memberFee + valuerFee + stampDuty + serviceCharge + docCharges + insurance + cgst + sgst + customChargesTotal + otherCharges));
     const netDisbursed = sanctionedAmt - totalDeductions;
     const wts = getLoanGrossAndNetWeight(loan);
     const goldWeight = wts.netWeight.toFixed(3);
@@ -8966,7 +8966,7 @@ function generateSingleSanctionLetterCard(loan, copyTag, copyTitleGujarati) {
             deductRowsTableHtml += `
                 <tr>
                     <td style="padding: 1.5px 3px; color: #222; white-space: nowrap;">• ${item.name}</td>
-                    <td style="padding: 1.5px 3px; text-align: right; font-weight: 700; color: #000; white-space: nowrap;">₹ ${item.amt.toLocaleString('en-IN')}</td>
+                    <td style="padding: 1.5px 3px; text-align: right; font-weight: 700; color: #000; white-space: nowrap;">₹ ${Number.isInteger(item.amt) ? item.amt.toLocaleString('en-IN') : item.amt.toFixed(2)}</td>
                 </tr>
             `;
         });
@@ -9073,7 +9073,7 @@ function generateSingleSanctionLetterCard(loan, copyTag, copyTitleGujarati) {
                             ${deductRowsTableHtml}
                             <tr style="border-top: 1px solid #000; font-weight: 800; background: #f1f5f9;">
                                 <td style="padding: 2px 3px;">કુલ કપાત (Total Deductions):</td>
-                                <td style="padding: 2px 3px; text-align: right; color: #b91c1c; font-size: 9px;">(-) ₹ ${totalDeductions.toLocaleString('en-IN')}/-</td>
+                                <td style="padding: 2px 3px; text-align: right; color: #b91c1c; font-size: 9px;">(-) ₹ ${Number.isInteger(totalDeductions) ? totalDeductions.toLocaleString('en-IN') : totalDeductions.toFixed(2)}/-</td>
                             </tr>
                         </table>
                     </td>
@@ -9082,7 +9082,7 @@ function generateSingleSanctionLetterCard(loan, copyTag, copyTitleGujarati) {
                     <td style="vertical-align: top; padding: 4px 6px; background: #f0fdf4; border-left: 1px solid #000;">
                         <div style="font-size: 8.5px; font-weight: 700; color: #166534;">ચોખ્ખી ચૂકવેલ / જમા રકમ:</div>
                         <div style="font-size: 14.5px; font-weight: 900; color: #15803d; margin: 3px 0 2px 0;">
-                            ₹ ${netDisbursed.toLocaleString('en-IN')}/-
+                            ₹ ${Number.isInteger(netDisbursed) ? netDisbursed.toLocaleString('en-IN') : netDisbursed.toFixed(2)}/-
                         </div>
                         <div style="font-size: 8.2px; font-weight: 700; color: #166534; line-height: 1.25;">
                             અંકે: રૂપિયા ${netWords} પૂરા.
@@ -9094,7 +9094,7 @@ function generateSingleSanctionLetterCard(loan, copyTag, copyTitleGujarati) {
 
         <!-- 3. Legal Undertaking & Declaration -->
         <div style="border: 1px solid #000; padding: 2px 5px; font-size: 8.2px; line-height: 1.25; background: #ffffff; margin-bottom: 2px;">
-            <strong>ગ્રાહક બાંહેધરી :</strong> અમોએ બેંકના સોના ધિરાણના તમામ નિયમો-શરતો વાંચી-સમજીને સ્વીકારેલ છે. ઉપરોક્ત વિગત મુજબ તમામ ખર્ચ કપાત બાદ નેટ રકમ રૂ. <strong>${netDisbursed.toLocaleString('en-IN')}/-</strong> બચત ખાતામાં જમા / રોકડેથી મળેલ છે.
+            <strong>ગ્રાહક બાંહેધરી :</strong> અમોએ બેંકના સોના ધિરાણના તમામ નિયમો-શરતો વાંચી-સમજીને સ્વીકારેલ છે. ઉપરોક્ત વિગત મુજબ તમામ ખર્ચ કપાત બાદ નેટ રકમ રૂ. <strong>${Number.isInteger(netDisbursed) ? netDisbursed.toLocaleString('en-IN') : netDisbursed.toFixed(2)}/-</strong> બચત ખાતામાં જમા / રોકડેથી મળેલ છે.
         </div>
 
         <!-- 4. Signatures (3 Distinct Columns: Borrower, Clerk, Branch Manager with Ample Height) -->
