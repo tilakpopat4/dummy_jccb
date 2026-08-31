@@ -2831,6 +2831,19 @@ function submitLoanEntry() {
             return;
         }
 
+        // Validate Member ID if customer is a member
+        const isMemberSelect = document.getElementById("is-member");
+        const isMemberVal = isMemberSelect ? isMemberSelect.value.toLowerCase() : "no";
+        if (isMemberVal === "yes") {
+            const memberNoInput = document.getElementById("member-no");
+            const memberNoVal = memberNoInput ? memberNoInput.value.trim() : "";
+            if (!memberNoVal) {
+                alert("સભ્ય (Member) તરીકે ચિહ્નિત કર્યું છે, તો Member ID / સભાસદ નં. ફરજિયાત છે. કૃપા કરી Member ID દાખલ કરો.");
+                if (memberNoInput) memberNoInput.focus();
+                return;
+            }
+        }
+
         const nameInput = document.getElementById("cust-name");
         const borrowerName = nameInput ? nameInput.value.trim() : "";
         if (!borrowerName) {
