@@ -1,4 +1,4 @@
-﻿// ==================== ROLE-BASED ACCESS CONTROL (RBAC) ENGINE ====================
+// ==================== ROLE-BASED ACCESS CONTROL (RBAC) ENGINE ====================
 const ROLES = {
     ADMIN: "admin", // Head Office Super Admin (Full System Access)
     BRANCH_MANAGER: "branch_manager", // Branch Manager (Loan Entry, Customer Master, Branch Reports)
@@ -3467,6 +3467,13 @@ function renderRegisterTable() {
                 (l.packetNo && l.packetNo.includes(filterSearch));
         });
     }
+
+    // Sort newest first (descending by date, then by id for same-date entries)
+    list = list.slice().sort((a, b) => {
+        const dateDiff = (b.date || "").localeCompare(a.date || "");
+        if (dateDiff !== 0) return dateDiff;
+        return (b.id || "").localeCompare(a.id || "");
+    });
 
     if (list.length === 0) {
         if (emptyMsg) emptyMsg.classList.remove("hidden");
