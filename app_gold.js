@@ -8813,7 +8813,18 @@ async function print3in1Voucher(loan) {
 
 function generateSingleSanctionLetterCard(loan, copyTag, copyTitleGujarati) {
     const sanctionedAmt = Math.round(parseFloat(loan.sanctionedAmount || 0));
-    const valuationAmt = Math.round(parseFloat(loan.valuationAmount || 0));
+    
+    // 1. Resolve exact original loan valuation recorded at sanction time
+    let ornamentsValSum = 0;
+    if (loan.ornamentsTable && Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0) {
+        loan.ornamentsTable.forEach(orn => {
+            ornamentsValSum += Math.round(parseFloat(orn.marketVal || 0));
+        });
+    }
+    const valuationAmt = parseFloat(loan.valuationAmount || 0) > 0 
+        ? Math.round(parseFloat(loan.valuationAmount)) 
+        : (ornamentsValSum > 0 ? ornamentsValSum : 0);
+
     const shareA = parseFloat(loan.shareA || 0);
     const shareB = parseFloat(loan.shareB || 0);
     const memberFee = parseFloat(loan.memberFee || 0);
