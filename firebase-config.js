@@ -1271,6 +1271,11 @@ const FirebaseService = {
                 localStorage.setItem("jccb_device_session_id", sessionId);
             }
 
+            // If this device was previously terminated by admin, do not send online heartbeat
+            if (localStorage.getItem("jccb_device_terminated") === sessionId) {
+                return { terminated: true };
+            }
+
             const ip = await this.getClientIp();
             const payload = {
                 sessionId: sessionId,
@@ -1285,7 +1290,9 @@ const FirebaseService = {
                 loginTime: sessionInfo.loginTime || localStorage.getItem("jccb_session_login_time") || new Date().toISOString(),
                 lastPing: new Date().toISOString(),
                 lastPingMs: Date.now(),
-                isOnline: true
+                isOnline: true,
+                terminated: false,
+                status: "active"
             };
 
             if (!localStorage.getItem("jccb_session_login_time")) {
@@ -1294,6 +1301,11 @@ const FirebaseService = {
 
             if (this.db) {
                 try {
+                    const doc = await this.db.collection('active_sessions').doc(sessionId).get();
+                    if (doc.exists && (doc.data().terminated === true || doc.data().status === "terminated")) {
+                        localStorage.setItem("jccb_device_terminated", sessionId);
+                        return { terminated: true };
+                    }
                     await this.db.collection('active_sessions').doc(sessionId).set(payload, { merge: true });
                 } catch (e) {}
             }
@@ -1309,6 +1321,57 @@ const FirebaseService = {
             return payload;
         } catch (err) {
             return null;
+        }
+    },
+
+    /**
+     * Terminate / Force-Disconnect an active device session from Central Management
+     */
+    terminateActiveSession: async function(sessionId) {
+        const payload = {
+            sessionId: sessionId,
+            isOnline: false,
+            terminated: true,
+            status: "terminated",
+            terminatedAt: new Date().toISOString(),
+            terminatedAtMs: Date.now()
+        };
+
+        if (this.db) {
+            try {
+                await this.db.collection('active_sessions').doc(sessionId).set(payload, { merge: true });
+            } catch (e) {}
+        }
+        try {
+            const fsDoc = this.toFirestoreDocument(payload);
+            await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/active_sessions/${sessionId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(fsDoc)
+            });
+        } catch (e) {}
+
+        return payload;
+    },
+
+    /**
+     * Realtime listener on client device for remote killswitch / force logout
+     */
+    listenSessionKillswitch: function(sessionId, onTerminated) {
+        if (!this.db || !sessionId) return () => {};
+        try {
+            return this.db.collection('active_sessions').doc(sessionId).onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    if (data && (data.terminated === true || data.status === "terminated" || data.isOnline === false)) {
+                        if (typeof onTerminated === "function") onTerminated(data);
+                    }
+                }
+            }, (err) => {
+                console.warn("[Firebase] Session killswitch listener notice:", err);
+            });
+        } catch (e) {
+            return () => {};
         }
     },
 

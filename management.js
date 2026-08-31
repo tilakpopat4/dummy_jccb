@@ -254,6 +254,7 @@ function loadLocalFallbackData() {
 function updateTopMetadata() {
     const now = Date.now();
     const activeOnlineDevices = (mgmtState.activeSessions || []).filter(s => {
+        if (s.terminated === true || s.status === "terminated" || s.isOnline === false) return false;
         const pingTime = s.lastPingMs || (s.lastPing ? new Date(s.lastPing).getTime() : 0);
         return (now - pingTime < 90000); // Active within last 90 seconds
     });
@@ -304,18 +305,34 @@ function renderActiveSessions() {
     sessions.sort((a, b) => (b.lastPingMs || 0) - (a.lastPingMs || 0));
 
     sessions.forEach(s => {
+        const sid = s.sessionId || s.id;
         const pingTime = s.lastPingMs || (s.lastPing ? new Date(s.lastPing).getTime() : 0);
-        const isOnline = (now - pingTime < 90000);
+        const isTerminated = (s.terminated === true || s.status === "terminated" || s.isOnline === false);
+        const isOnline = !isTerminated && (now - pingTime < 90000);
         const diffSec = Math.round((now - pingTime) / 1000);
         const relativePing = diffSec < 60 ? `${diffSec}s ago` : `${Math.round(diffSec / 60)}m ago`;
 
+        let statusBadge = '<span class="badge badge-offline">OFFLINE</span>';
+        if (isTerminated) {
+            statusBadge = '<span class="badge badge-action-delete" style="background:#fee2e2; color:#991b1b; border:1px solid #f87171; font-weight:700;"><i class="fa-solid fa-ban"></i> DISCONNECTED</span>';
+        } else if (isOnline) {
+            statusBadge = '<span class="badge badge-live"><span class="pulse-dot"></span> LIVE ONLINE</span>';
+        }
+
+        const actionHtml = isTerminated
+            ? `<button class="btn btn-secondary btn-sm remove-session-btn" data-session-id="${sid}" title="Permanently Clear Record" style="font-size:11px; padding:4px 8px;">
+                 <i class="fa-solid fa-trash text-muted"></i> Clear
+               </button>`
+            : `<button class="btn btn-secondary btn-sm terminate-session-btn" data-session-id="${sid}" data-branch="${s.branchName || s.branchCode}" title="Force Disconnect & Log Out Operator" style="font-size:11px; padding:4px 8px; color:#ef4444; border-color:#fca5a5;">
+                 <i class="fa-solid fa-power-off"></i> Disconnect
+               </button>`;
+
         const tr = document.createElement("tr");
+        if (isTerminated) tr.style.opacity = "0.75";
+
         tr.innerHTML = `
             <td style="text-align:center;">
-                ${isOnline
-                    ? '<span class="badge badge-live"><span class="pulse-dot"></span> LIVE ONLINE</span>'
-                    : '<span class="badge badge-offline">OFFLINE</span>'
-                }
+                ${statusBadge}
             </td>
             <td>
                 <strong>${s.branchName || 'Branch ' + s.branchCode}</strong>
@@ -334,13 +351,11 @@ function renderActiveSessions() {
                 <small>${formatTime(s.loginTime)}</small>
             </td>
             <td>
-                <strong>${relativePing}</strong>
+                <strong>${isTerminated ? 'Killed by Admin' : relativePing}</strong>
                 <br><small style="color:var(--text-muted); font-size:11px;">${formatTime(s.lastPing)}</small>
             </td>
             <td style="text-align:center;">
-                <button class="btn btn-secondary btn-sm terminate-session-btn" data-session-id="${s.sessionId}" title="Terminate Session">
-                    <i class="fa-solid fa-power-off text-danger"></i> Disconnect
-                </button>
+                ${actionHtml}
             </td>
         `;
         tbody.appendChild(tr);
@@ -349,10 +364,40 @@ function renderActiveSessions() {
     tbody.querySelectorAll(".terminate-session-btn").forEach(btn => {
         btn.addEventListener("click", () => {
             const sid = btn.getAttribute("data-session-id");
-            if (sid && confirm("Terminate this active device session?")) {
+            const branchTitle = btn.getAttribute("data-branch") || "this branch";
+            if (sid && confirm(`શું તમે ખરેખર ${branchTitle} નું સેશન ડિસ્કનેક્ટ કરવા માંગો છો?\n(Are you sure you want to forcefully disconnect ${branchTitle}? The operator will be instantly logged out.)`)) {
+                if (window.FirebaseService && typeof window.FirebaseService.terminateActiveSession === "function") {
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Disconnecting...';
+                    window.FirebaseService.terminateActiveSession(sid).then(() => {
+                        if (typeof window.FirebaseService.logAuditEvent === "function") {
+                            window.FirebaseService.logAuditEvent("KILLSWITCH_DISCONNECT", `Branch session (${branchTitle}) was forcefully terminated by Central Management`, {
+                                branchCode: "99",
+                                operator: "Management Admin",
+                                targetSession: sid
+                            });
+                        }
+                        const target = mgmtState.activeSessions.find(x => (x.sessionId || x.id) === sid);
+                        if (target) {
+                            target.terminated = true;
+                            target.status = "terminated";
+                            target.isOnline = false;
+                        }
+                        renderActiveSessions();
+                        updateTopMetadata();
+                    });
+                }
+            }
+        });
+    });
+
+    tbody.querySelectorAll(".remove-session-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const sid = btn.getAttribute("data-session-id");
+            if (sid && confirm("Remove this disconnected session record from list?")) {
                 if (window.FirebaseService && typeof window.FirebaseService.deleteActiveSession === "function") {
                     window.FirebaseService.deleteActiveSession(sid).then(() => {
-                        mgmtState.activeSessions = mgmtState.activeSessions.filter(x => x.sessionId !== sid);
+                        mgmtState.activeSessions = mgmtState.activeSessions.filter(x => (x.sessionId || x.id) !== sid);
                         renderActiveSessions();
                         updateTopMetadata();
                     });

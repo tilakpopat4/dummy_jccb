@@ -919,10 +919,17 @@ function initAuth() {
                 saveState();
                 if (errorAlert) errorAlert.classList.add("hidden");
                 document.getElementById("login-password").value = "";
+
+                // Reset any previous terminated flag and generate a fresh session ID for this login
+                const freshSessionId = `DEV_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                localStorage.removeItem("jccb_device_terminated");
+                localStorage.setItem("jccb_device_session_id", freshSessionId);
+                localStorage.setItem("jccb_session_login_time", new Date().toISOString());
+
                 showApp();
                 showToast(`સ્વાગત છે! ${branchObj.name} લૉગઇન સફળ.`);
 
-                // Log audit event and update live presence heartbeat
+                // Log audit event and start killswitch listener & heartbeat
                 if (window.FirebaseService) {
                     if (typeof window.FirebaseService.logAuditEvent === "function") {
                         window.FirebaseService.logAuditEvent("LOGIN", `User logged into ${branchObj.name} (${branchObj.code})`, {
@@ -938,6 +945,7 @@ function initAuth() {
                             operator: branchObj.name
                         });
                     }
+                    setupDeviceKillswitchListener();
                 }
             } else {
                 if (errorAlert) {
@@ -955,6 +963,10 @@ function initAuth() {
                     window.FirebaseService.logAuditEvent("LOGOUT", `User logged out from ${state.currentSession ? state.currentSession.name : 'Session'}`, {
                         branchCode: state.currentSession ? state.currentSession.code : '99'
                     });
+                }
+                const currentSid = localStorage.getItem("jccb_device_session_id");
+                if (currentSid && window.FirebaseService && typeof window.FirebaseService.deleteActiveSession === "function") {
+                    try { await window.FirebaseService.deleteActiveSession(currentSid); } catch(e){}
                 }
                 if (state.gdrive && state.gdrive.connected && state.gdrive.syncOnLogout !== false) {
                     try {
@@ -974,13 +986,16 @@ function initAuth() {
     }
 
     // Continuous 30-second live device presence heartbeat
-    setInterval(() => {
+    setInterval(async () => {
         if (state.currentSession && window.FirebaseService && typeof window.FirebaseService.updateDeviceHeartbeat === "function") {
-            window.FirebaseService.updateDeviceHeartbeat({
+            const res = await window.FirebaseService.updateDeviceHeartbeat({
                 branchCode: state.currentSession.code,
                 branchName: state.currentSession.name,
                 operator: state.currentSession.name
             });
+            if (res && res.terminated) {
+                triggerRemoteForceDisconnect();
+            }
         }
     }, 30000);
 
@@ -991,11 +1006,58 @@ function initAuth() {
                 branchCode: state.currentSession.code,
                 branchName: state.currentSession.name,
                 operator: state.currentSession.name
+            }).then(res => {
+                if (res && res.terminated) {
+                    triggerRemoteForceDisconnect();
+                } else {
+                    setupDeviceKillswitchListener();
+                }
             });
         }
     } else {
         showLogin();
     }
+}
+
+let activeKillswitchUnsubscribe = null;
+
+function setupDeviceKillswitchListener() {
+    if (activeKillswitchUnsubscribe) {
+        try { activeKillswitchUnsubscribe(); } catch (e) {}
+        activeKillswitchUnsubscribe = null;
+    }
+    const sessionId = localStorage.getItem("jccb_device_session_id");
+    if (!sessionId || !window.FirebaseService || typeof window.FirebaseService.listenSessionKillswitch !== "function") return;
+
+    activeKillswitchUnsubscribe = window.FirebaseService.listenSessionKillswitch(sessionId, (data) => {
+        if (data && (data.terminated === true || data.status === "terminated" || data.isOnline === false)) {
+            triggerRemoteForceDisconnect();
+        }
+    });
+}
+
+function triggerRemoteForceDisconnect() {
+    if (!state.currentSession) return;
+    const branchName = state.currentSession ? state.currentSession.name : "Branch";
+
+    if (activeKillswitchUnsubscribe) {
+        try { activeKillswitchUnsubscribe(); } catch (e) {}
+        activeKillswitchUnsubscribe = null;
+    }
+    const sid = localStorage.getItem("jccb_device_session_id");
+    if (sid) localStorage.setItem("jccb_device_terminated", sid);
+
+    state.currentSession = null;
+    setActiveSession(null);
+    saveState();
+    showLogin();
+
+    const errorAlert = document.getElementById("login-error-alert");
+    if (errorAlert) {
+        errorAlert.classList.remove("hidden");
+        errorAlert.innerHTML = `<strong><i class="fa-solid fa-ban"></i> સેશન ડિસ્કનેક્ટ:</strong> તમારું શાખા સેશન (${branchName}) કેન્દ્રીય એડમિનિસ્ટ્રેટર / મેનેજમેન્ટ પોર્ટલ દ્વારા ડિસ્કનેક્ટ કરવામાં આવ્યું છે (Session Disconnected by Administrator).`;
+    }
+    alert(`સૂચના: તમારું શાખા સેશન (${branchName}) કેન્દ્રીય મેનેજમેન્ટ પોર્ટલ દ્વારા ડિસ્કનેક્ટ કરવામાં આવ્યું છે.\n(Your session was disconnected by the Central Administrator).`);
 }
 
 function showLogin() {
