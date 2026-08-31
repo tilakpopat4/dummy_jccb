@@ -1100,6 +1100,86 @@ function updateBranchContextUI() {
         }
     }
 
+    // 1.5 Proposal No, Account No, Packet No: Editable for Head Office with live sync, locked for branch terminals
+    const proposalNoInp = document.getElementById("unique-proposal-no");
+    const packetNoInp = document.getElementById("packet-no");
+    const accountNoInp = document.getElementById("loan-ac-no");
+
+    if (proposalNoInp) {
+        if (isHO) {
+            proposalNoInp.removeAttribute("readonly");
+            proposalNoInp.readOnly = false;
+            proposalNoInp.style.backgroundColor = "#ffffff";
+            proposalNoInp.style.cursor = "text";
+            proposalNoInp.style.border = "1.5px solid var(--primary)";
+            proposalNoInp.title = "Head Office Privilege: Editable Proposal Number";
+            if (!proposalNoInp.dataset.boundUserEdit) {
+                proposalNoInp.dataset.boundUserEdit = "true";
+                proposalNoInp.addEventListener("input", () => {
+                    proposalNoInp.dataset.userEdited = "true";
+                });
+            }
+        } else {
+            proposalNoInp.setAttribute("readonly", "true");
+            proposalNoInp.readOnly = true;
+            proposalNoInp.style.backgroundColor = "#f8fafc";
+            proposalNoInp.style.cursor = "not-allowed";
+            proposalNoInp.style.border = "1px solid var(--border-color)";
+            proposalNoInp.title = "Auto-calculated for branch";
+            delete proposalNoInp.dataset.userEdited;
+        }
+    }
+
+    if (packetNoInp) {
+        if (isHO) {
+            packetNoInp.removeAttribute("readonly");
+            packetNoInp.readOnly = false;
+            packetNoInp.style.backgroundColor = "#ffffff";
+            packetNoInp.style.cursor = "text";
+            packetNoInp.style.border = "1.5px solid var(--primary)";
+            packetNoInp.title = "Head Office Privilege: Editable Gold Packet Number";
+            if (!packetNoInp.dataset.boundUserEdit) {
+                packetNoInp.dataset.boundUserEdit = "true";
+                packetNoInp.addEventListener("input", () => {
+                    packetNoInp.dataset.userEdited = "true";
+                });
+            }
+        } else {
+            packetNoInp.setAttribute("readonly", "true");
+            packetNoInp.readOnly = true;
+            packetNoInp.style.backgroundColor = "#f8fafc";
+            packetNoInp.style.cursor = "not-allowed";
+            packetNoInp.style.border = "1px solid var(--border-color)";
+            packetNoInp.title = "Auto-calculated for branch";
+            delete packetNoInp.dataset.userEdited;
+        }
+    }
+
+    if (accountNoInp) {
+        if (isHO) {
+            accountNoInp.removeAttribute("readonly");
+            accountNoInp.readOnly = false;
+            accountNoInp.style.backgroundColor = "#ffffff";
+            accountNoInp.style.cursor = "text";
+            accountNoInp.style.border = "1.5px solid var(--primary)";
+            accountNoInp.title = "Head Office Privilege: Editable Loan Account Number";
+            if (!accountNoInp.dataset.boundUserEdit) {
+                accountNoInp.dataset.boundUserEdit = "true";
+                accountNoInp.addEventListener("input", () => {
+                    accountNoInp.dataset.userEdited = "true";
+                });
+            }
+        } else {
+            accountNoInp.setAttribute("readonly", "true");
+            accountNoInp.readOnly = true;
+            accountNoInp.style.backgroundColor = "#f8fafc";
+            accountNoInp.style.cursor = "not-allowed";
+            accountNoInp.style.border = "1px solid var(--border-color)";
+            accountNoInp.title = "Auto-calculated for branch";
+            delete accountNoInp.dataset.userEdited;
+        }
+    }
+
     // Auto-generate proposal & packet seeds for active branch
     generateNextProposalNo(userBranch);
     generateNextPacketNo(userBranch);
@@ -1975,7 +2055,9 @@ function updateLoanAmountLogic() {
     // Auto Account Number format: શાખાનો કોડ + પ્રોડક્ટ કોડ + ખાતા નંબર(ઓટો સીરીયલ નંબર)
     const acInput = document.getElementById("loan-ac-no");
     if (acInput && !isEditingExistingLoan) {
-        acInput.value = generateNextAccountNo(branchCode, selectedProdCode);
+        if (!acInput.dataset.userEdited) {
+            acInput.value = generateNextAccountNo(branchCode, selectedProdCode);
+        }
     }
 }
 
@@ -2759,6 +2841,13 @@ function resetLoanEntryForm() {
     const form = document.getElementById("gold-loan-form");
     if (form) form.reset();
 
+    const proposalNoInp = document.getElementById("unique-proposal-no");
+    const packetNoInp = document.getElementById("packet-no");
+    const accountNoInp = document.getElementById("loan-ac-no");
+    if (proposalNoInp) delete proposalNoInp.dataset.userEdited;
+    if (packetNoInp) delete packetNoInp.dataset.userEdited;
+    if (accountNoInp) delete accountNoInp.dataset.userEdited;
+
     const loanDateInput = document.getElementById("loan-date");
     if (loanDateInput) loanDateInput.value = new Date().toISOString().split("T")[0];
 
@@ -2939,9 +3028,9 @@ function generateNextProposalNo(branchCode) {
     const currentYear = new Date().getFullYear();
     const serialFormatted = String(nextNo).padStart(4, "0");
 
-    // Format: <branch first 3 letters>/<current year>/<serial No.> (દા.ત. AZA/2026/0001)
+    // Format: <branch shortname>/<current year>/<serial No.> (દા.ત. CBB/2026/0001)
     const proposalStr = `${branchLetters}/${currentYear}/${serialFormatted}`;
-    if (input) input.value = proposalStr;
+    if (input && !input.dataset.userEdited) input.value = proposalStr;
     return proposalStr;
 }
 
@@ -2993,7 +3082,7 @@ function generateNextPacketNo(branchCode) {
     });
 
     const nextNo = baseSeed + branchLoans.length + 1;
-    if (input) input.value = nextNo;
+    if (input && !input.dataset.userEdited) input.value = nextNo;
     return String(nextNo);
 }
 
