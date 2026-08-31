@@ -478,6 +478,33 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 });
             }
+            // Listen for realtime deleted loans across all devices
+            if (typeof window.FirebaseService.listenDeletedLoans === "function") {
+                window.FirebaseService.listenDeletedLoans((deletedId) => {
+                    if (!deletedId) return;
+                    const cleanId = String(deletedId).trim();
+                    if (!state.deletedLoanIds) state.deletedLoanIds = [];
+                    if (!state.deletedLoanIds.includes(cleanId)) {
+                        state.deletedLoanIds.push(cleanId);
+                        if (state.deletedLoanIds.length > 500) {
+                            state.deletedLoanIds = state.deletedLoanIds.slice(-500);
+                        }
+                    }
+                    const prevCount = (state.loans || []).length;
+                    state.loans = (state.loans || []).filter(l => {
+                        const lid = String(l.id || l.loanId || "").trim();
+                        return lid !== cleanId;
+                    });
+                    if (state.loans.length !== prevCount) {
+                        saveState();
+                        renderDashboard();
+                        renderRegisterTable();
+                        if (typeof renderReportsTable === "function") renderReportsTable();
+                        console.log("[Firebase] Loan deletion synced from another device:", cleanId);
+                    }
+                });
+            }
+
             // Listen for realtime loan records
             if (typeof window.FirebaseService.listenLoans === "function") {
                 window.FirebaseService.listenLoans(null, (cloudLoans) => {
@@ -555,7 +582,21 @@ async function syncCloudData(isManual = false) {
             }
         }
 
-        // 2. Sync Loans
+        // 2. Sync Deleted Loans catchup
+        if (typeof window.FirebaseService.getDeletedLoanIds === "function") {
+            const cloudDeletedIds = await window.FirebaseService.getDeletedLoanIds();
+            if (Array.isArray(cloudDeletedIds) && cloudDeletedIds.length > 0) {
+                if (!state.deletedLoanIds) state.deletedLoanIds = [];
+                cloudDeletedIds.forEach(id => {
+                    const cleanId = String(id).trim();
+                    if (cleanId && !state.deletedLoanIds.includes(cleanId)) {
+                        state.deletedLoanIds.push(cleanId);
+                    }
+                });
+            }
+        }
+
+        // 3. Sync Loans
         const fbLoans = await window.FirebaseService.getLoans();
         const deletedSet = new Set(state.deletedLoanIds || []);
 

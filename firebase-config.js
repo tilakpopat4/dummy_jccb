@@ -551,12 +551,19 @@ const FirebaseService = {
     },
 
     /**
-     * Delete loan record
+     * Delete loan record (Dual delete from loans collection + write tombstone to deleted_loans for live multi-device sync)
      */
     deleteLoan: async function(loanId) {
         if (!loanId) return;
         const cleanId = String(loanId).trim();
         let deleted = false;
+        const tombstone = {
+            id: cleanId,
+            deletedAt: new Date().toISOString(),
+            deletedBy: this.currentUser ? this.currentUser.uid : 'SYSTEM'
+        };
+
+        // 1. Delete from loans collection & record in deleted_loans via SDK
         if (this.db) {
             try {
                 await this.db.collection('loans').doc(cleanId).delete();
@@ -565,7 +572,12 @@ const FirebaseService = {
             } catch (e) {
                 console.warn("[Firebase SDK] Loan delete SDK notice:", e);
             }
+            try {
+                await this.db.collection('deleted_loans').doc(cleanId).set(tombstone);
+            } catch (e) {}
         }
+
+        // 2. Guaranteed REST Fallback
         try {
             const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/loans/${cleanId}`, {
                 method: "DELETE"
@@ -577,7 +589,67 @@ const FirebaseService = {
         } catch (e) {
             console.warn("[Firebase REST] Loan delete REST notice:", e);
         }
+
+        try {
+            const fsDoc = this.toFirestoreDocument(tombstone);
+            await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/deleted_loans/${cleanId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(fsDoc)
+            });
+        } catch (e) {}
+
         return deleted;
+    },
+
+    /**
+     * Realtime listener for deleted loans across all devices
+     */
+    listenDeletedLoans: function(onDeleted) {
+        if (!this.db || typeof onDeleted !== 'function') return () => {};
+        return this.db.collection('deleted_loans').onSnapshot((snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added' || change.type === 'modified') {
+                    const data = change.doc.data();
+                    const deletedId = (data && data.id) ? data.id : change.doc.id;
+                    if (deletedId) onDeleted(deletedId);
+                }
+            });
+        }, (err) => {
+            console.warn("[Firebase] Deleted loans listener notice:", err);
+        });
+    },
+
+    /**
+     * Fetch all deleted loan IDs for cold start / offline sync catchup
+     */
+    getDeletedLoanIds: async function() {
+        let list = [];
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/deleted_loans`, {
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data.documents)) {
+                    list = data.documents.map(d => {
+                        const parsed = this.fromFirestoreDocument(d);
+                        return parsed.id || d.name.split('/').pop();
+                    });
+                }
+            }
+        } catch (e) {}
+
+        if (list.length === 0 && this.db) {
+            try {
+                const snap = await this.db.collection('deleted_loans').get();
+                snap.forEach(doc => list.push(doc.id));
+            } catch (e) {}
+        }
+        return list;
     },
 
     // =================================================================
