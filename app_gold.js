@@ -4124,6 +4124,7 @@ function getDailyAggregatedVouchersData(date, branchFilter = "") {
         if (total > 0) {
             const accStr = accs.length <= 4 ? accs.join(", ") : (accs.slice(0, 3).join(", ") + ` વગેરે કુલ ${accs.length}`);
             aggregatedList.push({
+                key: head.key,
                 glCode: head.glCode,
                 glName: head.glName,
                 nameGu: head.nameGu,
@@ -4279,8 +4280,9 @@ function initDailyVouchers() {
                 alert("તારીખ " + formatDateDMY(date) + " ના રોજ કોઈ લોન રેકોર્ડ મળેલ નથી.");
                 return;
             }
-            if (data.vouchers.length === 0) {
-                alert("તારીખ " + formatDateDMY(date) + " ના રોજ કોઈ ખર્ચ/કપાતની રકમ નોંધાયેલ નથી.");
+            const printableVouchers = (data.vouchers || []).filter(v => v.key !== "otherCharges" && v.glCode !== "GL-160199" && v.nameGu !== "અન્ય ચાર્જ");
+            if (printableVouchers.length === 0) {
+                alert("તારીખ " + formatDateDMY(date) + " ના રોજ વાઉચર પ્રિન્ટિંગ માટે કોઈ ખર્ચ/કપાતની રકમ નોંધાયેલ નથી.");
                 return;
             }
 
@@ -11785,6 +11787,7 @@ function getLoanExpenseVouchersList(loan) {
     const otherCharges = parseFloat(loan.otherCharges || 0);
     if (otherCharges > 0) {
         vouchers.push({
+            key: "otherCharges",
             glCode: "GL-160199",
             glName: "Other Charges Income",
             amount: otherCharges,
@@ -11826,10 +11829,12 @@ function formatAmountToGujaratiWords(num) {
 // --- Daily Aggregated Cash Credit Expense Vouchers (3 Vouchers per A4 Page) ---
 function generateDailyVouchers3in1HTML(date, branchFilter = "") {
     const data = getDailyAggregatedVouchersData(date, branchFilter);
-    if (data.vouchers.length === 0) {
+    // Other charges are listed in Daily Voucher tab table but excluded from voucher printing
+    const printableVouchers = (data.vouchers || []).filter(v => v.key !== "otherCharges" && v.glCode !== "GL-160199" && v.nameGu !== "અન્ય ચાર્જ");
+    if (printableVouchers.length === 0) {
         return `
         <div class="print-page" style="padding:50px 20px; text-align:center; font-family:'Outfit', 'Noto Sans Gujarati', sans-serif; font-size:15px; font-weight:700; background:#ffffff;">
-            તારીખ ${formatDateDMY(date)} ના રોજ કોઈ ખર્ચ વાઉચર નોંધાયેલ નથી.
+            તારીખ ${formatDateDMY(date)} ના રોજ કોઈ પ્રિન્ટ કરવા યોગ્ય ખર્ચ વાઉચર નોંધાયેલ નથી.
         </div>
         `;
     }
@@ -11839,8 +11844,8 @@ function generateDailyVouchers3in1HTML(date, branchFilter = "") {
 
     // Group vouchers in sets of 3 per A4 sheet
     const pages = [];
-    for (let i = 0; i < data.vouchers.length; i += 3) {
-        pages.push(data.vouchers.slice(i, i + 3));
+    for (let i = 0; i < printableVouchers.length; i += 3) {
+        pages.push(printableVouchers.slice(i, i + 3));
     }
 
     let fullHtml = "";
@@ -11963,7 +11968,9 @@ function generateDailyVouchers3in1HTML(date, branchFilter = "") {
 
 // Fallback single loan voucher generator
 function generate3in1VoucherHTML(loan, isPageBreak = false) {
-    const vouchers = getLoanExpenseVouchersList(loan);
+    const allVouchers = getLoanExpenseVouchersList(loan);
+    // Exclude other charges from printed vouchers
+    const vouchers = (allVouchers || []).filter(v => v.key !== "otherCharges" && v.glCode !== "GL-160199" && v.nameGu !== "અન્ય ચાર્જ");
     if (vouchers.length === 0) {
         return `
         <div class="print-page ${isPageBreak ? 'print-page-break' : ''}" style="padding:40px 20px; text-align:center; font-family:'Outfit', 'Noto Sans Gujarati', sans-serif; font-size:14px; font-weight:700; background:#ffffff;">
