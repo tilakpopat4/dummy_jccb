@@ -554,17 +554,30 @@ const FirebaseService = {
      * Delete loan record
      */
     deleteLoan: async function(loanId) {
+        if (!loanId) return;
         const cleanId = String(loanId).trim();
+        let deleted = false;
         if (this.db) {
             try {
                 await this.db.collection('loans').doc(cleanId).delete();
-            } catch (e) {}
+                console.log("[Firebase SDK] Loan deleted from Firestore:", cleanId);
+                deleted = true;
+            } catch (e) {
+                console.warn("[Firebase SDK] Loan delete SDK notice:", e);
+            }
         }
         try {
-            await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/loans/${cleanId}`, {
+            const res = await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/loans/${cleanId}`, {
                 method: "DELETE"
             });
-        } catch (e) {}
+            if (res.ok) {
+                console.log("[Firebase REST] Loan deleted via REST:", cleanId);
+                deleted = true;
+            }
+        } catch (e) {
+            console.warn("[Firebase REST] Loan delete REST notice:", e);
+        }
+        return deleted;
     },
 
     // =================================================================

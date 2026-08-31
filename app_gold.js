@@ -59,7 +59,6 @@ function hasPermission(permissionName, targetBranchCode = null) {
     switch (permissionName) {
         case "EDIT_GOLD_RATE":
         case "LOCK_GOLD_RATE":
-        case "DELETE_LOAN":
         case "MANAGE_BRANCHES":
         case "MANAGE_VALUERS":
         case "MANAGE_PRODUCTS":
@@ -67,6 +66,12 @@ function hasPermission(permissionName, targetBranchCode = null) {
         case "BACKUP_RESTORE":
         case "ACCOUNT_SETTINGS":
             return role === ROLES.ADMIN;
+
+        case "DELETE_LOAN":
+            if (role === ROLES.ADMIN) return true;
+            if (role === ROLES.AUDITOR) return false;
+            if (targetBranchCode && state.currentSession) return isBranchMatch(state.currentSession.code, targetBranchCode);
+            return true;
 
         case "CREATE_LOAN":
         case "EDIT_LOAN":
@@ -215,6 +220,7 @@ const DEFAULT_STATE = {
         { date: "2026-08-21", rate22K: 72000, rate24K: Math.round(72000 * (24 / 22)) }
     ],
     loans: [],
+    deletedLoanIds: [],
     branches: DEFAULT_BRANCHES,
     products: DEFAULT_PRODUCTS,
     valuers: DEFAULT_VALUERS,
@@ -380,6 +386,8 @@ function loadState() {
                 settings.branchSeeds = {};
             }
 
+            let deletedLoanIds = Array.isArray(parsed.deletedLoanIds) ? parsed.deletedLoanIds : [];
+
             return {
                 ...DEFAULT_STATE,
                 ...parsed,
@@ -387,6 +395,7 @@ function loadState() {
                 goldRates: goldRates,
                 rateHistory: rateHist,
                 loans: loans,
+                deletedLoanIds: deletedLoanIds,
                 currentSession: session,
                 branches: branches,
                 products: prods,
@@ -472,26 +481,48 @@ document.addEventListener("DOMContentLoaded", () => {
             // Listen for realtime loan records
             if (typeof window.FirebaseService.listenLoans === "function") {
                 window.FirebaseService.listenLoans(null, (cloudLoans) => {
-                    if (Array.isArray(cloudLoans) && cloudLoans.length > 0) {
+                    if (Array.isArray(cloudLoans)) {
                         if (!state.loans) state.loans = [];
-                        let changed = false;
-                        cloudLoans.forEach(cl => {
-                            const lId = cl.id || cl.loanId;
-                            const lIdx = state.loans.findIndex(x => x.id === lId || x.loanId === lId);
-                            if (lIdx === -1) {
-                                state.loans.unshift(cl);
-                                changed = true;
+                        const deletedSet = new Set(state.deletedLoanIds || []);
+
+                        // Filter out loans that were deleted
+                        const validCloudLoans = cloudLoans.filter(cl => {
+                            const id = String(cl.id || cl.loanId || "").trim();
+                            return id && !deletedSet.has(id);
+                        });
+
+                        const updatedList = [];
+                        const seenIds = new Set();
+
+                        validCloudLoans.forEach(cl => {
+                            const id = String(cl.id || cl.loanId).trim();
+                            seenIds.add(id);
+                            const local = state.loans.find(x => String(x.id || x.loanId).trim() === id);
+                            if (local) {
+                                updatedList.push({ ...local, ...cl, id: id, loanId: id });
                             } else {
-                                state.loans[lIdx] = { ...state.loans[lIdx], ...cl, id: lId, loanId: lId };
-                                changed = true;
+                                updatedList.push({ ...cl, id: id, loanId: id });
                             }
                         });
-                        if (changed) {
-                            saveState();
-                            renderDashboard();
-                            renderRegisterTable();
-                            if (typeof renderReportsTable === "function") renderReportsTable();
-                        }
+
+                        // Retain recently created offline loans that are pending upload
+                        state.loans.forEach(localLoan => {
+                            const id = String(localLoan.id || localLoan.loanId || "").trim();
+                            if (id && !seenIds.has(id) && !deletedSet.has(id)) {
+                                const createdTime = localLoan.createdAt ? new Date(localLoan.createdAt).getTime() : 0;
+                                const isRecent = createdTime > 0 && (Date.now() - createdTime < 3600000);
+                                if (isRecent) {
+                                    updatedList.unshift(localLoan);
+                                    seenIds.add(id);
+                                }
+                            }
+                        });
+
+                        state.loans = updatedList;
+                        saveState();
+                        renderDashboard();
+                        renderRegisterTable();
+                        if (typeof renderReportsTable === "function") renderReportsTable();
                     }
                 });
             }
@@ -526,36 +557,43 @@ async function syncCloudData(isManual = false) {
 
         // 2. Sync Loans
         const fbLoans = await window.FirebaseService.getLoans();
-        let changed = false;
-        let cloudCount = Array.isArray(fbLoans) ? fbLoans.length : 0;
+        const deletedSet = new Set(state.deletedLoanIds || []);
 
-        if (Array.isArray(fbLoans) && fbLoans.length > 0) {
-            if (!state.loans) state.loans = [];
-            fbLoans.forEach(cl => {
-                const lId = cl.id || cl.loanId;
-                const lIdx = state.loans.findIndex(x => x.id === lId || x.loanId === lId);
-                if (lIdx === -1) {
-                    state.loans.unshift(cl);
-                    changed = true;
-                } else if (cl.updatedAt && cl.updatedAt !== state.loans[lIdx].updatedAt) {
-                    state.loans[lIdx] = { ...state.loans[lIdx], ...cl, id: lId, loanId: lId };
-                    changed = true;
+        if (Array.isArray(fbLoans)) {
+            const validFbLoans = fbLoans.filter(cl => {
+                const id = String(cl.id || cl.loanId || "").trim();
+                return id && !deletedSet.has(id);
+            });
+
+            const mergedLoans = [];
+            const seen = new Set();
+
+            validFbLoans.forEach(cl => {
+                const id = String(cl.id || cl.loanId).trim();
+                seen.add(id);
+                const local = (state.loans || []).find(x => String(x.id || x.loanId).trim() === id);
+                if (local) {
+                    mergedLoans.push({ ...local, ...cl, id: id, loanId: id });
+                } else {
+                    mergedLoans.push({ ...cl, id: id, loanId: id });
                 }
             });
 
-            // Auto upload any local offline loans into Cloud
-            state.loans.forEach(localLoan => {
-                const lId = localLoan.id || localLoan.loanId;
-                const inCloud = fbLoans.some(cl => (cl.id === lId || cl.loanId === lId));
-                if (!inCloud && lId) {
-                    window.FirebaseService.saveLoan(localLoan).catch(() => {});
+            // Retain and upload only recently created offline loans
+            (state.loans || []).forEach(localLoan => {
+                const id = String(localLoan.id || localLoan.loanId || "").trim();
+                if (id && !seen.has(id) && !deletedSet.has(id)) {
+                    const createdTime = localLoan.createdAt ? new Date(localLoan.createdAt).getTime() : 0;
+                    const isRecent = createdTime > 0 && (Date.now() - createdTime < 3600000);
+                    if (isRecent) {
+                        mergedLoans.unshift(localLoan);
+                        seen.add(id);
+                        window.FirebaseService.saveLoan(localLoan).catch(() => {});
+                    }
                 }
             });
-        } else if (Array.isArray(state.loans) && state.loans.length > 0) {
-            // First time cloud sync: upload existing local loans to cloud
-            state.loans.forEach(localLoan => {
-                window.FirebaseService.saveLoan(localLoan).catch(() => {});
-            });
+
+            state.loans = mergedLoans;
         }
 
         saveState();
@@ -2730,14 +2768,25 @@ function initRegister() {
     }
 
     if (deleteAllBtn) {
-        const isHO = state.currentSession && state.currentSession.code === "99";
+        const isHO = isHeadOfficeSession();
         deleteAllBtn.style.display = isHO ? "inline-block" : "none";
         deleteAllBtn.addEventListener("click", () => {
             if (confirm("CRITICAL: Delete ALL loan records in the register? This cannot be undone!")) {
+                const idsToDelete = (state.loans || []).map(l => String(l.id || l.loanId).trim()).filter(Boolean);
+                if (!state.deletedLoanIds) state.deletedLoanIds = [];
+                idsToDelete.forEach(id => {
+                    if (!state.deletedLoanIds.includes(id)) state.deletedLoanIds.push(id);
+                });
                 state.loans = [];
                 saveState();
                 renderDashboard();
                 renderRegisterTable();
+                if (typeof renderReportsTable === "function") renderReportsTable();
+                if (window.FirebaseService) {
+                    idsToDelete.forEach(id => {
+                        window.FirebaseService.deleteLoan(id).catch(() => {});
+                    });
+                }
                 showToast("All loans deleted.");
             }
         });
@@ -2760,39 +2809,37 @@ function renderRegisterTable() {
     if (filterBranchEl) {
         filterBranchEl.disabled = false;
         if (filterBranchEl.options.length <= 1) {
-            const curVal = filterBranchEl.value;
-            filterBranchEl.innerHTML = '<option value="">-- All Branches (બધી શાખાઓ) --</option>';
-            (state.branches || []).forEach(b => {
+            filterBranchEl.innerHTML = '<option value="">-- All Branches --</option>';
+            state.branches.forEach(b => {
                 const opt = document.createElement("option");
                 opt.value = b.code;
                 opt.textContent = b.name;
                 filterBranchEl.appendChild(opt);
             });
-            if (curVal) filterBranchEl.value = curVal;
         }
     }
 
-    const search = document.getElementById("filter-search") ? document.getElementById("filter-search").value.toLowerCase().trim() : "";
+    const filterSearch = document.getElementById("filter-search") ? document.getElementById("filter-search").value.toLowerCase().trim() : "";
     const filterBranch = filterBranchEl ? filterBranchEl.value : "";
-    const dateFrom = document.getElementById("filter-date-from") ? document.getElementById("filter-date-from").value : "";
-    const dateTo = document.getElementById("filter-date-to") ? document.getElementById("filter-date-to").value : "";
-    const product = document.getElementById("filter-product") ? document.getElementById("filter-product").value : "";
+    const filterDateFrom = document.getElementById("filter-date-from") ? document.getElementById("filter-date-from").value : "";
+    const filterDateTo = document.getElementById("filter-date-to") ? document.getElementById("filter-date-to").value : "";
+    const filterProduct = document.getElementById("filter-product") ? document.getElementById("filter-product").value : "";
 
     // Branch sees only its own loans by default; Head Office sees all branches
     let list = isHO ? (state.loans || []) : (state.loans || []).filter(l => isBranchMatch(l.branchCode, userBranch));
 
     if (isHO && filterBranch) list = list.filter(l => isBranchMatch(l.branchCode, filterBranch));
-    if (product) list = list.filter(l => (l.loanType || "").includes(product));
-    if (dateFrom) list = list.filter(l => l.date >= dateFrom);
-    if (dateTo) list = list.filter(l => l.date <= dateTo);
-    if (search) {
+    if (filterProduct) list = list.filter(l => (l.loanType || "").includes(filterProduct));
+    if (filterDateFrom) list = list.filter(l => l.date >= filterDateFrom);
+    if (filterDateTo) list = list.filter(l => l.date <= filterDateTo);
+    if (filterSearch) {
         list = list.filter(l => {
             const accFmt = formatLoanAccountNo(l.accountNo, l.branchCode, l.loanType);
-            return (l.borrowerName && l.borrowerName.toLowerCase().includes(search)) ||
-                (l.accountNo && l.accountNo.includes(search)) ||
-                (accFmt && accFmt.includes(search)) ||
-                (l.customerNo && l.customerNo.includes(search)) ||
-                (l.packetNo && l.packetNo.includes(search));
+            return (l.borrowerName && l.borrowerName.toLowerCase().includes(filterSearch)) ||
+                (l.accountNo && l.accountNo.includes(filterSearch)) ||
+                (accFmt && accFmt.includes(filterSearch)) ||
+                (l.customerNo && l.customerNo.includes(filterSearch)) ||
+                (l.packetNo && l.packetNo.includes(filterSearch));
         });
     }
 
@@ -2813,6 +2860,7 @@ function renderRegisterTable() {
         )));
         const netPaid = sancAmt - deductions;
         const accFormatted = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
+        const canDelete = isHO || isBranchMatch(loan.branchCode, userBranch);
 
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -2835,7 +2883,7 @@ function renderRegisterTable() {
                         <i class="fa-solid fa-print"></i> Sanction
                     </button>
                     <button class="btn-icon-blue edit-loan-btn" data-id="${loan.id}" title="Edit Loan Entry" style="width:29px; height:29px; display:inline-flex; align-items:center; justify-content:center; border-radius:5px;"><i class="fa-solid fa-pen-to-square"></i></button>
-                    ${isHO ? `<button class="btn-icon-red delete-loan-btn" data-id="${loan.id}" title="Delete Loan Entry" style="width:29px; height:29px; display:inline-flex; align-items:center; justify-content:center; border-radius:5px;"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+                    ${canDelete ? `<button class="btn-icon-red delete-loan-btn" data-id="${loan.id}" title="Delete Loan Entry" style="width:29px; height:29px; display:inline-flex; align-items:center; justify-content:center; border-radius:5px;"><i class="fa-solid fa-trash-can"></i></button>` : ''}
                 </div>
             </td>
         `;
@@ -2986,26 +3034,56 @@ function editLoanRecord(id) {
 }
 
 function deleteLoanRecord(id) {
-    if (!isHeadOfficeSession()) {
-        alert("લોન એન્ટ્રી ડિલીટ કરવાનો અધિકાર ફક્ત હેડ ઓફિસ (Head Office) પાસે છે. શાખા દ્વારા એન્ટ્રી ડિલીટ કરી શકાશે નહીં.");
+    if (!id) return;
+    const cleanId = String(id).trim();
+    const loan = state.loans.find(l => String(l.id).trim() === cleanId || String(l.loanId).trim() === cleanId);
+    if (!loan) {
+        console.warn("Loan not found for deletion:", id);
         return;
     }
 
-    const loan = state.loans.find(l => l.id === id);
-    if (!loan) return;
+    if (!isHeadOfficeSession()) {
+        const userBranch = state.currentSession ? state.currentSession.code : "";
+        if (!isBranchMatch(loan.branchCode, userBranch)) {
+            alert("તમે ફક્ત તમારી પોતાની શાખાની જ લોન એન્ટ્રી કાઢી શકો છો. (You can only delete loan records from your own branch.)");
+            return;
+        }
+    }
 
-    if (confirm("શું તમે આ ગોલ્ડ લોન એન્ટ્રી કાયમ માટે કાઢી નાંખવા માંગો છો?")) {
-        state.loans = state.loans.filter(l => l.id !== id);
+    const accFormatted = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
+    const borrower = loan.borrowerName || "Unnamed";
+
+    if (confirm(`શું તમે આ ગોલ્ડ લોન એન્ટ્રી (${accFormatted} - ${borrower}) કાયમ માટે કાઢી નાંખવા માંગો છો?\n(Are you sure you want to permanently delete this loan record?)`)) {
+        const targetId = String(loan.id || cleanId).trim();
+
+        // 1. Maintain list of deleted IDs to prevent background sync resurrection
+        if (!state.deletedLoanIds) state.deletedLoanIds = [];
+        if (!state.deletedLoanIds.includes(targetId)) {
+            state.deletedLoanIds.push(targetId);
+            if (state.deletedLoanIds.length > 500) {
+                state.deletedLoanIds = state.deletedLoanIds.slice(-500);
+            }
+        }
+
+        // 2. Remove immediately from local state
+        state.loans = state.loans.filter(l => {
+            const lid = String(l.id || l.loanId || "").trim();
+            return lid !== targetId && lid !== cleanId;
+        });
+
         saveState();
         renderDashboard();
         renderRegisterTable();
+        if (typeof renderReportsTable === "function") renderReportsTable();
 
-        // Delete from Cloud Firestore (Admin privilege)
-        if (window.FirebaseService && window.FirebaseService.isInitialized) {
-            window.FirebaseService.deleteLoan(id).catch(e => console.warn("[Firebase] Loan delete cloud error:", e));
+        // 3. Delete from Firebase Cloud Firestore
+        if (window.FirebaseService) {
+            window.FirebaseService.deleteLoan(targetId)
+                .then(() => console.log("[Firebase] Loan permanently deleted:", targetId))
+                .catch(e => console.warn("[Firebase] Loan delete cloud notice:", e));
         }
 
-        showToast("Loan entry deleted.");
+        showToast("લોન એન્ટ્રી ડિલીટ થઈ ગઈ છે. (Loan entry deleted.)");
     }
 }
 
@@ -10613,3 +10691,9 @@ function numberToGujaratiWords(num) {
 
     return result.replace(/\s+/g, " ").trim();
 }
+
+// Global Window Exports
+window.deleteLoanRecord = deleteLoanRecord;
+window.editLoanRecord = editLoanRecord;
+window.syncCloudData = syncCloudData;
+
