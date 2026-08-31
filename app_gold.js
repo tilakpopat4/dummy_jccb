@@ -5357,9 +5357,14 @@ function initBranchMaster() {
                     branchCode: code,
                     branchName: name,
                     password: password,
+                    shortName: shortNameRaw,
                     isHeadOffice: (code === "99"),
                     isActive: true
                 }).catch(e => console.warn("[Firebase] Branch cloud save error:", e));
+
+                // Also update the full branches list so realtime listener gets shortName
+                window.FirebaseService.saveBranchesList(state.branches)
+                    .catch(e => console.warn("[Firebase] Branches list sync warning:", e));
             }
         });
     }
