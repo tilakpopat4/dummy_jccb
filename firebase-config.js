@@ -1028,9 +1028,10 @@ const FirebaseService = {
     /**
      * Save all Valuers list to Firestore
      */
-    saveValuersList: async function(valuersList) {
+    saveValuersList: async function(valuersList, deletedIds = []) {
         const payload = {
             list: valuersList,
+            deletedIds: Array.isArray(deletedIds) ? deletedIds : [],
             updatedAt: new Date().toISOString()
         };
         if (this.db) {
@@ -1057,14 +1058,14 @@ const FirebaseService = {
             if (res.ok) {
                 const data = await res.json();
                 const parsed = this.fromFirestoreDocument(data);
-                if (parsed && Array.isArray(parsed.list)) return parsed.list;
+                if (parsed && Array.isArray(parsed.list)) return { list: parsed.list, deletedIds: Array.isArray(parsed.deletedIds) ? parsed.deletedIds : [] };
             }
         } catch (e) {}
 
         if (this.db) {
             try {
                 const doc = await this.db.collection('settings').doc('valuersList').get();
-                if (doc.exists && doc.data().list) return doc.data().list;
+                if (doc.exists && doc.data().list) return { list: doc.data().list, deletedIds: Array.isArray(doc.data().deletedIds) ? doc.data().deletedIds : [] };
             } catch (e) {}
         }
         return null;
@@ -1078,7 +1079,7 @@ const FirebaseService = {
         return this.db.collection('settings').doc('valuersList').onSnapshot((doc) => {
             if (doc.exists && typeof onUpdate === 'function') {
                 const data = doc.data();
-                if (Array.isArray(data.list)) onUpdate(data.list);
+                if (Array.isArray(data.list)) onUpdate(data.list, Array.isArray(data.deletedIds) ? data.deletedIds : []);
             }
         }, (err) => {
             console.warn("[Firebase] Valuers listener error:", err);

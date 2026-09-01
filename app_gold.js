@@ -442,7 +442,9 @@ function loadState() {
             if (!prods || prods.length !== 5 || !prods.some(p => p.code === "GNA-3527")) {
                 prods = DEFAULT_PRODUCTS;
             }
+            const delValIds = Array.isArray(parsed.deletedValuerIds) ? parsed.deletedValuerIds : [];
             let vals = Array.isArray(parsed.valuers) && parsed.valuers.length > 0 ? parsed.valuers : (DEFAULT_VALUERS ? JSON.parse(JSON.stringify(DEFAULT_VALUERS)) : []);
+            vals = vals.filter(v => v && !delValIds.includes(v.id) && !delValIds.includes(v.name));
             let branches = parsed.branches;
             if (!Array.isArray(branches) || branches.length === 0) {
                 branches = JSON.parse(JSON.stringify(DEFAULT_BRANCHES));
@@ -513,6 +515,7 @@ function loadState() {
                 rateHistory: rateHist,
                 loans: loans,
                 deletedLoanIds: deletedLoanIds,
+                deletedValuerIds: delValIds,
                 currentSession: session,
                 branches: branches,
                 products: prods,
@@ -766,12 +769,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
 
-            // 7. Listen for realtime Valuers Master (Non-destructive Smart Union)
             // 7. Listen for realtime Valuers Master
             if (typeof window.FirebaseService.listenValuers === "function") {
-                window.FirebaseService.listenValuers((cloudValuers) => {
-                    if (Array.isArray(cloudValuers) && cloudValuers.length > 0) {
-                        state.valuers = cloudValuers;
+                window.FirebaseService.listenValuers((cloudValuers, cloudDeletedIds) => {
+                    if (Array.isArray(cloudDeletedIds) && cloudDeletedIds.length > 0) {
+                        if (!state.deletedValuerIds) state.deletedValuerIds = [];
+                        cloudDeletedIds.forEach(id => {
+                            if (id && !state.deletedValuerIds.includes(id)) state.deletedValuerIds.push(id);
+                        });
+                    }
+                    const delIds = state.deletedValuerIds || [];
+                    if (Array.isArray(cloudValuers)) {
+                        state.valuers = cloudValuers.filter(v => v && !delIds.includes(v.id) && !delIds.includes(v.name));
                         saveState();
                         if (typeof renderValuers === "function") renderValuers();
                         console.log("[Firebase] Realtime Valuers Master synced across PCs.");
@@ -884,12 +893,23 @@ async function syncCloudData(isManual = false) {
 
         // 5. Sync Valuers List
         if (typeof window.FirebaseService.getValuersList === "function") {
-            const fbValuers = await window.FirebaseService.getValuersList();
-            if (Array.isArray(fbValuers) && fbValuers.length > 0) {
-                state.valuers = fbValuers;
-                saveState();
-            } else if (Array.isArray(state.valuers) && state.valuers.length > 0) {
-                window.FirebaseService.saveValuersList(state.valuers).catch(() => {});
+            const fbValuersRes = await window.FirebaseService.getValuersList();
+            if (fbValuersRes) {
+                const fbList = Array.isArray(fbValuersRes.list) ? fbValuersRes.list : (Array.isArray(fbValuersRes) ? fbValuersRes : []);
+                const cloudDeletedIds = Array.isArray(fbValuersRes.deletedIds) ? fbValuersRes.deletedIds : [];
+                if (cloudDeletedIds.length > 0) {
+                    if (!state.deletedValuerIds) state.deletedValuerIds = [];
+                    cloudDeletedIds.forEach(id => {
+                        if (id && !state.deletedValuerIds.includes(id)) state.deletedValuerIds.push(id);
+                    });
+                }
+                const delIds = state.deletedValuerIds || [];
+                if (fbList.length > 0) {
+                    state.valuers = fbList.filter(v => v && !delIds.includes(v.id) && !delIds.includes(v.name));
+                    saveState();
+                } else if (Array.isArray(state.valuers) && state.valuers.length > 0) {
+                    window.FirebaseService.saveValuersList(state.valuers, state.deletedValuerIds).catch(() => {});
+                }
             }
         }
 
@@ -6137,11 +6157,14 @@ function initValuerMaster() {
                 state.valuers.push(valuerObj);
             }
 
+            if (state.deletedValuerIds) {
+                state.deletedValuerIds = state.deletedValuerIds.filter(x => x !== assignedId && x !== name);
+            }
             saveState();
 
             // Instant sync to Cloud Firestore
             if (window.FirebaseService && typeof window.FirebaseService.saveValuersList === "function") {
-                window.FirebaseService.saveValuersList(state.valuers).then(() => {
+                window.FirebaseService.saveValuersList(state.valuers, state.deletedValuerIds).then(() => {
                     console.log("[Firebase] Valuers synced successfully to Firestore");
                 }).catch(e => console.warn("[Firebase] Valuers cloud sync error:", e));
             }
@@ -6366,9 +6389,12 @@ function renderValuers() {
                 const v = state.valuers.find(x => x.id === id);
                 if (v && confirm(`શું તમે ખરેખર સોની વેલ્યુઅર ${v.name} નું પ્રોફાઇલ કાઢી નાખવા માંગો છો?`)) {
                     state.valuers = state.valuers.filter(x => x.id !== id);
+                    if (!state.deletedValuerIds) state.deletedValuerIds = [];
+                    if (id && !state.deletedValuerIds.includes(id)) state.deletedValuerIds.push(id);
+                    if (v.name && !state.deletedValuerIds.includes(v.name)) state.deletedValuerIds.push(v.name);
                     saveState();
                     if (window.FirebaseService && typeof window.FirebaseService.saveValuersList === "function") {
-                        window.FirebaseService.saveValuersList(state.valuers).catch(e => console.warn("[Firebase] Valuers cloud sync error:", e));
+                        window.FirebaseService.saveValuersList(state.valuers, state.deletedValuerIds).catch(e => console.warn("[Firebase] Valuers cloud sync error:", e));
                     }
                     if (window.FirebaseService && typeof window.FirebaseService.logAuditEvent === "function") {
                         window.FirebaseService.logAuditEvent("VALUER_DELETED", `Valuer ${v.name} (${v.id}) deleted by Head Office`, {
@@ -6378,7 +6404,7 @@ function renderValuers() {
                         });
                     }
                     renderValuers();
-                    showToast("Valuer profile removed.");
+                    showToast("Valuer profile removed permanently.");
                 }
             });
         });
