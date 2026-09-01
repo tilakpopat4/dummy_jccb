@@ -1571,13 +1571,13 @@ function updateBranchContextUI() {
     const accountNoInp = document.getElementById("loan-ac-no");
 
     if (proposalNoInp) {
-        if (isHO) {
+        if (isHO || isEditingExistingLoan) {
             proposalNoInp.removeAttribute("readonly");
             proposalNoInp.readOnly = false;
             proposalNoInp.style.backgroundColor = "#ffffff";
             proposalNoInp.style.cursor = "text";
             proposalNoInp.style.border = "1.5px solid var(--primary)";
-            proposalNoInp.title = "Head Office Privilege: Editable Proposal Number";
+            proposalNoInp.title = "Editable Proposal Number";
             if (!proposalNoInp.dataset.boundUserEdit) {
                 proposalNoInp.dataset.boundUserEdit = "true";
                 proposalNoInp.addEventListener("input", () => {
@@ -1596,13 +1596,13 @@ function updateBranchContextUI() {
     }
 
     if (packetNoInp) {
-        if (isHO) {
+        if (isHO || isEditingExistingLoan) {
             packetNoInp.removeAttribute("readonly");
             packetNoInp.readOnly = false;
             packetNoInp.style.backgroundColor = "#ffffff";
             packetNoInp.style.cursor = "text";
             packetNoInp.style.border = "1.5px solid var(--primary)";
-            packetNoInp.title = "Head Office Privilege: Editable Gold Packet Number";
+            packetNoInp.title = "Editable Gold Packet Number";
             if (!packetNoInp.dataset.boundUserEdit) {
                 packetNoInp.dataset.boundUserEdit = "true";
                 packetNoInp.addEventListener("input", () => {
@@ -1621,13 +1621,13 @@ function updateBranchContextUI() {
     }
 
     if (accountNoInp) {
-        if (isHO) {
+        if (isHO || isEditingExistingLoan) {
             accountNoInp.removeAttribute("readonly");
             accountNoInp.readOnly = false;
             accountNoInp.style.backgroundColor = "#ffffff";
             accountNoInp.style.cursor = "text";
             accountNoInp.style.border = "1.5px solid var(--primary)";
-            accountNoInp.title = "Head Office Privilege: Editable Loan Account Number";
+            accountNoInp.title = "Editable Loan Account Number";
             if (!accountNoInp.dataset.boundUserEdit) {
                 accountNoInp.dataset.boundUserEdit = "true";
                 accountNoInp.addEventListener("input", () => {
@@ -3954,7 +3954,11 @@ function renderRegisterTable() {
             <td style="white-space:nowrap;"><strong>${formatDateDMY(loan.date)}</strong></td>
             <td style="white-space:nowrap; text-align:center;"><span class="badge badge-primary">${loan.branchCode}</span></td>
             <td style="white-space:nowrap;"><strong>${accFormatted}</strong></td>
-            <td style="white-space:nowrap; text-align:center;"><strong>${loan.packetNo || "-"}</strong></td>
+            <td style="white-space:nowrap; text-align:center;">
+                <span class="packet-no-pill" data-id="${loan.id}" title="Click to quickly edit Packet Number" style="cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px; background:#f0f6fa; border:1px solid var(--accent-slate); font-weight:800; color:var(--primary);">
+                    ${loan.packetNo || "-"} <i class="fa-solid fa-pen" style="font-size:9.5px; opacity:0.7;"></i>
+                </span>
+            </td>
             <td style="min-width:160px; font-weight:700;">${loan.borrowerName}</td>
             <td style="white-space:nowrap; text-align:center;"><span class="badge badge-gold">${loan.loanType || "GW-3725"}</span></td>
             <td style="text-align:right; white-space:nowrap; font-weight:800;">₹ ${sancAmt.toLocaleString("en-IN")}</td>
@@ -3975,6 +3979,25 @@ function renderRegisterTable() {
             </td>
         `;
         tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll(".packet-no-pill").forEach(pill => {
+        pill.addEventListener("click", () => {
+            const id = pill.getAttribute("data-id");
+            const loan = state.loans.find(l => l.id === id);
+            if (!loan) return;
+            const currentPacket = loan.packetNo || "";
+            const newPacket = prompt(`પેકેટ નંબર સુધારો (Edit Packet Number):\nખાતા નંબર: ${loan.accountNo || ""}\nગ્રાહક: ${loan.borrowerName || ""}`, currentPacket);
+            if (newPacket !== null && newPacket.trim() !== "") {
+                loan.packetNo = newPacket.trim();
+                saveState();
+                if (window.FirebaseService && typeof window.FirebaseService.saveLoan === "function") {
+                    window.FirebaseService.saveLoan(loan).catch(() => {});
+                }
+                renderRegisterTable();
+                showToast(`પેકેટ નંબર ${newPacket.trim()} સફળતાપૂર્વક અપડેટ થયો!`);
+            }
+        });
     });
 
     tbody.querySelectorAll(".print-doc-btn").forEach(btn => {
