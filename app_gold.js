@@ -2197,6 +2197,14 @@ function initLoanEntryForm() {
         }
     }
 
+    // Savings Account No (Strictly 15 Digits Numerical)
+    const custSavingsAcInput = document.getElementById("cust-savings-ac");
+    if (custSavingsAcInput) {
+        custSavingsAcInput.addEventListener("input", () => {
+            custSavingsAcInput.value = custSavingsAcInput.value.replace(/\D/g, "").slice(0, 15);
+        });
+    }
+
     // Init first ornament row
     const tbody = document.getElementById("ornaments-table-tbody");
     if (tbody && tbody.children.length === 0) {
@@ -2975,6 +2983,19 @@ function submitLoanEntry() {
         if (!borrowerName) {
             alert("કૃપા કરીને ગ્રાહકનું નામ (Customer / Borrower Name) દાખલ કરો.");
             if (nameInput) nameInput.focus();
+            return;
+        }
+
+        const savingsAcInput = document.getElementById("cust-savings-ac");
+        const savingsAcVal = savingsAcInput ? savingsAcInput.value.trim() : "";
+        if (!savingsAcVal) {
+            alert("બચત ખાતા નંબર (Savings A/c No) ફરજિયાત છે. કૃપા કરીને ૧૫ અંકનો બચત ખાતા નંબર દાખલ કરો.");
+            if (savingsAcInput) savingsAcInput.focus();
+            return;
+        }
+        if (!/^\d{15}$/.test(savingsAcVal)) {
+            alert("બચત ખાતા નંબર (Savings A/c No) ફક્ત ૧૫ અંકનો ન્યુમેરિકલ (Exact 15 digits numerical) જ હોવો જોઈએ.\nહાલમાં દાખલ કરેલ અંક: " + savingsAcVal.length + " અંક");
+            if (savingsAcInput) savingsAcInput.focus();
             return;
         }
 
@@ -6233,6 +6254,14 @@ function initCustomerMaster() {
         mDobInput.addEventListener("change", autoCalcMAge);
     }
 
+    // Savings Account No (Strictly 15 Digits Numerical) for Customer Master
+    const mSavingsAcInput = document.getElementById("m-cust-savings-ac");
+    if (mSavingsAcInput) {
+        mSavingsAcInput.addEventListener("input", () => {
+            mSavingsAcInput.value = mSavingsAcInput.value.replace(/\D/g, "").slice(0, 15);
+        });
+    }
+
     if (form) {
         form.addEventListener("submit", (e) => {
             e.preventDefault();
@@ -6256,6 +6285,12 @@ function initCustomerMaster() {
 
             if (!custNo || !name) {
                 alert("Please enter Customer Number and Name.");
+                return;
+            }
+
+            if (savingsAc && !/^\d{15}$/.test(savingsAc)) {
+                alert("બચત ખાતા નંબર (Savings A/c No) ફક્ત ૧૫ અંકનો ન્યુમેરિકલ (Exact 15 digits numerical) જ હોવો જોઈએ.\nહાલમાં દાખલ કરેલ અંક: " + savingsAc.length);
+                if (mSavingsAcInput) mSavingsAcInput.focus();
                 return;
             }
 
