@@ -2515,9 +2515,9 @@ function updateOrnamentsTotals() {
         totalValuation += rowVal;
     });
 
-    const normGrossGm = (totalGrossGm + Math.floor(totalGrossMg / 1000)).toFixed(3);
+    const normGrossGm = Math.floor(totalGrossGm + Math.floor(totalGrossMg / 1000));
     const normGrossMg = totalGrossMg % 1000;
-    const normNetGm = (totalNetGm + Math.floor(totalNetMg / 1000)).toFixed(3);
+    const normNetGm = Math.floor(totalNetGm + Math.floor(totalNetMg / 1000));
     const normNetMg = totalNetMg % 1000;
 
     // Update Footer Totals
@@ -10067,7 +10067,9 @@ function generatePage1KarajManganiHTML(loan, isPageBreak = false) {
                 મેનેજરશ્રી,<br>
                 ધી જૂનાગઢ કોમર્શિયલ કો-ઓપરેટીવ બેંક લિ.<br>
                 <strong>${cleanBranch}</strong><br>
-                Customer Number : <strong>${loan.customerNo || ""}</strong>
+                Customer ID : <strong>${loan.customerNo || "-"}</strong><br>
+                Membership No. : <strong>${loan.memberNo || "-"}</strong><br>
+                Saving A/c No. : <strong>${loan.savingsAc || "-"}</strong>
             </div>
 
             <!-- Customer Photo Box -->
@@ -10199,9 +10201,9 @@ function generatePage2ValuationReportHTML(loan, ltv, isPageBreak = true) {
         });
     }
 
-    const normGrossGm = (totalGrossGm + Math.floor(totalGrossMg / 1000)).toFixed(3);
+    const normGrossGm = Math.floor(totalGrossGm + Math.floor(totalGrossMg / 1000));
     const normGrossMg = totalGrossMg % 1000;
-    const normNetGm = (totalNetGm + Math.floor(totalNetMg / 1000)).toFixed(3);
+    const normNetGm = Math.floor(totalNetGm + Math.floor(totalNetMg / 1000));
     const normNetMg = totalNetMg % 1000;
 
     for (let i = 0; i < 10; i++) {
@@ -10217,10 +10219,10 @@ function generatePage2ValuationReportHTML(loan, ltv, isPageBreak = true) {
                     <td style="border:1px solid #000; padding:2.5px 2px;">${i + 1}</td>
                     <td style="border:1px solid #000; padding:2.5px 4px; text-align:left;"><strong>${orn.name || ""}</strong></td>
                     <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${orn.qty || 1}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${parseFloat(orn.grossGm || 0).toFixed(3)}</td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${orn.grossMg || 0}</td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${parseFloat(orn.netGm || 0).toFixed(3)}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${orn.netMg || 0}</strong></td>
+                    <td style="border:1px solid #000; padding:2.5px 2px;">${parseInt(orn.grossGm || 0)}</td>
+                    <td style="border:1px solid #000; padding:2.5px 2px;">${parseInt(orn.grossMg || 0)}</td>
+                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${parseInt(orn.netGm || 0)}</strong></td>
+                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${parseInt(orn.netMg || 0)}</strong></td>
                     <td style="border:1px solid #000; padding:2.5px 2px;">${orn.purity || 22} K</td>
                     <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${fineGold.toFixed(3)}</strong></td>
                     <td style="border:1px solid #000; padding:2.5px 4px; text-align:right;"><strong>₹ ${valAmt.toLocaleString("en-IN")}</strong></td>
@@ -10264,7 +10266,10 @@ function generatePage2ValuationReportHTML(loan, ltv, isPageBreak = true) {
             <div style="font-size:11.5px; line-height:1.35;">
                 પ્રતિ, મેનેજરશ્રી,<br>
                 ધી જૂનાગઢ કોમર્શિયલ કો-ઓપરેટીવ બેંક લી.<br>
-                <strong>${cleanBranch}</strong>
+                <strong>${cleanBranch}</strong><br>
+                Customer ID : <strong>${loan.customerNo || "-"}</strong><br>
+                Membership No. : <strong>${loan.memberNo || "-"}</strong><br>
+                Saving A/c No. : <strong>${loan.savingsAc || "-"}</strong>
             </div>
 
             <!-- Spacious Centered Ornaments Photo Box (50% Bigger) -->
@@ -10444,9 +10449,9 @@ function generatePage3ReceiptsHTML(loan, isPageBreak = true) {
         });
     }
 
-    const normGrossGm = (totalGrossGm + Math.floor(totalGrossMg / 1000)).toFixed(3);
+    const normGrossGm = Math.floor(totalGrossGm + Math.floor(totalGrossMg / 1000));
     const normGrossMg = totalGrossMg % 1000;
-    const normNetGm = (totalNetGm + Math.floor(totalNetMg / 1000)).toFixed(3);
+    const normNetGm = Math.floor(totalNetGm + Math.floor(totalNetMg / 1000));
     const normNetMg = totalNetMg % 1000;
 
     for (let i = 0; i < 10; i++) {
@@ -10462,10 +10467,10 @@ function generatePage3ReceiptsHTML(loan, isPageBreak = true) {
                     <td style="border:1px solid #000; padding:2.5px 2px;">${i + 1}</td>
                     <td style="border:1px solid #000; padding:2.5px 4px; text-align:left;"><strong>${orn.name || ""}</strong></td>
                     <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${orn.qty || 1}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${parseFloat(orn.grossGm || 0).toFixed(3)}</td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${orn.grossMg || 0}</td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${parseFloat(orn.netGm || 0).toFixed(3)}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${orn.netMg || 0}</strong></td>
+                    <td style="border:1px solid #000; padding:2.5px 2px;">${parseInt(orn.grossGm || 0)}</td>
+                    <td style="border:1px solid #000; padding:2.5px 2px;">${parseInt(orn.grossMg || 0)}</td>
+                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${parseInt(orn.netGm || 0)}</strong></td>
+                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${parseInt(orn.netMg || 0)}</strong></td>
                     <td style="border:1px solid #000; padding:2.5px 2px;">${orn.purity || 22} K</td>
                     <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${fineGold.toFixed(3)}</strong></td>
                     <td style="border:1px solid #000; padding:2.5px 4px; text-align:right;"><strong>₹ ${valAmt.toLocaleString("en-IN")}</strong></td>
@@ -10510,7 +10515,10 @@ function generatePage3ReceiptsHTML(loan, isPageBreak = true) {
                 પ્રતિ,<br>
                 મેનેજરશ્રી,<br>
                 ધી જૂનાગઢ કોમર્શિયલ કો-ઓપરેટીવ બેંક લિ.<br>
-                <strong>${cleanBranch}</strong>
+                <strong>${cleanBranch}</strong><br>
+                Customer ID : <strong>${loan.customerNo || "-"}</strong><br>
+                Membership No. : <strong>${loan.memberNo || "-"}</strong><br>
+                Saving A/c No. : <strong>${loan.savingsAc || "-"}</strong>
             </div>
 
             <!-- Dual Photos on Right: Customer Photo + 50% Bigger Ornaments Photo -->
@@ -11365,7 +11373,9 @@ function generatePage5MembershipGroupAHTML(loan, isPageBreak = false) {
                 <strong>ચેરમેનશ્રી,</strong><br>
                 <strong>ધી જૂનાગઢ કોમર્શિયલ કો-ઓપરેટિવ બેન્ક લિ.</strong><br>
                 શાખા : <strong>${cleanBranch}</strong><br>
-                કસ્ટમર આઇ.ડી. : <strong>${customerNo}</strong>
+                Customer ID : <strong>${customerNo || "-"}</strong><br>
+                Membership No. : <strong>${memberNo || "-"}</strong><br>
+                Saving A/c No. : <strong>${savingsAc || "-"}</strong>
             </div>
 
             <!-- Customer Photo Box -->
@@ -11572,7 +11582,9 @@ function generatePage5MembershipGroupBHTML(loan, isPageBreak = false) {
                 <strong>ચેરમેનશ્રી,</strong><br>
                 <strong>ધી જૂનાગઢ કોમર્શિયલ કો-ઓપરેટિવ બેન્ક લિ.</strong><br>
                 શાખા : <strong>${cleanBranch}</strong><br>
-                કસ્ટમર આઇ.ડી. : <strong>${customerNo}</strong>
+                Customer ID : <strong>${customerNo || "-"}</strong><br>
+                Membership No. : <strong>${memberNo || "-"}</strong><br>
+                Saving A/c No. : <strong>${savingsAc || "-"}</strong>
             </div>
 
             <!-- Customer Photo Box -->
