@@ -3688,3 +3688,139 @@ input.admin-editable:focus, select.admin-editable:focus {
     background-color: #ffffff !important;
 }
 
+/* ==================== PROFESSIONAL PORTAL FOOTER ==================== */
+.app-portal-footer {
+    margin-top: auto;
+    background-color: #ffffff;
+    border-top: 1.5px solid var(--border-color);
+    padding: 22px 30px;
+    box-shadow: 0 -2px 10px rgba(0, 75, 135, 0.04);
+}
+
+.footer-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.footer-left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.footer-bank-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.footer-bank-logo {
+    height: 38px;
+    width: auto;
+    object-fit: contain;
+}
+
+.footer-bank-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #004b87;
+    margin: 0;
+    letter-spacing: 0.2px;
+}
+
+.footer-bank-sub {
+    font-size: 11.5px;
+    color: #64748b;
+    margin: 0;
+    font-weight: 500;
+}
+
+.footer-copyright {
+    font-size: 12px;
+    color: #475569;
+    font-weight: 600;
+    margin: 0;
+}
+
+.footer-right {
+    display: flex;
+    align-items: center;
+}
+
+/* Designer & Developer Badge */
+.developer-credit-badge {
+    background: #f8fafc;
+    border: 1.5px solid #004b87;
+    border-radius: 10px;
+    padding: 10px 18px;
+    box-shadow: 0 3px 12px rgba(0, 75, 135, 0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.developer-credit-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 75, 135, 0.15);
+    background: #ffffff;
+}
+
+.dev-badge-tag {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.dev-badge-author {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.dev-name {
+    font-size: 14px;
+    font-weight: 900;
+    color: #004b87;
+    letter-spacing: 0.3px;
+}
+
+.dev-badge-sub {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+/* Sidebar mini credit */
+.sidebar-dev-credit {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.75);
+    text-align: center;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sidebar-dev-credit strong {
+    color: #ffd700;
+    font-weight: 800;
+}
+
+@media (max-width: 768px) {
+    .footer-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    .developer-credit-badge {
+        align-items: flex-start;
+        width: 100%;
+    }
+}
+
