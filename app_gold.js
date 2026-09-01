@@ -1590,13 +1590,13 @@ function updateBranchContextUI() {
     const accountNoInp = document.getElementById("loan-ac-no");
 
     if (proposalNoInp) {
-        if (isHO || isEditingExistingLoan) {
+        if (isHO) {
             proposalNoInp.removeAttribute("readonly");
             proposalNoInp.readOnly = false;
             proposalNoInp.style.backgroundColor = "#ffffff";
             proposalNoInp.style.cursor = "text";
             proposalNoInp.style.border = "1.5px solid var(--primary)";
-            proposalNoInp.title = "Editable Proposal Number";
+            proposalNoInp.title = "Head Office Admin Privilege: Editable Proposal Number";
             if (!proposalNoInp.dataset.boundUserEdit) {
                 proposalNoInp.dataset.boundUserEdit = "true";
                 proposalNoInp.addEventListener("input", () => {
@@ -1609,19 +1609,19 @@ function updateBranchContextUI() {
             proposalNoInp.style.backgroundColor = "#f8fafc";
             proposalNoInp.style.cursor = "not-allowed";
             proposalNoInp.style.border = "1px solid var(--border-color)";
-            proposalNoInp.title = "Auto-calculated for branch";
+            proposalNoInp.title = "Locked: Admin Privilege Only";
             delete proposalNoInp.dataset.userEdited;
         }
     }
 
     if (packetNoInp) {
-        if (isHO || isEditingExistingLoan) {
+        if (isHO) {
             packetNoInp.removeAttribute("readonly");
             packetNoInp.readOnly = false;
             packetNoInp.style.backgroundColor = "#ffffff";
             packetNoInp.style.cursor = "text";
             packetNoInp.style.border = "1.5px solid var(--primary)";
-            packetNoInp.title = "Editable Gold Packet Number";
+            packetNoInp.title = "Head Office Admin Privilege: Editable Gold Packet Number";
             if (!packetNoInp.dataset.boundUserEdit) {
                 packetNoInp.dataset.boundUserEdit = "true";
                 packetNoInp.addEventListener("input", () => {
@@ -1634,19 +1634,19 @@ function updateBranchContextUI() {
             packetNoInp.style.backgroundColor = "#f8fafc";
             packetNoInp.style.cursor = "not-allowed";
             packetNoInp.style.border = "1px solid var(--border-color)";
-            packetNoInp.title = "Auto-calculated for branch";
+            packetNoInp.title = "Locked: Admin Privilege Only";
             delete packetNoInp.dataset.userEdited;
         }
     }
 
     if (accountNoInp) {
-        if (isHO || isEditingExistingLoan) {
+        if (isHO) {
             accountNoInp.removeAttribute("readonly");
             accountNoInp.readOnly = false;
             accountNoInp.style.backgroundColor = "#ffffff";
             accountNoInp.style.cursor = "text";
             accountNoInp.style.border = "1.5px solid var(--primary)";
-            accountNoInp.title = "Editable Loan Account Number";
+            accountNoInp.title = "Head Office Admin Privilege: Editable Loan Account Number";
             if (!accountNoInp.dataset.boundUserEdit) {
                 accountNoInp.dataset.boundUserEdit = "true";
                 accountNoInp.addEventListener("input", () => {
@@ -1659,7 +1659,7 @@ function updateBranchContextUI() {
             accountNoInp.style.backgroundColor = "#f8fafc";
             accountNoInp.style.cursor = "not-allowed";
             accountNoInp.style.border = "1px solid var(--border-color)";
-            accountNoInp.title = "Auto-calculated for branch";
+            accountNoInp.title = "Locked: Admin Privilege Only";
             delete accountNoInp.dataset.userEdited;
         }
     }
@@ -3990,9 +3990,13 @@ function renderRegisterTable() {
             <td style="white-space:nowrap; text-align:center;"><span class="badge badge-primary">${loan.branchCode}</span></td>
             <td style="white-space:nowrap;"><strong>${accFormatted}</strong></td>
             <td style="white-space:nowrap; text-align:center;">
-                <span class="packet-no-pill" data-id="${loan.id}" title="Click to quickly edit Packet Number" style="cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px; background:#f0f6fa; border:1px solid var(--accent-slate); font-weight:800; color:var(--primary);">
+                ${isHO ? `
+                <span class="packet-no-pill" data-id="${loan.id}" title="Head Office Privilege: Click to edit Packet Number" style="cursor:pointer; display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:6px; background:#f0f6fa; border:1px solid var(--accent-slate); font-weight:800; color:var(--primary);">
                     ${loan.packetNo || "-"} <i class="fa-solid fa-pen" style="font-size:9.5px; opacity:0.7;"></i>
                 </span>
+                ` : `
+                <strong style="font-weight:800; color:#334155;">${loan.packetNo || "-"}</strong>
+                `}
             </td>
             <td style="min-width:160px; font-weight:700;">${loan.borrowerName}</td>
             <td style="white-space:nowrap; text-align:center;"><span class="badge badge-gold">${loan.loanType || "GW-3725"}</span></td>
@@ -4016,24 +4020,26 @@ function renderRegisterTable() {
         tbody.appendChild(tr);
     });
 
-    tbody.querySelectorAll(".packet-no-pill").forEach(pill => {
-        pill.addEventListener("click", () => {
-            const id = pill.getAttribute("data-id");
-            const loan = state.loans.find(l => l.id === id);
-            if (!loan) return;
-            const currentPacket = loan.packetNo || "";
-            const newPacket = prompt(`પેકેટ નંબર સુધારો (Edit Packet Number):\nખાતા નંબર: ${loan.accountNo || ""}\nગ્રાહક: ${loan.borrowerName || ""}`, currentPacket);
-            if (newPacket !== null && newPacket.trim() !== "") {
-                loan.packetNo = newPacket.trim();
-                saveState();
-                if (window.FirebaseService && typeof window.FirebaseService.saveLoan === "function") {
-                    window.FirebaseService.saveLoan(loan).catch(() => {});
+    if (isHO) {
+        tbody.querySelectorAll(".packet-no-pill").forEach(pill => {
+            pill.addEventListener("click", () => {
+                const id = pill.getAttribute("data-id");
+                const loan = state.loans.find(l => l.id === id);
+                if (!loan) return;
+                const currentPacket = loan.packetNo || "";
+                const newPacket = prompt(`[Head Office Admin Privilege]\nપેકેટ નંબર સુધારો (Edit Packet Number):\nખાતા નંબર: ${loan.accountNo || ""}\nગ્રાહક: ${loan.borrowerName || ""}`, currentPacket);
+                if (newPacket !== null && newPacket.trim() !== "") {
+                    loan.packetNo = newPacket.trim();
+                    saveState();
+                    if (window.FirebaseService && typeof window.FirebaseService.saveLoan === "function") {
+                        window.FirebaseService.saveLoan(loan).catch(() => {});
+                    }
+                    renderRegisterTable();
+                    showToast(`પેકેટ નંબર ${newPacket.trim()} સફળતાપૂર્વક અપડેટ થયો!`);
                 }
-                renderRegisterTable();
-                showToast(`પેકેટ નંબર ${newPacket.trim()} સફળતાપૂર્વક અપડેટ થયો!`);
-            }
+            });
         });
-    });
+    }
 
     tbody.querySelectorAll(".print-doc-btn").forEach(btn => {
         btn.addEventListener("click", () => {
