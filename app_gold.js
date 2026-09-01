@@ -779,11 +779,27 @@ document.addEventListener("DOMContentLoaded", () => {
                         });
                     }
                     const delIds = state.deletedValuerIds || [];
-                    if (Array.isArray(cloudValuers)) {
-                        state.valuers = cloudValuers.filter(v => v && !delIds.includes(v.id) && !delIds.includes(v.name));
+                    if (Array.isArray(cloudValuers) && cloudValuers.length > 0) {
+                        const valMap = new Map();
+                        (DEFAULT_VALUERS || []).forEach(v => {
+                            if (v && !delIds.includes(v.id) && !delIds.includes(v.name)) {
+                                valMap.set(v.name || v.id, { ...v });
+                            }
+                        });
+                        (state.valuers || []).forEach(v => {
+                            if (v && !delIds.includes(v.id) && !delIds.includes(v.name)) {
+                                valMap.set(v.name || v.id, { ...(valMap.get(v.name || v.id) || {}), ...v });
+                            }
+                        });
+                        cloudValuers.forEach(v => {
+                            if (v && !delIds.includes(v.id) && !delIds.includes(v.name)) {
+                                valMap.set(v.name || v.id, { ...(valMap.get(v.name || v.id) || {}), ...v });
+                            }
+                        });
+                        state.valuers = Array.from(valMap.values());
                         saveState();
                         if (typeof renderValuers === "function") renderValuers();
-                        console.log("[Firebase] Realtime Valuers Master synced across PCs.");
+                        console.log("[Firebase] Realtime Valuers Master synced & merged across PCs:", state.valuers.length);
                     }
                 });
             }
@@ -891,7 +907,7 @@ async function syncCloudData(isManual = false) {
             }
         }
 
-        // 5. Sync Valuers List
+        // 5. Sync Valuers List (Non-destructive Smart Union Merge)
         if (typeof window.FirebaseService.getValuersList === "function") {
             const fbValuersRes = await window.FirebaseService.getValuersList();
             if (fbValuersRes) {
@@ -904,12 +920,28 @@ async function syncCloudData(isManual = false) {
                     });
                 }
                 const delIds = state.deletedValuerIds || [];
-                if (fbList.length > 0) {
-                    state.valuers = fbList.filter(v => v && !delIds.includes(v.id) && !delIds.includes(v.name));
-                    saveState();
-                } else if (Array.isArray(state.valuers) && state.valuers.length > 0) {
-                    window.FirebaseService.saveValuersList(state.valuers, state.deletedValuerIds).catch(() => {});
-                }
+
+                const valMap = new Map();
+                (DEFAULT_VALUERS || []).forEach(v => {
+                    if (v && !delIds.includes(v.id) && !delIds.includes(v.name)) {
+                        valMap.set(v.name || v.id, { ...v });
+                    }
+                });
+                (state.valuers || []).forEach(v => {
+                    if (v && !delIds.includes(v.id) && !delIds.includes(v.name)) {
+                        valMap.set(v.name || v.id, { ...(valMap.get(v.name || v.id) || {}), ...v });
+                    }
+                });
+                fbList.forEach(v => {
+                    if (v && !delIds.includes(v.id) && !delIds.includes(v.name)) {
+                        valMap.set(v.name || v.id, { ...(valMap.get(v.name || v.id) || {}), ...v });
+                    }
+                });
+
+                state.valuers = Array.from(valMap.values());
+                saveState();
+                if (typeof renderValuers === "function") renderValuers();
+                window.FirebaseService.saveValuersList(state.valuers, state.deletedValuerIds).catch(() => {});
             }
         }
 
@@ -1882,6 +1914,7 @@ function initNavigation() {
             if (targetId === "settings-view") renderBranchSettings();
             if (targetId === "entry-view") {
                 updateBranchContextUI();
+                if (typeof renderValuers === "function") renderValuers();
                 if (!isEditingExistingLoan) {
                     const b = document.getElementById("loan-branch") ? document.getElementById("loan-branch").value : (state.currentSession ? state.currentSession.code : "99");
                     generateNextProposalNo(b);
