@@ -156,7 +156,7 @@ const DEFAULT_VALUERS = [
 // Default Dynamic Bank Rules (Editable via HO Rules Master)
 const DEFAULT_RULES = {
     membership: {
-        nonMemberLimit: 99999,
+        nonMemberLimit: 100000,
         shareGroupB: 50,
         shareGroupA: 500,
         memberFee: 25
@@ -2693,19 +2693,19 @@ function calculateAllCharges() {
     const rules = state.rules || DEFAULT_RULES;
 
     // 1. Membership & Share Rules:
-    // If sanction amount is < 50000, Share A & Share B must strictly be 0
+    // If loan amount is <= 100000 and Member Status is No, Share B must strictly be ₹50
     let shareA = 0;
     let shareB = 0;
     let memberFee = 0;
 
-    if (loanAmt >= 50000) {
+    if (loanAmt > 0) {
         // Staff treated same as member (no extra fees)
         if (isMember || isStaff) {
             shareA = 0;
             shareB = 0;
             memberFee = 0;
         } else {
-            const nonMemLimit = parseFloat(rules.membership?.nonMemberLimit ?? 99999);
+            const nonMemLimit = parseFloat(rules.membership?.nonMemberLimit ?? 100000);
             if (loanAmt <= nonMemLimit) {
                 shareA = 0;
                 shareB = parseFloat(rules.membership?.shareGroupB ?? 50);
@@ -5185,7 +5185,7 @@ function initRulesMaster() {
 
             state.rules = {
                 membership: {
-                    nonMemberLimit: parseFloat(document.getElementById("rule-mem-limit").value || 99999),
+                    nonMemberLimit: parseFloat(document.getElementById("rule-mem-limit").value || 100000),
                     shareGroupB: parseFloat(document.getElementById("rule-share-b").value || 50),
                     shareGroupA: parseFloat(document.getElementById("rule-share-a").value || 500),
                     memberFee: parseFloat(document.getElementById("rule-member-fee").value || 25)
@@ -5289,7 +5289,7 @@ function renderRulesMaster() {
     };
 
     // 1. Membership
-    setVal("rule-mem-limit", rules.membership?.nonMemberLimit ?? 99999);
+    setVal("rule-mem-limit", rules.membership?.nonMemberLimit ?? 100000);
     setVal("rule-share-b", rules.membership?.shareGroupB ?? 50);
     setVal("rule-share-a", rules.membership?.shareGroupA ?? 500);
     setVal("rule-member-fee", rules.membership?.memberFee ?? 25);
@@ -6617,7 +6617,7 @@ function initRulesMaster() {
 
             state.rules = {
                 membership: {
-                    nonMemberLimit: parseFloat(document.getElementById("rule-mem-limit")?.value || 99999),
+                    nonMemberLimit: parseFloat(document.getElementById("rule-mem-limit")?.value || 100000),
                     shareGroupB: parseFloat(document.getElementById("rule-share-b")?.value || 50),
                     shareGroupA: parseFloat(document.getElementById("rule-share-a")?.value || 500),
                     memberFee: parseFloat(document.getElementById("rule-member-fee")?.value || 25)
@@ -6838,7 +6838,7 @@ function renderRulesMaster() {
     }
 
     // 1. Membership
-    if (document.getElementById("rule-mem-limit")) document.getElementById("rule-mem-limit").value = rules.membership?.nonMemberLimit ?? 99999;
+    if (document.getElementById("rule-mem-limit")) document.getElementById("rule-mem-limit").value = rules.membership?.nonMemberLimit ?? 100000;
     if (document.getElementById("rule-share-b")) document.getElementById("rule-share-b").value = rules.membership?.shareGroupB ?? 50;
     if (document.getElementById("rule-share-a")) document.getElementById("rule-share-a").value = rules.membership?.shareGroupA ?? 500;
     if (document.getElementById("rule-member-fee")) document.getElementById("rule-member-fee").value = rules.membership?.memberFee ?? 25;
@@ -7484,6 +7484,8 @@ function exportCompleteBackupExcel() {
             "PacketNo": l.packetNo || "",
             "CustomerNo": l.customerNo || "",
             "IsMember": (l.isMember === true || l.isMember === "Yes") ? "Yes" : "No",
+            "IsStaff": (l.isStaff === true || l.isStaff === "Yes") ? "Yes" : "No",
+            "IsCompulsoryOD": (l.isCompulsoryOD === true || l.isCompulsoryOD === "Yes") ? "Yes" : "No",
             "MemberNo": l.memberNo || "",
             "BorrowerName": l.borrowerName || "",
             "Mobile": l.mobile || "",
@@ -7503,6 +7505,8 @@ function exportCompleteBackupExcel() {
             "ValuationAmount": l.valuationAmount || 0,
             "GoldWeight": l.goldWeight || 0,
             "GrossWeight": l.grossWeight || l.goldWeight || 0,
+            "GoldRate24K": l.goldRate24K || l.goldRate || 0,
+            "GoldRate22K": l.goldRate22K || l.goldRate || 0,
             "Purpose": l.purpose || "",
             "ShareA": l.shareA || 0,
             "ShareB": l.shareB || 0,
@@ -7529,7 +7533,7 @@ function exportCompleteBackupExcel() {
 
         const wsLoans = loansData.length > 0 
             ? XLSX.utils.json_to_sheet(loansData) 
-            : XLSX.utils.aoa_to_sheet([["ID", "ProposalNo", "Date", "LoanStatus", "BranchCode", "BranchName", "AccountNo", "PacketNo", "CustomerNo", "IsMember", "MemberNo", "BorrowerName", "Mobile", "Address", "SavingsAc", "DOB", "Age", "Occupation", "Religion", "Caste", "NomineeName", "NomineeRelation", "ValuerName", "LoanType", "InterestRate", "SanctionedAmount", "ValuationAmount", "GoldWeight", "GrossWeight", "Purpose", "ShareA", "ShareB", "MemberFee", "ValuerFee", "StampDuty", "ServiceCharge", "DocCharges", "Insurance", "CGST", "SGST", "OtherCharges", "CustomChargesJSON", "CustomChargesTotal", "TotalDeductions", "EmiAmount", "Installments", "GrievanceOfficer", "OrnamentsTableJSON", "CustomerPhoto", "OrnamentPhoto", "UpdatedAt"]]);
+            : XLSX.utils.aoa_to_sheet([["ID", "ProposalNo", "Date", "LoanStatus", "BranchCode", "BranchName", "AccountNo", "PacketNo", "CustomerNo", "IsMember", "IsStaff", "IsCompulsoryOD", "MemberNo", "BorrowerName", "Mobile", "Address", "SavingsAc", "DOB", "Age", "Occupation", "Religion", "Caste", "NomineeName", "NomineeRelation", "ValuerName", "LoanType", "InterestRate", "SanctionedAmount", "ValuationAmount", "GoldWeight", "GrossWeight", "GoldRate24K", "GoldRate22K", "Purpose", "ShareA", "ShareB", "MemberFee", "ValuerFee", "StampDuty", "ServiceCharge", "DocCharges", "Insurance", "CGST", "SGST", "OtherCharges", "CustomChargesJSON", "CustomChargesTotal", "TotalDeductions", "EmiAmount", "Installments", "GrievanceOfficer", "OrnamentsTableJSON", "CustomerPhoto", "OrnamentPhoto", "UpdatedAt"]]);
         XLSX.utils.book_append_sheet(wb, wsLoans, "1_Loans_Register");
 
         // 2. Customer Master
@@ -7549,41 +7553,68 @@ function exportCompleteBackupExcel() {
             "mobile": c.mobile || "",
             "nomineeName": c.nomineeName || "",
             "nomineeRelation": c.nomineeRelation || "",
+            "updatedAt": c.updatedAt || "",
             "photo": vaultLargeString(`CUST_${c.id || c.customerNo || idx}_photo`, c.photo || c.customerPhoto || "")
         }));
         const wsCustomers = (customersData.length > 0)
             ? XLSX.utils.json_to_sheet(customersData)
-            : XLSX.utils.aoa_to_sheet([["id", "customerNo", "name", "isMember", "memberNo", "address", "savingsAc", "dob", "age", "occupation", "religion", "caste", "mobile", "nomineeName", "nomineeRelation", "photo"]]);
+            : XLSX.utils.aoa_to_sheet([["id", "customerNo", "name", "isMember", "memberNo", "address", "savingsAc", "dob", "age", "occupation", "religion", "caste", "mobile", "nomineeName", "nomineeRelation", "updatedAt", "photo"]]);
         XLSX.utils.book_append_sheet(wb, wsCustomers, "2_Customer_Master");
 
-        // 3. Valuer Master
-        const wsValuers = (state.valuers && state.valuers.length > 0)
-            ? XLSX.utils.json_to_sheet(state.valuers)
+        // 3. Valuer Master (canonical fields to match restore parser)
+        const valuersData = (state.valuers || []).map(v => ({
+            "id": v.id || "",
+            "name": v.name || "",
+            "phone": v.phone || v.mobile || "",
+            "address": v.address || "",
+            "savingsAc": v.savingsAc || "",
+            "branch": v.branch || "",
+            "active": (v.active === true || v.active === undefined) ? "Yes" : "No"
+        }));
+        const wsValuers = (valuersData.length > 0)
+            ? XLSX.utils.json_to_sheet(valuersData)
             : XLSX.utils.aoa_to_sheet([["id", "name", "phone", "address", "savingsAc", "branch", "active"]]);
         XLSX.utils.book_append_sheet(wb, wsValuers, "3_Valuer_Master");
 
-        // 4. Product Master
-        const wsProducts = (state.products && state.products.length > 0)
-            ? XLSX.utils.json_to_sheet(state.products)
-            : XLSX.utils.aoa_to_sheet([["id", "code", "shortCode", "minAmt", "maxAmt", "rate", "name", "type"]]);
+        // 4. Product Master (all canonical fields)
+        const productsData = (state.products || []).map(p => ({
+            "id": p.id || "",
+            "code": p.code || "",
+            "name": p.name || "",
+            "minAmt": p.minAmt || 0,
+            "maxAmt": p.maxAmt || 0,
+            "rate": p.rate || 0,
+            "type": p.type || "bullet"
+        }));
+        const wsProducts = (productsData.length > 0)
+            ? XLSX.utils.json_to_sheet(productsData)
+            : XLSX.utils.aoa_to_sheet([["id", "code", "name", "minAmt", "maxAmt", "rate", "type"]]);
         XLSX.utils.book_append_sheet(wb, wsProducts, "4_Product_Master");
 
-        // 5. Branch Master
+        // 5. Branch Master (all canonical fields)
         const branchesData = (state.branches || []).map(b => ({
             "code": b.code,
             "name": b.name,
             "password": b.password || (b.code === "99" ? "Rahul#80810" : "Admin@123"),
-            "isHO": (b.isHO || b.code === "99") ? "Yes" : "No"
+            "isHO": (b.isHO || b.code === "99") ? "Yes" : "No",
+            "role": b.role || (b.code === "99" ? "admin" : "branch_manager"),
+            "shortName": b.shortName || ""
         }));
         const wsBranches = (branchesData.length > 0)
             ? XLSX.utils.json_to_sheet(branchesData)
-            : XLSX.utils.aoa_to_sheet([["code", "name", "password", "isHO"]]);
+            : XLSX.utils.aoa_to_sheet([["code", "name", "password", "isHO", "role", "shortName"]]);
         XLSX.utils.book_append_sheet(wb, wsBranches, "5_Branch_Master");
 
-        // 6. Gold Rates History
-        const wsRates = (state.rateHistory && state.rateHistory.length > 0)
-            ? XLSX.utils.json_to_sheet(state.rateHistory)
-            : XLSX.utils.aoa_to_sheet([["date", "rate24K", "rate22K"]]);
+        // 6. Gold Rates History (all fields including updatedBy)
+        const ratesData = (state.rateHistory || []).map(r => ({
+            "date": r.date || "",
+            "rate22K": r.rate22K || 0,
+            "rate24K": r.rate24K || 0,
+            "updatedBy": r.updatedBy || ""
+        }));
+        const wsRates = (ratesData.length > 0)
+            ? XLSX.utils.json_to_sheet(ratesData)
+            : XLSX.utils.aoa_to_sheet([["date", "rate22K", "rate24K", "updatedBy"]]);
         XLSX.utils.book_append_sheet(wb, wsRates, "6_Gold_Rates_History");
 
         // 7. Rules Master & Dynamic Custom Charges
@@ -7607,6 +7638,13 @@ function exportCompleteBackupExcel() {
             ? XLSX.utils.json_to_sheet(photoVaultRows)
             : XLSX.utils.aoa_to_sheet([["VaultKey", "ChunkIndex", "TotalChunks", "DataChunk"]]);
         XLSX.utils.book_append_sheet(wb, wsVault, "9_Photo_Vault");
+
+        // 10. Deleted Loan IDs Log (for soft-delete integrity on restore)
+        const deletedIdsData = (state.deletedLoanIds || []).map(id => ({ "DeletedLoanID": id }));
+        const wsDeleted = (deletedIdsData.length > 0)
+            ? XLSX.utils.json_to_sheet(deletedIdsData)
+            : XLSX.utils.aoa_to_sheet([["DeletedLoanID"]]);
+        XLSX.utils.book_append_sheet(wb, wsDeleted, "10_Deleted_Loan_IDs");
 
         const dateStr = new Date().toISOString().split("T")[0];
         const fileName = `JCCB_GoldLoan_Universal_Database_${dateStr}.xlsx`;
@@ -7654,7 +7692,8 @@ function exportSecureVaultBackup(format = "jccb") {
             rateHistory: state.rateHistory || [],
             goldRates: state.goldRates || { "24K": 0, "22K": 0 },
             rules: state.rules || DEFAULT_RULES,
-            settings: state.settings || { branchSeeds: {} }
+            settings: state.settings || { branchSeeds: {} },
+            deletedLoanIds: state.deletedLoanIds || []
         };
 
         const dbString = JSON.stringify(rawDatabase);
@@ -7832,6 +7871,7 @@ function importSecureVaultBackup() {
             if (!Array.isArray(state.rules.customCharges)) state.rules.customCharges = [];
         }
         if (db.settings) state.settings = { ...state.settings, ...db.settings };
+        if (Array.isArray(db.deletedLoanIds)) state.deletedLoanIds = db.deletedLoanIds;
 
         saveState();
         updateBackupStats();
@@ -8198,7 +8238,8 @@ function generateVaultBlobPackage() {
         rateHistory: state.rateHistory || [],
         goldRates: state.goldRates || { "24K": 0, "22K": 0 },
         rules: state.rules || DEFAULT_RULES,
-        settings: state.settings || { branchSeeds: {} }
+        settings: state.settings || { branchSeeds: {} },
+        deletedLoanIds: state.deletedLoanIds || []
     };
     const dbString = JSON.stringify(rawDatabase);
     const checksum = calculateVaultChecksum(dbString);
@@ -8268,6 +8309,8 @@ function generateExcelBlobPackage() {
         "PacketNo": l.packetNo || "",
         "CustomerNo": l.customerNo || "",
         "IsMember": (l.isMember === true || l.isMember === "Yes") ? "Yes" : "No",
+        "IsStaff": (l.isStaff === true || l.isStaff === "Yes") ? "Yes" : "No",
+        "IsCompulsoryOD": (l.isCompulsoryOD === true || l.isCompulsoryOD === "Yes") ? "Yes" : "No",
         "MemberNo": l.memberNo || "",
         "BorrowerName": l.borrowerName || "",
         "Mobile": l.mobile || "",
@@ -8287,6 +8330,8 @@ function generateExcelBlobPackage() {
         "ValuationAmount": l.valuationAmount || 0,
         "GoldWeight": l.goldWeight || 0,
         "GrossWeight": l.grossWeight || l.goldWeight || 0,
+        "GoldRate24K": l.goldRate24K || l.goldRate || 0,
+        "GoldRate22K": l.goldRate22K || l.goldRate || 0,
         "Purpose": l.purpose || "",
         "ShareA": l.shareA || 0,
         "ShareB": l.shareB || 0,
@@ -8329,45 +8374,45 @@ function generateExcelBlobPackage() {
         "mobile": c.mobile || "",
         "nomineeName": c.nomineeName || "",
         "nomineeRelation": c.nomineeRelation || "",
-        "photo": vaultLargeString(`CUST_${c.id || idx}_photo`, c.photo || "")
+        "updatedAt": c.updatedAt || "",
+        "photo": vaultLargeString(`CUST_${c.id || idx}_photo`, c.photo || c.customerPhoto || "")
     }));
-    const wsCust = customersData.length > 0 ? XLSX.utils.json_to_sheet(customersData) : XLSX.utils.aoa_to_sheet([["id"]]);
+    const wsCust = customersData.length > 0 ? XLSX.utils.json_to_sheet(customersData) : XLSX.utils.aoa_to_sheet([["id", "customerNo", "name", "isMember", "memberNo", "address", "savingsAc", "dob", "age", "occupation", "religion", "caste", "mobile", "nomineeName", "nomineeRelation", "updatedAt", "photo"]]);
     XLSX.utils.book_append_sheet(wb, wsCust, "2_Customer_Master");
 
     const valuersData = (state.valuers || []).map(v => ({
         "id": v.id || "",
         "name": v.name || "",
-        "firm": v.firm || "",
-        "mobile": v.mobile || "",
+        "phone": v.phone || v.mobile || "",
         "address": v.address || "",
+        "savingsAc": v.savingsAc || "",
         "branch": v.branch || "",
-        "status": v.status || "Active"
+        "active": (v.active === true || v.active === undefined) ? "Yes" : "No"
     }));
-    const wsVal = valuersData.length > 0 ? XLSX.utils.json_to_sheet(valuersData) : XLSX.utils.aoa_to_sheet([["id"]]);
+    const wsVal = valuersData.length > 0 ? XLSX.utils.json_to_sheet(valuersData) : XLSX.utils.aoa_to_sheet([["id", "name", "phone", "address", "savingsAc", "branch", "active"]]);
     XLSX.utils.book_append_sheet(wb, wsVal, "3_Valuer_Master");
 
     const productsData = (state.products || []).map(p => ({
+        "id": p.id || "",
         "code": p.code || "",
         "name": p.name || "",
-        "interestRate": p.interestRate || 0,
-        "maxAmount": p.maxAmount || 0,
-        "maxLTV": p.maxLTV || 0,
-        "tenureMonths": p.tenureMonths || 12,
-        "status": p.status || "Active"
+        "minAmt": p.minAmt || 0,
+        "maxAmt": p.maxAmt || 0,
+        "rate": p.rate || 0,
+        "type": p.type || "bullet"
     }));
-    const wsProd = productsData.length > 0 ? XLSX.utils.json_to_sheet(productsData) : XLSX.utils.aoa_to_sheet([["code"]]);
+    const wsProd = productsData.length > 0 ? XLSX.utils.json_to_sheet(productsData) : XLSX.utils.aoa_to_sheet([["id", "code", "name", "minAmt", "maxAmt", "rate", "type"]]);
     XLSX.utils.book_append_sheet(wb, wsProd, "4_Product_Master");
 
     const branchesData = (state.branches || []).map(b => ({
         "code": String(b.code || "").padStart(2, "0"),
         "name": b.name || "",
-        "prefix": b.prefix || "",
-        "manager": b.manager || "",
-        "phone": b.phone || "",
-        "address": b.address || "",
-        "password": b.password || "1234"
+        "password": b.password || (b.code === "99" ? "Rahul#80810" : "Admin@123"),
+        "isHO": (b.isHO || b.code === "99") ? "Yes" : "No",
+        "role": b.role || (b.code === "99" ? "admin" : "branch_manager"),
+        "shortName": b.shortName || ""
     }));
-    const wsBranch = branchesData.length > 0 ? XLSX.utils.json_to_sheet(branchesData) : XLSX.utils.aoa_to_sheet([["code"]]);
+    const wsBranch = branchesData.length > 0 ? XLSX.utils.json_to_sheet(branchesData) : XLSX.utils.aoa_to_sheet([["code", "name", "password", "isHO", "role", "shortName"]]);
     XLSX.utils.book_append_sheet(wb, wsBranch, "5_Branch_Master");
 
     const ratesData = (state.rateHistory || []).map(r => ({
@@ -8397,6 +8442,13 @@ function generateExcelBlobPackage() {
         ? XLSX.utils.json_to_sheet(photoVaultRows)
         : XLSX.utils.aoa_to_sheet([["VaultKey", "ChunkIndex", "TotalChunks", "DataChunk"]]);
     XLSX.utils.book_append_sheet(wb, wsVault, "9_Photo_Vault");
+
+    // 10. Deleted Loan IDs Log (for soft-delete integrity on restore)
+    const deletedIdsData = (state.deletedLoanIds || []).map(id => ({ "DeletedLoanID": id }));
+    const wsDeleted = (deletedIdsData.length > 0)
+        ? XLSX.utils.json_to_sheet(deletedIdsData)
+        : XLSX.utils.aoa_to_sheet([["DeletedLoanID"]]);
+    XLSX.utils.book_append_sheet(wb, wsDeleted, "10_Deleted_Loan_IDs");
 
     const dateStr = new Date().toISOString().split("T")[0];
     const fileName = `JCCB_GoldLoan_Universal_Database_${dateStr}.xlsx`;
