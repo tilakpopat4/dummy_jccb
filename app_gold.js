@@ -8761,8 +8761,12 @@ function importCompleteRestoreExcel(file) {
                 const rawProducts = XLSX.utils.sheet_to_json(prodSheet);
                 state.products = rawProducts.map(p => ({
                     id: String(p["id"] || p["ID"] || ""),
+                    code: String(p["code"] || p["Code"] || ""),
                     name: String(p["name"] || p["Name"] || ""),
-                    type: String(p["type"] || p["Type"] || "Bullet")
+                    minAmt: parseFloat(p["minAmt"] || p["MinAmt"] || 0),
+                    maxAmt: parseFloat(p["maxAmt"] || p["MaxAmt"] || 999999999),
+                    rate: parseFloat(p["rate"] || p["Rate"] || 0),
+                    type: String(p["type"] || p["Type"] || "bullet")
                 }));
                 restoredSummary.products = state.products.length;
             }
@@ -8778,7 +8782,9 @@ function importCompleteRestoreExcel(file) {
                         code: code2,
                         name: String(b["name"] || b["Name"] || "").trim(),
                         password: String(b["password"] || b["Password"] || (code2 === "99" ? "Rahul#80810" : "Admin@123")),
-                        isHO: (b["isHO"] === "Yes" || b["isHO"] === true || b["IsHO"] === "Yes" || code2 === "99")
+                        isHO: (b["isHO"] === "Yes" || b["isHO"] === true || b["IsHO"] === "Yes" || code2 === "99"),
+                        role: String(b["role"] || b["Role"] || (code2 === "99" ? "admin" : "branch_manager")),
+                        shortName: String(b["shortName"] || b["ShortName"] || "")
                     };
                 });
                 restoredSummary.branches = state.branches.length;
@@ -8791,7 +8797,8 @@ function importCompleteRestoreExcel(file) {
                 state.rateHistory = rawRates.map(r => ({
                     date: String(r["date"] || r["Date"] || ""),
                     rate24K: parseFloat(r["rate24K"] || r["Rate24K"] || r["rate"] || 0),
-                    rate22K: parseFloat(r["rate22K"] || r["Rate22K"] || 0)
+                    rate22K: parseFloat(r["rate22K"] || r["Rate22K"] || 0),
+                    updatedBy: String(r["updatedBy"] || r["UpdatedBy"] || "")
                 })).filter(r => r.date);
                 restoredSummary.rates = state.rateHistory.length;
             }
@@ -8839,6 +8846,13 @@ function importCompleteRestoreExcel(file) {
                         restoredSummary.settings = true;
                     }
                 }
+            }
+
+            // 9. Deleted Loan IDs Sheet
+            const deletedSheet = findSheet("delete");
+            if (deletedSheet) {
+                const rawDeleted = XLSX.utils.sheet_to_json(deletedSheet);
+                state.deletedLoanIds = rawDeleted.map(d => String(d["DeletedLoanID"] || d["deletedLoanID"] || d["id"] || "")).filter(Boolean);
             }
 
             saveState();
