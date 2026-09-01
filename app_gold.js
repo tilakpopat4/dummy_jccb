@@ -190,7 +190,9 @@ const DEFAULT_RULES = {
         slab1Rate: 0.25,
         slab1Cap: 500,
         slab2Rate: 0.50,
-        slab2Cap: 5000
+        slab2Cap: 5000,
+        godAbove2LRate: 0.75,
+        godAbove2LCap: 5000
     },
     stampDuty: {
         exemptLimit: 49999,
@@ -2780,8 +2782,19 @@ function calculateAllCharges() {
             const raw = Math.round(loanAmt * (parseFloat(srvRules.slab1Rate ?? 0.25) / 100));
             serviceChg = Math.min(parseFloat(srvRules.slab1Cap ?? 500), raw);
         } else {
-            const raw = Math.round(loanAmt * (parseFloat(srvRules.slab2Rate ?? 0.50) / 100));
-            serviceChg = Math.min(parseFloat(srvRules.slab2Cap ?? 5000), raw);
+            // When loanAmt > 200,000
+            const isScheme3553 = (isCompulsoryOD || schemeSelectVal === "3553" || schemeSelectVal === "GOD-3553" || (typeof selectedProdCode !== "undefined" && String(selectedProdCode).includes("3553")));
+            if (isScheme3553) {
+                // GOD (> 2L): 0.75%, Max Cap Rs. 5000
+                const godRate = parseFloat(srvRules.godAbove2LRate ?? 0.75);
+                const godCap = parseFloat(srvRules.godAbove2LCap ?? 5000);
+                const raw = Math.round(loanAmt * (godRate / 100));
+                serviceChg = Math.min(godCap, raw);
+            } else {
+                // Regular / Installment (> 2L): 0.50%, Max Cap Rs. 5000
+                const raw = Math.round(loanAmt * (parseFloat(srvRules.slab2Rate ?? 0.50) / 100));
+                serviceChg = Math.min(parseFloat(srvRules.slab2Cap ?? 5000), raw);
+            }
         }
     }
 
@@ -5240,7 +5253,9 @@ function initRulesMaster() {
                     slab1Rate: parseFloat(document.getElementById("rule-srv-slab1-rate").value || 0.25),
                     slab1Cap: parseFloat(document.getElementById("rule-srv-slab1-cap").value || 500),
                     slab2Rate: parseFloat(document.getElementById("rule-srv-slab2-rate").value || 0.50),
-                    slab2Cap: parseFloat(document.getElementById("rule-srv-slab2-cap").value || 5000)
+                    slab2Cap: parseFloat(document.getElementById("rule-srv-slab2-cap").value || 5000),
+                    godAbove2LRate: parseFloat(document.getElementById("rule-srv-god-rate")?.value || 0.75),
+                    godAbove2LCap: parseFloat(document.getElementById("rule-srv-god-cap")?.value || 5000)
                 },
                 stampDuty: {
                     exemptLimit: parseFloat(document.getElementById("rule-stamp-exempt")?.value || 49999),
@@ -5336,6 +5351,8 @@ function renderRulesMaster() {
     setVal("rule-srv-slab1-cap", rules.serviceCharge?.slab1Cap ?? 500);
     setVal("rule-srv-slab2-rate", rules.serviceCharge?.slab2Rate ?? 0.50);
     setVal("rule-srv-slab2-cap", rules.serviceCharge?.slab2Cap ?? 5000);
+    setVal("rule-srv-god-rate", rules.serviceCharge?.godAbove2LRate ?? 0.75);
+    setVal("rule-srv-god-cap", rules.serviceCharge?.godAbove2LCap ?? 5000);
     setVal("rule-cgst-rate", rules.gst?.cgstPercent ?? 9);
     setVal("rule-sgst-rate", rules.gst?.sgstPercent ?? 9);
 
@@ -6686,7 +6703,9 @@ function initRulesMaster() {
                     slab1Rate: parseFloat(document.getElementById("rule-srv-slab1-rate")?.value || 0.25),
                     slab1Cap: parseFloat(document.getElementById("rule-srv-slab1-cap")?.value || 500),
                     slab2Rate: parseFloat(document.getElementById("rule-srv-slab2-rate")?.value || 0.50),
-                    slab2Cap: parseFloat(document.getElementById("rule-srv-slab2-cap")?.value || 5000)
+                    slab2Cap: parseFloat(document.getElementById("rule-srv-slab2-cap")?.value || 5000),
+                    godAbove2LRate: parseFloat(document.getElementById("rule-srv-god-rate")?.value || 0.75),
+                    godAbove2LCap: parseFloat(document.getElementById("rule-srv-god-cap")?.value || 5000)
                 },
                 stampDuty: {
                     exemptLimit: parseFloat(document.getElementById("rule-stamp-exempt")?.value || 50000),
@@ -6899,6 +6918,8 @@ function renderRulesMaster() {
     if (document.getElementById("rule-srv-slab1-cap")) document.getElementById("rule-srv-slab1-cap").value = rules.serviceCharge?.slab1Cap ?? 500;
     if (document.getElementById("rule-srv-slab2-rate")) document.getElementById("rule-srv-slab2-rate").value = rules.serviceCharge?.slab2Rate ?? 0.50;
     if (document.getElementById("rule-srv-slab2-cap")) document.getElementById("rule-srv-slab2-cap").value = rules.serviceCharge?.slab2Cap ?? 5000;
+    if (document.getElementById("rule-srv-god-rate")) document.getElementById("rule-srv-god-rate").value = rules.serviceCharge?.godAbove2LRate ?? 0.75;
+    if (document.getElementById("rule-srv-god-cap")) document.getElementById("rule-srv-god-cap").value = rules.serviceCharge?.godAbove2LCap ?? 5000;
     if (document.getElementById("rule-cgst-rate")) document.getElementById("rule-cgst-rate").value = rules.gst?.cgstPercent ?? 9;
     if (document.getElementById("rule-sgst-rate")) document.getElementById("rule-sgst-rate").value = rules.gst?.sgstPercent ?? 9;
 
