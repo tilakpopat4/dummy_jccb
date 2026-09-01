@@ -1297,32 +1297,10 @@ function initAuth() {
     }
 
     if (logoutBtn) {
-        logoutBtn.addEventListener("click", async () => {
-            if (confirm("Are you sure you want to log out? (શું તમે ખરેખર લૉગઆઉટ કરવા માંગો છો?)")) {
-                if (window.FirebaseService && typeof window.FirebaseService.logAuditEvent === "function") {
-                    window.FirebaseService.logAuditEvent("LOGOUT", `User logged out from ${state.currentSession ? state.currentSession.name : 'Session'}`, {
-                        branchCode: state.currentSession ? state.currentSession.code : '99'
-                    });
-                }
-                const currentSid = localStorage.getItem("jccb_device_session_id");
-                if (currentSid && window.FirebaseService && typeof window.FirebaseService.deleteActiveSession === "function") {
-                    try { await window.FirebaseService.deleteActiveSession(currentSid); } catch (e) { }
-                }
-                if (state.gdrive && state.gdrive.connected && state.gdrive.syncOnLogout !== false) {
-                    try {
-                        showToast("Google Drive માં બેકઅપ સિંક થઈ રહ્યો છે...");
-                        await syncAllBackupsToGoogleDrive(true);
-                    } catch (e) {
-                        console.warn("Logout sync warning:", e);
-                    }
-                }
-                state.currentSession = null;
-                setActiveSession(null);
-                saveState();
-                showLogin();
-                showToast("સફળતાપૂર્વક લૉગઆઉટ થઈ ગયું છે.");
-            }
-        });
+        logoutBtn.onclick = (e) => {
+            e.preventDefault();
+            handleLogout();
+        };
     }
 
     // Continuous 30-second live device presence heartbeat
@@ -1368,6 +1346,38 @@ function initAuth() {
         showLogin();
     }
 }
+
+function handleLogout() {
+    if (!confirm("Are you sure you want to log out? (શું તમે ખરેખર લૉગઆઉટ કરવા માંગો છો?)")) {
+        return;
+    }
+
+    try {
+        if (window.FirebaseService && typeof window.FirebaseService.logAuditEvent === "function") {
+            window.FirebaseService.logAuditEvent("LOGOUT", `User logged out from ${state.currentSession ? state.currentSession.name : 'Session'}`, {
+                branchCode: state.currentSession ? state.currentSession.code : '99'
+            }).catch(() => { });
+        }
+        const currentSid = localStorage.getItem("jccb_device_session_id");
+        if (currentSid && window.FirebaseService && typeof window.FirebaseService.deleteActiveSession === "function") {
+            window.FirebaseService.deleteActiveSession(currentSid).catch(() => { });
+        }
+    } catch (e) { }
+
+    try {
+        localStorage.removeItem("jccb_device_session_id");
+        localStorage.removeItem("jccb_session_login_time");
+        sessionStorage.removeItem("jccb_active_session");
+        sessionStorage.clear();
+    } catch (e) { }
+
+    state.currentSession = null;
+    setActiveSession(null);
+    saveState();
+    showLogin();
+    showToast("સફળતાપૂર્વક લૉગઆઉટ થઈ ગયું છે.");
+}
+window.handleLogout = handleLogout;
 
 function promptMandatoryPasswordChange(branchObj) {
     const modal = document.getElementById("mandatory-password-modal");
