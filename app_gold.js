@@ -3257,13 +3257,15 @@ function submitLoanEntry() {
         const branchCode = isHO ? (branchEl && branchEl.value ? branchEl.value : "99") : (state.currentSession ? state.currentSession.code : "99");
         const branchObj = state.branches.find(b => isBranchMatch(b.code, branchCode)) || { code: branchCode, name: branchCode + " BRANCH" };
 
+        const existingLoanData = (isEditingExistingLoan && currentEditingLoanId) ? (state.loans || []).find(l => l.id === currentEditingLoanId) : null;
+
         const proposalNoInput = document.getElementById("unique-proposal-no");
-        const proposalNo = (proposalNoInput && proposalNoInput.value.trim()) ? proposalNoInput.value.trim() : ("GL-P-" + String(state.loans.length + 1).padStart(4, "0"));
+        const proposalNo = (proposalNoInput && proposalNoInput.value.trim()) ? proposalNoInput.value.trim() : (existingLoanData && existingLoanData.loanNo ? existingLoanData.loanNo : ("GL-P-" + String(state.loans.length + 1).padStart(4, "0")));
         
         const loanDateInput = document.getElementById("loan-date");
         const loanDate = (loanDateInput && loanDateInput.value) ? loanDateInput.value : new Date().toISOString().split("T")[0];
         const packetNoInput = document.getElementById("packet-no");
-        const packetNo = (packetNoInput && packetNoInput.value.trim()) ? packetNoInput.value.trim() : generateNextPacketNo(branchCode);
+        const packetNo = (packetNoInput && packetNoInput.value.trim()) ? packetNoInput.value.trim() : (existingLoanData && existingLoanData.packetNo ? existingLoanData.packetNo : generateNextPacketNo(branchCode));
 
         const valRateInput = document.getElementById("val-gold-rate-input");
         const goldRate22K = (valRateInput && parseFloat(valRateInput.value) > 0) ? parseFloat(valRateInput.value) : getActiveGoldRate22K();
@@ -3319,7 +3321,7 @@ function submitLoanEntry() {
         }
 
         const accountNoInput = document.getElementById("loan-ac-no");
-        const rawAccountNo = (accountNoInput && accountNoInput.value.trim()) ? accountNoInput.value.trim() : generateNextAccountNo(branchCode, loanTypeCode);
+        const rawAccountNo = (accountNoInput && accountNoInput.value.trim()) ? accountNoInput.value.trim() : (existingLoanData && existingLoanData.accountNo ? existingLoanData.accountNo : generateNextAccountNo(branchCode, loanTypeCode));
         const accountNo = formatLoanAccountNo(rawAccountNo, branchCode, loanTypeCode);
 
         const isMemberSelectEl = document.getElementById("is-member");
@@ -3694,6 +3696,14 @@ function getBranchFirst3Letters(branchCode) {
 
 function generateNextProposalNo(branchCode) {
     const input = document.getElementById("unique-proposal-no");
+    if (isEditingExistingLoan && currentEditingLoanId) {
+        if (input && input.value && input.value.trim()) return input.value.trim();
+        const existingLoan = (state.loans || []).find(l => l.id === currentEditingLoanId);
+        if (existingLoan && existingLoan.loanNo) {
+            if (input) input.value = existingLoan.loanNo;
+            return existingLoan.loanNo;
+        }
+    }
     const rawBranch = branchCode ? String(branchCode).trim() : (document.getElementById("loan-branch") ? document.getElementById("loan-branch").value : (state.currentSession ? state.currentSession.code : "99"));
     const numOnly = String(rawBranch).replace(/\D/g, '');
     const bCode2 = numOnly ? numOnly.padStart(2, "0") : "99";
@@ -3717,6 +3727,14 @@ function generateNextProposalNo(branchCode) {
 }
 
 function generateNextAccountNo(branchCode, productCode) {
+    const input = document.getElementById("loan-ac-no");
+    if (isEditingExistingLoan && currentEditingLoanId) {
+        if (input && input.value && input.value.trim()) return input.value.trim();
+        const existingLoan = (state.loans || []).find(l => l.id === currentEditingLoanId);
+        if (existingLoan && existingLoan.accountNo) {
+            return String(existingLoan.accountNo);
+        }
+    }
     const rawBranch = branchCode ? String(branchCode).trim() : (state.currentSession ? String(state.currentSession.code).trim() : "99");
     const numOnly = rawBranch.replace(/\D/g, '');
     const bCode3 = String(numOnly || "99").padStart(3, "0");
@@ -3752,6 +3770,14 @@ function generateNextAccountNo(branchCode, productCode) {
 
 function generateNextPacketNo(branchCode) {
     const input = document.getElementById("packet-no");
+    if (isEditingExistingLoan && currentEditingLoanId) {
+        if (input && input.value && input.value.trim()) return input.value.trim();
+        const existingLoan = (state.loans || []).find(l => l.id === currentEditingLoanId);
+        if (existingLoan && existingLoan.packetNo) {
+            if (input) input.value = existingLoan.packetNo;
+            return String(existingLoan.packetNo);
+        }
+    }
     const rawBranch = branchCode ? String(branchCode).trim() : (document.getElementById("loan-branch") ? document.getElementById("loan-branch").value : (state.currentSession ? state.currentSession.code : "99"));
     const numOnly = String(rawBranch).replace(/\D/g, '');
     const bCode2 = String(numOnly || "99").padStart(2, "0");
@@ -4002,7 +4028,11 @@ function editLoanRecord(id) {
     if (entryTab) entryTab.click();
 
     // Populate Fields
-    document.getElementById("unique-proposal-no").value = loan.loanNo || "";
+    const propInp = document.getElementById("unique-proposal-no");
+    if (propInp) {
+        propInp.value = loan.loanNo || "";
+        propInp.dataset.userEdited = "true";
+    }
     document.getElementById("loan-date").value = loan.date || "";
     document.getElementById("loan-branch").value = loan.branchCode || "99";
     document.getElementById("cust-no").value = loan.customerNo || "";
@@ -4057,8 +4087,19 @@ function editLoanRecord(id) {
     }
     document.getElementById("valuer-select").value = loan.valuerName || "";
     document.getElementById("loan-amount").value = loan.sanctionedAmount || "";
-    document.getElementById("loan-ac-no").value = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
-    document.getElementById("packet-no").value = loan.packetNo || "";
+    
+    const acInp = document.getElementById("loan-ac-no");
+    if (acInp) {
+        acInp.value = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
+        acInp.dataset.userEdited = "true";
+    }
+
+    const packetInp = document.getElementById("packet-no");
+    if (packetInp) {
+        packetInp.value = loan.packetNo || "";
+        packetInp.dataset.userEdited = "true";
+    }
+
     document.getElementById("loan-purpose").value = loan.purpose || "";
 
     const catSelect = document.getElementById("loan-category-select");
