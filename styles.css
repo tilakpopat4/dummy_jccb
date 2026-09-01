@@ -1,31 +1,30 @@
-/* ==================== DESIGN SYSTEM & VARS (Trustworthy Banking Elegance) ==================== */
+/* ==================== DESIGN SYSTEM & VARS (Professional Banking Standard) ==================== */
 :root {
-    /* Palette 5 Colors: #003B5C, #9DABDA, #F4C300, #EAEAEA, #2D2D2D */
-    --bg-primary: #f4f5f8;
+    --bg-primary: #f4f6f9;
     --bg-secondary: #ffffff;
     --bg-tertiary: #eaeaea;
     
-    --text-primary: #2d2d2d;
-    --text-secondary: #525c6c;
-    --text-muted: #828d9f;
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
     
-    /* 1. Primary Banking Navy (#003B5C) */
-    --primary: #003b5c;
-    --primary-light: #0a4f78;
-    --primary-hover: #002840;
-    --primary-glow: rgba(0, 59, 92, 0.18);
+    /* 1. Solid Corporate Banking Blue (#004B87) - No Gradients */
+    --primary: #004b87;
+    --primary-light: #005fa8;
+    --primary-hover: #003764;
+    --primary-glow: rgba(0, 75, 135, 0.18);
     
     /* 2. Soft Periwinkle Slate Accent (#9DABDA) */
     --accent-slate: #9dabda;
-    --accent-slate-light: rgba(157, 171, 218, 0.22);
+    --accent-slate-light: rgba(157, 171, 218, 0.20);
     --accent-slate-border: #9dabda;
     
-    /* 3. Vibrant Warm Gold (#F4C300) */
+    /* 3. Refined Gold Accent (#F4C300) - Minimized */
     --gold: #f4c300;
     --gold-dark: #d69e00;
     --gold-light: #fff8d6;
-    --gold-gradient: linear-gradient(135deg, #f4c300 0%, #e6a700 50%, #ffd84d 100%);
-    --gold-glow: rgba(244, 195, 0, 0.35);
+    --gold-gradient: #f4c300;
+    --gold-glow: rgba(244, 195, 0, 0.25);
 
     /* UI State Colors */
     --success: #10b981;
@@ -34,20 +33,20 @@
     --danger: #ef4444;
     --danger-hover: #dc2626;
     
-    /* 4. Clean Neutral Gray (#EAEAEA) & Borders */
-    --border-color: #d5dae2;
-    --border-subtle: #eaeaea;
+    /* Borders & Shadows */
+    --border-color: #cbd5e1;
+    --border-subtle: #e2e8f0;
     --border-radius-sm: 6px;
-    --border-radius-md: 10px;
-    --border-radius-lg: 16px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
     
     --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 8px -1px rgba(0, 59, 92, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-    --shadow-lg: 0 10px 20px -3px rgba(0, 59, 92, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-gold: 0 8px 18px -2px rgba(244, 195, 0, 0.3);
+    --shadow-md: 0 4px 8px -1px rgba(0, 75, 135, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 10px 20px -3px rgba(0, 75, 135, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-gold: 0 6px 14px -2px rgba(244, 195, 0, 0.25);
     
-    /* 5. Fonts */
-    --font-family: 'Outfit', 'Noto Sans Gujarati', sans-serif;
+    /* Professional Banking Typography */
+    --font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans Gujarati', sans-serif;
 }
 
 /* ==================== BASE STYLES ==================== */
@@ -111,10 +110,10 @@ body {
 }
 
 .btn-gold {
-    background: var(--gold-gradient);
-    color: #003b5c;
+    background: var(--gold);
+    color: #004b87;
     font-weight: 700;
-    border: 1px solid var(--gold);
+    border: 1px solid var(--gold-dark);
 }
 .btn-gold:hover {
     box-shadow: 0 0 15px var(--gold-glow);
@@ -237,14 +236,14 @@ input[readonly] {
     background-color: #f0f6fa !important;
     border: 1.5px solid var(--primary) !important;
     font-weight: 700 !important;
-    color: #003b5c !important;
+    color: #004b87 !important;
 }
 
 /* Auto-calculated / Locked fields styling */
 .auto-calc-field, input[readonly].auto-calc-field, select[disabled].auto-calc-field {
     background-color: #f0f6fa !important; /* Clean soft blue-white tint */
-    border: 1.5px solid #003b5c !important;
-    color: #003b5c !important;
+    border: 1.5px solid #004b87 !important;
+    color: #004b87 !important;
     font-weight: 800 !important;
     cursor: not-allowed !important;
 }
@@ -256,7 +255,7 @@ input[readonly] {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background: linear-gradient(135deg, #001a2c 0%, #003b5c 60%, #082942 100%);
+    background-color: #004b87;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -333,7 +332,7 @@ input[readonly] {
 
 .bank-logo-icon {
     font-size: 32px;
-    color: #003b5c;
+    color: #004b87;
 }
 
 .login-header h2 {
@@ -453,7 +452,7 @@ input[readonly] {
 .sidebar-header {
     padding: 20px 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    background: linear-gradient(180deg, rgba(212, 175, 55, 0.1) 0%, rgba(0, 0, 0, 0) 100%);
+    background-color: #004b87;
 }
 
 .sidebar-logo {
@@ -574,11 +573,11 @@ input[readonly] {
 
 /* Header Dev Badge */
 .header-dev-badge {
-    background: linear-gradient(135deg, rgba(15, 28, 63, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
-    border: 1.5px solid #d4af37;
+    background-color: #004b87;
+    border: 1.5px solid rgba(244, 195, 0, 0.4);
     padding: 6px 14px;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(212, 175, 55, 0.25);
+    box-shadow: 0 2px 10px rgba(0, 75, 135, 0.2);
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -763,11 +762,11 @@ input[readonly] {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, #001a2c 0%, #003b5c 60%, #0d4e75 100%);
+    background-color: #004b87;
     border: 2px solid var(--gold);
     padding: 7px 20px;
     border-radius: 50px;
-    box-shadow: 0 4px 16px rgba(244, 195, 0, 0.35), inset 0 0 10px rgba(244, 195, 0, 0.15);
+    box-shadow: 0 4px 16px rgba(0, 75, 135, 0.25);
     white-space: nowrap;
     animation: goldPulseGlow 3s infinite alternate ease-in-out;
 }
@@ -852,15 +851,15 @@ input[readonly] {
 .margin-top { margin-top: 20px; }
 .margin-bottom { margin-bottom: 20px; }
 
-/* ==================== LUXURY WELCOME GOLD BANNER ==================== */
+/* ==================== /* ==================== LUXURY WELCOME GOLD BANNER ==================== */
 .welcome-banner {
-    background: linear-gradient(135deg, #001a2c 0%, #003b5c 50%, #094064 100%);
+    background-color: #004b87;
     color: white;
     border-radius: var(--border-radius-lg);
     padding: 22px 28px;
     margin: 18px 0 30px 0;
     border: 1.5px solid rgba(244, 195, 0, 0.4);
-    box-shadow: 0 10px 30px rgba(0, 59, 92, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 75, 135, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
     position: relative;
     overflow: visible;
 }
@@ -1086,14 +1085,14 @@ input[readonly] {
 }
 
 .gold-grad-card {
-    background: linear-gradient(135deg, #001a2c 0%, #003b5c 100%);
+    background-color: #004b87;
     color: white;
     border: none;
 }
 
 .gold-grad-card .stat-icon {
-    background: var(--gold-gradient);
-    color: #003b5c;
+    background-color: var(--gold);
+    color: #004b87;
 }
 
 .gold-grad-card .stat-value {
@@ -1289,11 +1288,11 @@ input[readonly] {
     align-items: center;
     gap: 9px;
     letter-spacing: 0.3px;
-    background: linear-gradient(135deg, #003b5c 0%, #0a4f78 100%) !important;
+    background: #004b87 !important;
     border-bottom: 2px solid var(--accent-slate) !important;
     color: #ffffff !important;
     text-shadow: none !important;
-    box-shadow: 0 2px 6px rgba(0, 59, 92, 0.12);
+    box-shadow: 0 2px 6px rgba(0, 75, 135, 0.12);
 }
 
 .section-title i {
@@ -1323,7 +1322,7 @@ input[readonly] {
 .section-card-valuation .section-title,
 .section-card-deductions .section-title,
 .section-card-photos .section-title {
-    background: linear-gradient(135deg, #003b5c 0%, #0a4f78 100%) !important;
+    background: #004b87 !important;
     border-bottom: 2px solid var(--accent-slate) !important;
     color: #ffffff !important;
     text-shadow: none !important;
@@ -1674,7 +1673,7 @@ label.required::after,
 
 /* Ornaments Table Total Row (Reverse Format - Black Border) */
 .orn-total-row, .orn-total-row td {
-    background: linear-gradient(180deg, #091024 0%, #111e40 100%) !important;
+    background: #004b87 !important;
     font-weight: 900 !important;
     color: #ffffff !important;
     font-size: 12.5px !important;
@@ -1935,7 +1934,7 @@ label.required::after,
 
 /* Modern Net Disbursal Banner */
 .compact-net-card {
-    background: linear-gradient(135deg, #091024 0%, #111e40 60%, #1e293b 100%);
+    background-color: #004b87;
     color: #ffffff;
     border-radius: 10px;
     padding: 10px 16px;
@@ -1943,8 +1942,8 @@ label.required::after,
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
-    border: 1.5px solid #334155;
+    box-shadow: 0 4px 14px rgba(0, 75, 135, 0.25);
+    border: 1.5px solid rgba(244, 195, 0, 0.4);
 }
 
 .compact-net-card .net-item {
@@ -2275,21 +2274,20 @@ label.required::after,
 }
 
 .ornaments-entry-table th {
-    background: linear-gradient(180deg, #0f1c3f 0%, #1e293b 100%) !important;
-    border: 1px solid #475569 !important;
+    background: #004b87 !important;
+    border: 1px solid #cbd5e1 !important;
     padding: 7px 5px !important;
     font-weight: 800 !important;
     text-align: center !important;
     color: #ffffff !important;
     letter-spacing: 0.2px !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
     font-size: 11.5px !important;
 }
 
 .ornaments-entry-table thead tr:nth-child(2) th {
-    background: linear-gradient(180deg, #1e293b 0%, #334155 100%) !important;
-    border: 1px solid #475569 !important;
-    color: #ffd700 !important;
+    background: #003764 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #fde047 !important;
     font-size: 11px !important;
     padding: 5px 3px !important;
 }
@@ -2522,10 +2520,10 @@ label.required::after,
 .edit-product-btn:hover,
 .edit-custom-charge-btn:hover,
 .edit-loan-btn:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    background: #004b87 !important;
     color: #ffffff !important;
-    border-color: #1d4ed8 !important;
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35) !important;
+    border-color: #004b87 !important;
+    box-shadow: 0 4px 10px rgba(0, 75, 135, 0.35) !important;
     transform: translateY(-2px) scale(1.05) !important;
 }
 
@@ -2608,18 +2606,18 @@ label.required::after,
     transform: translateY(-2px) scale(1.03) !important;
 }
 
-/* 3-in-1 Voucher (Sapphire Blue Classic) */
+/* 3-in-1 Voucher (Solid #004B87) */
 .print-3in1-btn {
-    background: #eff6ff !important;
-    color: #1d4ed8 !important;
-    border: 1.5px solid #bfdbfe !important;
+    background: #f0f6fa !important;
+    color: #004b87 !important;
+    border: 1.5px solid var(--accent-slate) !important;
 }
 
 .print-3in1-btn:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    background: #004b87 !important;
     color: #ffffff !important;
-    border-color: #1d4ed8 !important;
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35) !important;
+    border-color: #004b87 !important;
+    box-shadow: 0 4px 10px rgba(0, 75, 135, 0.35) !important;
     transform: translateY(-2px) scale(1.03) !important;
 }
 
