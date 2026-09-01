@@ -1,23 +1,31 @@
-/* ==================== DESIGN SYSTEM & VARS ==================== */
+/* ==================== DESIGN SYSTEM & VARS (Trustworthy Banking Elegance) ==================== */
 :root {
-    --bg-primary: #f8fafc;
+    /* Palette 5 Colors: #003B5C, #9DABDA, #F4C300, #EAEAEA, #2D2D2D */
+    --bg-primary: #f4f5f8;
     --bg-secondary: #ffffff;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #94a3b8;
+    --bg-tertiary: #eaeaea;
     
-    /* Banking Navy Blue */
-    --primary: #0f1c3f;
-    --primary-light: #1e293b;
-    --primary-hover: #1e3a8a;
-    --primary-glow: rgba(15, 28, 63, 0.15);
+    --text-primary: #2d2d2d;
+    --text-secondary: #525c6c;
+    --text-muted: #828d9f;
     
-    /* Gold Theme Colors */
-    --gold: #d4af37;
-    --gold-dark: #b8860b;
-    --gold-light: #f3e5ab;
-    --gold-gradient: linear-gradient(135deg, #f39c12 0%, #d4af37 50%, #f1c40f 100%);
-    --gold-glow: rgba(212, 175, 55, 0.3);
+    /* 1. Primary Banking Navy (#003B5C) */
+    --primary: #003b5c;
+    --primary-light: #0a4f78;
+    --primary-hover: #002840;
+    --primary-glow: rgba(0, 59, 92, 0.18);
+    
+    /* 2. Soft Periwinkle Slate Accent (#9DABDA) */
+    --accent-slate: #9dabda;
+    --accent-slate-light: rgba(157, 171, 218, 0.22);
+    --accent-slate-border: #9dabda;
+    
+    /* 3. Vibrant Warm Gold (#F4C300) */
+    --gold: #f4c300;
+    --gold-dark: #d69e00;
+    --gold-light: #fff8d6;
+    --gold-gradient: linear-gradient(135deg, #f4c300 0%, #e6a700 50%, #ffd84d 100%);
+    --gold-glow: rgba(244, 195, 0, 0.35);
 
     /* UI State Colors */
     --success: #10b981;
@@ -26,18 +34,19 @@
     --danger: #ef4444;
     --danger-hover: #dc2626;
     
-    /* Borders & Shadows */
-    --border-color: #e2e8f0;
+    /* 4. Clean Neutral Gray (#EAEAEA) & Borders */
+    --border-color: #d5dae2;
+    --border-subtle: #eaeaea;
     --border-radius-sm: 6px;
-    --border-radius-md: 12px;
-    --border-radius-lg: 20px;
+    --border-radius-md: 10px;
+    --border-radius-lg: 16px;
     
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-gold: 0 10px 20px -3px rgba(212, 175, 55, 0.2);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 8px -1px rgba(0, 59, 92, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+    --shadow-lg: 0 10px 20px -3px rgba(0, 59, 92, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-gold: 0 8px 18px -2px rgba(244, 195, 0, 0.3);
     
-    /* Fonts */
+    /* 5. Fonts */
     --font-family: 'Outfit', 'Noto Sans Gujarati', sans-serif;
 }
 
@@ -103,8 +112,8 @@ body {
 
 .btn-gold {
     background: var(--gold-gradient);
-    color: #0f1c3f;
-    font-weight: 600;
+    color: #003b5c;
+    font-weight: 700;
     border: 1px solid var(--gold);
 }
 .btn-gold:hover {
@@ -113,7 +122,7 @@ body {
 }
 
 .btn-gold-success {
-    background: linear-gradient(135deg, #10b981 0%, #d4af37 100%);
+    background: linear-gradient(135deg, #10b981 0%, var(--gold) 100%);
     color: white;
     font-weight: 700;
     border: none;
@@ -213,29 +222,29 @@ input[id*="password"],
 }
 
 input:focus, select:focus, textarea:focus {
-    border-color: var(--gold);
-    box-shadow: 0 0 0 3px var(--gold-glow);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--accent-slate-light);
 }
 
 input[readonly] {
-    background-color: #f1f5f9;
+    background-color: #f4f5f8;
     color: var(--text-secondary);
     cursor: not-allowed;
     border: 1.5px solid #000000;
 }
 
 .highlight-input {
-    background-color: #fefcf0 !important;
-    border: 1.5px solid #000000 !important;
+    background-color: #fff9d6 !important;
+    border: 1.5px solid var(--gold) !important;
     font-weight: 700 !important;
-    color: #854d0e !important;
+    color: #664d00 !important;
 }
 
 /* Auto-calculated / Locked fields styling */
 .auto-calc-field, input[readonly].auto-calc-field, select[disabled].auto-calc-field {
-    background-color: #fef9c3 !important; /* Soft yellow/gold tint */
-    border: 1.5px solid #d4af37 !important;
-    color: #713f12 !important;
+    background-color: #fff9d6 !important; /* Soft yellow/gold tint */
+    border: 1.5px solid var(--gold) !important;
+    color: #664d00 !important;
     font-weight: 700 !important;
     cursor: not-allowed !important;
 }
@@ -247,7 +256,7 @@ input[readonly] {
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: #0b132b;
+    background: linear-gradient(135deg, #001a2c 0%, #003b5c 60%, #082942 100%);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -274,7 +283,7 @@ input[readonly] {
 .glow-1 {
     width: 400px;
     height: 400px;
-    background: #d4af37;
+    background: var(--gold);
     top: -100px;
     right: -100px;
 }
@@ -282,7 +291,7 @@ input[readonly] {
 .glow-2 {
     width: 500px;
     height: 500px;
-    background: #1e3a8a;
+    background: var(--accent-slate);
     bottom: -150px;
     left: -150px;
 }
@@ -291,7 +300,7 @@ input[readonly] {
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(157, 171, 218, 0.2);
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
@@ -319,12 +328,12 @@ input[readonly] {
     align-items: center;
     justify-content: center;
     margin: 0 auto 15px auto;
-    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4);
+    box-shadow: 0 4px 15px rgba(244, 195, 0, 0.4);
 }
 
 .bank-logo-icon {
     font-size: 32px;
-    color: #0b132b;
+    color: #003b5c;
 }
 
 .login-header h2 {
@@ -679,9 +688,9 @@ input[readonly] {
 
 .nav-item.active {
     background: var(--gold-gradient);
-    color: #0f1c3f;
-    font-weight: 700;
-    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.25);
+    color: #003b5c;
+    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(244, 195, 0, 0.3);
 }
 
 .nav-divider {
@@ -753,11 +762,11 @@ input[readonly] {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, #091024 0%, #111e40 60%, #1e293b 100%);
-    border: 2px solid #d4af37;
+    background: linear-gradient(135deg, #001a2c 0%, #003b5c 60%, #0d4e75 100%);
+    border: 2px solid var(--gold);
     padding: 7px 20px;
     border-radius: 50px;
-    box-shadow: 0 4px 16px rgba(212, 175, 55, 0.35), inset 0 0 10px rgba(212, 175, 55, 0.15);
+    box-shadow: 0 4px 16px rgba(244, 195, 0, 0.35), inset 0 0 10px rgba(244, 195, 0, 0.15);
     white-space: nowrap;
     animation: goldPulseGlow 3s infinite alternate ease-in-out;
 }
@@ -844,13 +853,13 @@ input[readonly] {
 
 /* ==================== LUXURY WELCOME GOLD BANNER ==================== */
 .welcome-banner {
-    background: linear-gradient(135deg, #091024 0%, #111e40 45%, #182e66 100%);
+    background: linear-gradient(135deg, #001a2c 0%, #003b5c 50%, #094064 100%);
     color: white;
     border-radius: var(--border-radius-lg);
     padding: 22px 28px;
     margin: 18px 0 30px 0;
-    border: 1.5px solid rgba(212, 175, 55, 0.35);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    border: 1.5px solid rgba(244, 195, 0, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 59, 92, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
     position: relative;
     overflow: visible;
 }
@@ -1076,14 +1085,14 @@ input[readonly] {
 }
 
 .gold-grad-card {
-    background: linear-gradient(135deg, #0f1c3f 0%, #1e293b 100%);
+    background: linear-gradient(135deg, #001a2c 0%, #003b5c 100%);
     color: white;
     border: none;
 }
 
 .gold-grad-card .stat-icon {
     background: var(--gold-gradient);
-    color: #0f1c3f;
+    color: #003b5c;
 }
 
 .gold-grad-card .stat-value {
@@ -2404,27 +2413,27 @@ label.required::after,
 }
 
 .table th {
-    background-color: #f1f5f9;
-    color: var(--text-secondary);
+    background-color: #f1f4f9;
+    color: var(--primary);
     padding: 12px 16px;
-    font-weight: 700;
-    border-bottom: 1.5px solid var(--border-color);
+    font-weight: 800;
+    border-bottom: 2px solid var(--accent-slate);
     font-size: 12.5px;
 }
 
 .table td {
     padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-subtle);
     vertical-align: middle;
     color: var(--text-primary);
 }
 
 .table-hover tbody tr:hover {
-    background-color: #f8fafc;
+    background-color: rgba(157, 171, 218, 0.12);
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
-    background-color: #fcfdfe;
+    background-color: #fafbfd;
 }
 
 .compact-table th, .compact-table td {
@@ -3646,21 +3655,21 @@ input.admin-editable:focus, select.admin-editable:focus {
 }
 
 #pending-member-table th {
-    background: #f8fafc !important;
-    color: #475569 !important;
+    background: #f1f4f9 !important;
+    color: var(--primary) !important;
     padding: 12px 16px !important;
     font-size: 12px !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
-    border-bottom: 1.5px solid #e2e8f0 !important;
+    border-bottom: 2px solid var(--accent-slate) !important;
     vertical-align: middle !important;
 }
 
 #pending-member-table td {
     padding: 13px 16px !important;
     vertical-align: middle !important;
-    border-bottom: 1px solid #f1f5f9 !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
     font-size: 13px !important;
 }
 
@@ -3669,12 +3678,12 @@ input.admin-editable:focus, select.admin-editable:focus {
 }
 
 #pending-member-table tbody tr:hover {
-    background-color: #f8fafc !important;
+    background-color: rgba(157, 171, 218, 0.12) !important;
 }
 
 .pending-member-input:focus {
     border-color: var(--primary) !important;
-    box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.12) !important;
+    box-shadow: 0 0 0 3px var(--accent-slate-light) !important;
     outline: none !important;
     background-color: #ffffff !important;
 }
