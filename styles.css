@@ -1401,7 +1401,7 @@ input[readonly] {
     box-shadow: 0 0 0 3.5px rgba(22, 163, 74, 0.25) !important;
 }
 
-/* Required Field Labels — Red */
+/* Required Field Labels — Normal Title with Red Asterisk Only */
 .required-label,
 .compulsory-label,
 label.required,
@@ -1410,7 +1410,7 @@ label.required,
 .form-group:has(> textarea[required]) > label,
 .form-group:has(> .rate-input-group > input[required]) > label,
 .form-group:has(> div > input[required]:not([readonly])) > label {
-    color: #dc2626 !important;
+    color: #334155 !important;
     font-weight: 700;
 }
 
@@ -1425,7 +1425,8 @@ label.required::after,
     content: " *";
     color: #dc2626;
     font-weight: 900;
-    font-size: 0.9em;
+    font-size: 1.1em;
+    margin-left: 2px;
 }
 
 /* Compulsory OD Checkbox Highlight */
