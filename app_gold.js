@@ -442,9 +442,16 @@ function loadState() {
             if (!prods || prods.length !== 5 || !prods.some(p => p.code === "GNA-3527")) {
                 prods = DEFAULT_PRODUCTS;
             }
-            let vals = parsed.valuers;
-            if (!vals || vals.length < 15 || !vals.some(v => v.name && v.name.includes("SURYAKANT"))) {
-                vals = DEFAULT_VALUERS;
+            let vals = DEFAULT_VALUERS ? JSON.parse(JSON.stringify(DEFAULT_VALUERS)) : [];
+            if (Array.isArray(parsed.valuers) && parsed.valuers.length > 0) {
+                const valMap = new Map();
+                vals.forEach(v => valMap.set(v.id || v.name, v));
+                parsed.valuers.forEach(v => {
+                    if (v && (v.id || v.name)) {
+                        valMap.set(v.id || v.name, { ...(valMap.get(v.id || v.name) || {}), ...v });
+                    }
+                });
+                vals = Array.from(valMap.values());
             }
             let branches = parsed.branches;
             if (!Array.isArray(branches) || branches.length === 0) {
@@ -769,14 +776,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
 
-            // 7. Listen for realtime Valuers Master
+            // 7. Listen for realtime Valuers Master (Non-destructive Smart Union)
             if (typeof window.FirebaseService.listenValuers === "function") {
                 window.FirebaseService.listenValuers((cloudValuers) => {
                     if (Array.isArray(cloudValuers) && cloudValuers.length > 0) {
-                        state.valuers = cloudValuers;
+                        const valMap = new Map();
+                        (DEFAULT_VALUERS || []).forEach(v => valMap.set(v.id || v.name, { ...v }));
+                        (state.valuers || []).forEach(v => {
+                            if (v && (v.id || v.name)) valMap.set(v.id || v.name, { ...v });
+                        });
+                        cloudValuers.forEach(v => {
+                            if (v && (v.id || v.name)) valMap.set(v.id || v.name, { ...(valMap.get(v.id || v.name) || {}), ...v });
+                        });
+                        state.valuers = Array.from(valMap.values());
                         saveState();
                         if (typeof renderValuers === "function") renderValuers();
-                        console.log("[Firebase] Realtime Valuers Master synced across PCs.");
+                        console.log("[Firebase] Realtime Valuers Master merged & synced across PCs.");
                     }
                 });
             }
@@ -884,14 +899,22 @@ async function syncCloudData(isManual = false) {
             }
         }
 
-        // 5. Sync Valuers List
+        // 5. Sync Valuers List (Non-destructive Smart Union Merge)
         if (typeof window.FirebaseService.getValuersList === "function") {
             const fbValuers = await window.FirebaseService.getValuersList();
+            const valMap = new Map();
+            (DEFAULT_VALUERS || []).forEach(v => valMap.set(v.id || v.name, { ...v }));
+            (state.valuers || []).forEach(v => {
+                if (v && (v.id || v.name)) valMap.set(v.id || v.name, { ...(valMap.get(v.id || v.name) || {}), ...v });
+            });
             if (Array.isArray(fbValuers) && fbValuers.length > 0) {
-                state.valuers = fbValuers;
-            } else if (Array.isArray(state.valuers) && state.valuers.length > 0) {
-                window.FirebaseService.saveValuersList(state.valuers).catch(() => {});
+                fbValuers.forEach(v => {
+                    if (v && (v.id || v.name)) valMap.set(v.id || v.name, { ...(valMap.get(v.id || v.name) || {}), ...v });
+                });
             }
+            state.valuers = Array.from(valMap.values());
+            saveState();
+            window.FirebaseService.saveValuersList(state.valuers).catch(() => {});
         }
 
         // 6. Sync Products List
