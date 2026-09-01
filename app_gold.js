@@ -9540,79 +9540,7 @@ function updatePendingMemberBadge() {
     }
 }
 
-function renderPendingMemberTable() {
-    const tbody = document.getElementById("pending-member-tbody");
-    const emptyMsg = document.getElementById("pending-member-empty-msg");
-    if (!tbody) return;
 
-    tbody.innerHTML = "";
-
-    const isHO = isHeadOfficeSession();
-    const userBranch = state.currentSession ? state.currentSession.code : "99";
-
-    let list = (state.loans || []).filter(l => {
-        const isBranch = isHO || isBranchMatch(l.branchCode, userBranch);
-        const hasNoMemberNo = !l.memberNo || String(l.memberNo).trim() === "";
-        return isBranch && hasNoMemberNo;
-    });
-
-    // Sort newest first
-    list = list.slice().sort((a, b) => {
-        const dateDiff = (b.date || "").localeCompare(a.date || "");
-        if (dateDiff !== 0) return dateDiff;
-        return (b.id || "").localeCompare(a.id || "");
-    });
-
-    updatePendingMemberBadge();
-
-    if (list.length === 0) {
-        if (emptyMsg) emptyMsg.classList.remove("hidden");
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;"><i class="fa-solid fa-check-circle" style="color:var(--success); font-size:18px; margin-right:6px;"></i> No pending member ID loans found.</td></tr>';
-        return;
-    } else {
-        if (emptyMsg) emptyMsg.classList.add("hidden");
-    }
-
-    list.forEach(loan => {
-        const tr = document.createElement("tr");
-        const accFmt = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
-        
-        tr.innerHTML = `
-            <td style="white-space:nowrap;"><strong>${formatDateDMY(loan.date)}</strong></td>
-            <td style="white-space:nowrap; text-align:center;"><span class="badge badge-primary">${loan.branchCode}</span></td>
-            <td style="white-space:nowrap;"><strong>${accFmt}</strong></td>
-            <td><strong>${loan.borrowerName}</strong>${loan.customerNo ? `<br><small style="color:var(--text-secondary);">Cust No: ${loan.customerNo}</small>` : ''}</td>
-            <td style="text-align:center; white-space:nowrap;">
-                <span class="badge" style="background:rgba(239,68,68,0.1); color:var(--danger); font-weight:700; border:1px solid rgba(239,68,68,0.2);">Pending</span>
-            </td>
-            <td style="min-width:180px;">
-                <div style="display:flex; align-items:center; gap:6px;">
-                    <input type="text" class="pending-member-input form-control" id="pending-input-${loan.id}" placeholder="Enter Member ID" value="${loan.memberNo || ''}" style="padding:6px 10px; font-size:12.5px; border-radius:6px; border:1.5px solid var(--border-color); width:100%; max-width:180px; font-weight:600;">
-                </div>
-            </td>
-            <td style="text-align:center; white-space:nowrap;">
-                <button type="button" class="btn btn-sm btn-primary save-pending-member-btn" data-id="${loan.id}" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; font-size:12px; font-weight:700; border-radius:6px; cursor:pointer;">
-                    <i class="fa-solid fa-floppy-disk"></i> Update
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    tbody.querySelectorAll(".save-pending-member-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const loanId = btn.getAttribute("data-id");
-            const input = document.getElementById(`pending-input-${loanId}`);
-            const memberVal = input ? input.value.trim() : "";
-            if (!memberVal) {
-                alert("Please enter a valid Member ID / સભાસદ નં. to update.");
-                if (input) input.focus();
-                return;
-            }
-            savePendingMemberNo(loanId, memberVal);
-        });
-    });
-}
 
 function savePendingMemberNo(loanId, memberNoVal) {
     if (!loanId || !memberNoVal) return;
