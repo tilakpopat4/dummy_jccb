@@ -10352,6 +10352,9 @@ function generatePage2ValuationReportHTML(loan, ltv, isPageBreak = true) {
     const ornamentPhotoSrc = loan.ornamentPhoto || loan.goldPhoto || "";
 
     let rowsHtml = "";
+    let totalQty = 0;
+    let totalGrossGm = 0, totalGrossMg = 0, totalNetGm = 0, totalNetMg = 0, totalFineGoldGm = 0, totalVal = 0;
+
     const ornaments = (loan.ornamentsTable && Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0) 
         ? loan.ornamentsTable 
         : [];
@@ -10603,6 +10606,10 @@ function generatePage3ReceiptsHTML(loan, isPageBreak = true) {
     const effectiveGoldRate = parseFloat(loan.goldRate22K || loan.goldRate || (state.goldRates && (state.goldRates["22K"] || state.goldRates["24K"])) || activeHORate || 72000);
     const custPhotoSrc = loan.customerPhoto || loan.photo || "";
     const ornamentPhotoSrc = loan.ornamentPhoto || loan.goldPhoto || "";
+
+    let rowsHtml = "";
+    let totalQty = 0;
+    let totalGrossGm = 0, totalGrossMg = 0, totalNetGm = 0, totalNetMg = 0, totalFineGoldGm = 0, totalVal = 0;
 
     const ornaments = (loan.ornamentsTable && Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0) 
         ? loan.ornamentsTable 
