@@ -3252,18 +3252,21 @@ function submitLoanEntry() {
             return;
         }
 
+        const existingLoanData = (isEditingExistingLoan && currentEditingLoanId) ? (state.loans || []).find(l => l.id === currentEditingLoanId) : null;
+
         const isHO = isHeadOfficeSession();
         const branchEl = document.getElementById("loan-branch");
-        const branchCode = isHO ? (branchEl && branchEl.value ? branchEl.value : "99") : (state.currentSession ? state.currentSession.code : "99");
-        const branchObj = state.branches.find(b => isBranchMatch(b.code, branchCode)) || { code: branchCode, name: branchCode + " BRANCH" };
-
-        const existingLoanData = (isEditingExistingLoan && currentEditingLoanId) ? (state.loans || []).find(l => l.id === currentEditingLoanId) : null;
+        
+        // If editing an existing loan, branchCode & branchName MUST NEVER change
+        const branchCode = existingLoanData ? existingLoanData.branchCode : (isHO ? (branchEl && branchEl.value ? branchEl.value : "99") : (state.currentSession ? state.currentSession.code : "99"));
+        const branchObj = state.branches.find(b => isBranchMatch(b.code, branchCode)) || { code: branchCode, name: (existingLoanData && existingLoanData.branchName ? existingLoanData.branchName : branchCode + " BRANCH") };
+        const branchName = existingLoanData && existingLoanData.branchName ? existingLoanData.branchName : branchObj.name;
 
         const proposalNoInput = document.getElementById("unique-proposal-no");
         const proposalNo = (proposalNoInput && proposalNoInput.value.trim()) ? proposalNoInput.value.trim() : (existingLoanData && existingLoanData.loanNo ? existingLoanData.loanNo : ("GL-P-" + String(state.loans.length + 1).padStart(4, "0")));
         
         const loanDateInput = document.getElementById("loan-date");
-        const loanDate = (loanDateInput && loanDateInput.value) ? loanDateInput.value : new Date().toISOString().split("T")[0];
+        const loanDate = (loanDateInput && loanDateInput.value) ? loanDateInput.value : (existingLoanData && existingLoanData.date ? existingLoanData.date : new Date().toISOString().split("T")[0]);
         const packetNoInput = document.getElementById("packet-no");
         const packetNo = (packetNoInput && packetNoInput.value.trim()) ? packetNoInput.value.trim() : (existingLoanData && existingLoanData.packetNo ? existingLoanData.packetNo : generateNextPacketNo(branchCode));
 
@@ -3413,7 +3416,18 @@ function submitLoanEntry() {
         if (isEditingExistingLoan && currentEditingLoanId) {
             const idx = state.loans.findIndex(l => l.id === currentEditingLoanId);
             if (idx !== -1) {
-                state.loans[idx] = { ...state.loans[idx], ...loanObj };
+                const orig = state.loans[idx];
+                state.loans[idx] = { 
+                    ...orig, 
+                    ...loanObj, 
+                    id: orig.id,
+                    branchCode: orig.branchCode,
+                    branchName: orig.branchName,
+                    loanNo: proposalNo,
+                    packetNo: packetNo,
+                    accountNo: accountNo
+                };
+                loanObj = state.loans[idx]; // Keep exact object for cloud sync
             } else {
                 state.loans.unshift(loanObj);
             }
@@ -4043,12 +4057,12 @@ function editLoanRecord(id) {
         }
     }
 
-    isEditingExistingLoan = true;
-    currentEditingLoanId = loan.id;
-
     // Switch to Loan Entry tab
     const entryTab = document.querySelector('.sidebar-nav .nav-item[data-tab="entry-view"]');
     if (entryTab) entryTab.click();
+
+    isEditingExistingLoan = true;
+    currentEditingLoanId = loan.id;
 
     // Populate Fields
     const propInp = document.getElementById("unique-proposal-no");
@@ -4056,8 +4070,35 @@ function editLoanRecord(id) {
         propInp.value = loan.loanNo || "";
         propInp.dataset.userEdited = "true";
     }
-    document.getElementById("loan-date").value = loan.date || "";
-    document.getElementById("loan-branch").value = loan.branchCode || "99";
+    const loanDateInp = document.getElementById("loan-date");
+    if (loanDateInp) {
+        loanDateInp.value = loan.date || "";
+    }
+    
+    // Select and strictly lock the original branch
+    const branchEl = document.getElementById("loan-branch");
+    if (branchEl) {
+        let found = false;
+        for (let opt of branchEl.options) {
+            if (isBranchMatch(opt.value, loan.branchCode)) {
+                branchEl.value = opt.value;
+                found = true;
+                break;
+            }
+        }
+        if (!found && loan.branchCode) {
+            const newOpt = document.createElement("option");
+            newOpt.value = loan.branchCode;
+            newOpt.textContent = loan.branchName || (loan.branchCode + " BRANCH");
+            branchEl.appendChild(newOpt);
+            branchEl.value = loan.branchCode;
+        }
+        branchEl.disabled = true;
+        branchEl.style.backgroundColor = "#f1f5f9";
+        branchEl.style.cursor = "not-allowed";
+        branchEl.title = `Branch is permanently locked to original creation branch (${loan.branchCode})`;
+    }
+
     document.getElementById("cust-no").value = loan.customerNo || "";
 
     // Determine member status to restore
