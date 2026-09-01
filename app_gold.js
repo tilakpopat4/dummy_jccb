@@ -210,7 +210,87 @@ const DEFAULT_RULES = {
     customCharges: []
 };
 
-// Default App State
+// Permanent Base Loans
+const PERMANENT_LOANS = [
+    {
+        id: "GL-1787739373314",
+        loanId: "GL-1787739373314",
+        loanNo: "GL-P-004-0001",
+        proposalNo: "GL-P-004-0001",
+        accountNo: "004-3725-00000001",
+        savingsAc: "004135800002228",
+        date: "2026-08-25",
+        branchCode: "04",
+        branchId: "04",
+        branchName: "04 KODINAR BRANCH",
+        packetNo: "101",
+        customerNo: "280442",
+        borrowerName: "SATARBHAI KASAMBHAI JOKIYA",
+        customerName: "SATARBHAI KASAMBHAI JOKIYA",
+        mobile: "9978875286",
+        address: "BRAHMAN SHERI, MU. LALPUR,  TAL : JAMNAGAR",
+        dob: "1965-06-01",
+        age: "61",
+        occupation: "FARMING",
+        religion: "MUSLIM",
+        caste: "MUSLIM",
+        purpose: "FOR FARMING",
+        nomineeName: "KADARBHAI SATARBHAI JOKIYA",
+        nomineeRelation: "SON",
+        loanType: "GW-3725",
+        sanctionedAmount: 83000,
+        loanAmount: 83000,
+        sanctionAmount: 83000,
+        valuationAmount: 125896,
+        interestRate: 11.5,
+        installments: 36,
+        emiAmount: 0,
+        isMember: false,
+        memberNo: "",
+        grossWeight: "10.000",
+        goldWeight: 10,
+        goldRate22K: 125896,
+        goldRate24K: 137341,
+        valuerName: "SURYAKANT HIMMATLAL LUHAR",
+        valuerFee: 250,
+        docCharges: 50,
+        serviceCharge: 208,
+        cgst: 23,
+        sgst: 23,
+        stampDuty: 210,
+        insurance: 50,
+        shareA: 0,
+        shareB: 50,
+        memberFee: 0,
+        otherCharges: 0,
+        customChargesTotal: 0,
+        customCharges: [],
+        totalDeductions: 864,
+        loanStatus: "New",
+        status: "Active",
+        grievanceOfficer: "Amrutlal Valjibhai Chavda",
+        createdBy: "SYSTEM",
+        createdAt: "2026-08-29T12:44:47.502Z",
+        updatedBy: "SYSTEM",
+        updatedAt: "2026-08-31T05:17:27.395Z",
+        customerPhoto: "",
+        ornamentPhoto: "",
+        ornamentsTable: [
+            {
+                name: "HEARING",
+                qty: 2,
+                purity: "19",
+                grossGm: 10,
+                grossMg: 130,
+                netGm: 10,
+                netMg: 0,
+                fineGoldGm: 8.636,
+                marketVal: 118608
+            }
+        ]
+    }
+];
+
 const DEFAULT_STATE = {
     currentSession: null,
     goldRates: {
@@ -222,7 +302,7 @@ const DEFAULT_STATE = {
     rateHistory: [
         { date: "2026-08-21", rate22K: 72000, rate24K: Math.round(72000 * (24 / 22)) }
     ],
-    loans: [],
+    loans: PERMANENT_LOANS,
     deletedLoanIds: [],
     branches: DEFAULT_BRANCHES,
     products: DEFAULT_PRODUCTS,
@@ -243,12 +323,12 @@ function formatLoanAccountNo(accNo, branchCode, productCode) {
         return "PENDING";
     }
     const clean = String(accNo).trim();
-    
+
     // Check if already in standard XXX-XXXX-XXXXXXXX format (3 digits - 4 digits - 8 digits)
     if (/^\d{3}-\d{4}-\d{8}$/.test(clean)) {
         return clean;
     }
-    
+
     const rawBranch = branchCode ? String(branchCode).trim() : (state && state.currentSession ? String(state.currentSession.code).trim() : "001");
     const numBranch = rawBranch.match(/\d+/) ? rawBranch.match(/\d+/)[0] : rawBranch;
     const bCode = String(numBranch).padStart(3, "0");
@@ -285,7 +365,7 @@ function getActiveSession() {
     try {
         const raw = sessionStorage.getItem("jccb_active_session");
         if (raw) return JSON.parse(raw);
-    } catch (e) {}
+    } catch (e) { }
     return null;
 }
 
@@ -296,7 +376,7 @@ function setActiveSession(sess) {
         } else {
             sessionStorage.removeItem("jccb_active_session");
         }
-    } catch (e) {}
+    } catch (e) { }
 }
 
 function isHeadOfficeSession() {
@@ -304,7 +384,7 @@ function isHeadOfficeSession() {
     const sess = state.currentSession;
     const numOnly = String(sess.code || "").trim().replace(/\D/g, '');
     const name = String(sess.name || "").toUpperCase();
-    
+
     // Head office is code 99 / role admin / explicit HEAD OFFICE name
     if (numOnly === "99" || numOnly === "099" || numOnly === "00" || numOnly === "0") return true;
     if (sess.role === ROLES.ADMIN || sess.role === "admin") return true;
@@ -419,7 +499,7 @@ async function syncFromIndexedDBOnInit() {
             if (updated) {
                 console.log("[IndexedDB] Synced high-res assets & data from IndexedDB successfully.");
                 if (typeof renderRegisterTable === "function") {
-                    try { renderRegisterTable(); } catch (e) {}
+                    try { renderRegisterTable(); } catch (e) { }
                 }
             }
         }
@@ -474,10 +554,17 @@ function loadState() {
                     ...l,
                     accountNo: formatLoanAccountNo(l.accountNo, l.branchCode, l.loanType)
                 }));
+            } else {
+                loans = [];
             }
+            PERMANENT_LOANS.forEach(permLoan => {
+                if (!loans.some(l => l.id === permLoan.id || l.proposalNo === permLoan.proposalNo)) {
+                    loans.push(JSON.parse(JSON.stringify(permLoan)));
+                }
+            });
 
             let rateHist = Array.isArray(parsed.rateHistory) ? parsed.rateHistory : [...DEFAULT_STATE.rateHistory];
-            
+
             rateHist = rateHist.map(r => {
                 const r22 = parseFloat(r.rate22K || r.rate24K || 72000);
                 return {
@@ -612,7 +699,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (window.FirebaseService) {
         window.FirebaseService.init().then(() => {
             console.log("[Firebase] Central Cloud Database Initialized.");
-            
+
             // 1. Listen for realtime gold rate changes
             if (typeof window.FirebaseService.listenDailyRates === "function") {
                 window.FirebaseService.listenDailyRates((cloudRates) => {
@@ -862,7 +949,7 @@ async function syncCloudData(isManual = false) {
             if (fbSettings && typeof fbSettings === "object") {
                 state.settings = { ...state.settings, ...fbSettings };
             } else if (state.settings && Object.keys(state.settings.branchSeeds || {}).length > 0) {
-                window.FirebaseService.saveSettings(state.settings).catch(() => {});
+                window.FirebaseService.saveSettings(state.settings).catch(() => { });
             }
         }
 
@@ -872,7 +959,7 @@ async function syncCloudData(isManual = false) {
             if (fbRules && typeof fbRules === "object" && fbRules.membership) {
                 state.rules = { ...state.rules, ...fbRules };
             } else if (state.rules && state.rules.membership) {
-                window.FirebaseService.saveRules(state.rules).catch(() => {});
+                window.FirebaseService.saveRules(state.rules).catch(() => { });
             }
         }
 
@@ -941,7 +1028,7 @@ async function syncCloudData(isManual = false) {
                 state.valuers = Array.from(valMap.values());
                 saveState();
                 if (typeof renderValuers === "function") renderValuers();
-                window.FirebaseService.saveValuersList(state.valuers, state.deletedValuerIds).catch(() => {});
+                window.FirebaseService.saveValuersList(state.valuers, state.deletedValuerIds).catch(() => { });
             }
         }
 
@@ -951,7 +1038,7 @@ async function syncCloudData(isManual = false) {
             if (Array.isArray(fbProducts) && fbProducts.length > 0) {
                 state.products = fbProducts;
             } else if (Array.isArray(state.products) && state.products.length > 0) {
-                window.FirebaseService.saveProductsList(state.products).catch(() => {});
+                window.FirebaseService.saveProductsList(state.products).catch(() => { });
             }
         }
 
@@ -1002,7 +1089,7 @@ async function syncCloudData(isManual = false) {
                     if (isRecent) {
                         mergedLoans.unshift(localLoan);
                         seen.add(id);
-                        window.FirebaseService.saveLoan(localLoan).catch(() => {});
+                        window.FirebaseService.saveLoan(localLoan).catch(() => { });
                     }
                 }
             });
@@ -1067,7 +1154,7 @@ function initGlobalUppercaseEnforcer() {
                 if (start !== null && end !== null) {
                     try {
                         el.setSelectionRange(start, end);
-                    } catch (err) {}
+                    } catch (err) { }
                 }
             }
         }
@@ -1219,7 +1306,7 @@ function initAuth() {
                 }
                 const currentSid = localStorage.getItem("jccb_device_session_id");
                 if (currentSid && window.FirebaseService && typeof window.FirebaseService.deleteActiveSession === "function") {
-                    try { await window.FirebaseService.deleteActiveSession(currentSid); } catch(e){}
+                    try { await window.FirebaseService.deleteActiveSession(currentSid); } catch (e) { }
                 }
                 if (state.gdrive && state.gdrive.connected && state.gdrive.syncOnLogout !== false) {
                     try {
@@ -1454,7 +1541,7 @@ let activeKillswitchUnsubscribe = null;
 
 function setupDeviceKillswitchListener() {
     if (activeKillswitchUnsubscribe) {
-        try { activeKillswitchUnsubscribe(); } catch (e) {}
+        try { activeKillswitchUnsubscribe(); } catch (e) { }
         activeKillswitchUnsubscribe = null;
     }
     const sessionId = localStorage.getItem("jccb_device_session_id");
@@ -1472,7 +1559,7 @@ function triggerRemoteForceDisconnect() {
     const branchName = state.currentSession ? state.currentSession.name : "Branch";
 
     if (activeKillswitchUnsubscribe) {
-        try { activeKillswitchUnsubscribe(); } catch (e) {}
+        try { activeKillswitchUnsubscribe(); } catch (e) { }
         activeKillswitchUnsubscribe = null;
     }
     const sid = localStorage.getItem("jccb_device_session_id");
@@ -1777,8 +1864,8 @@ function updateBranchContextUI() {
         dashRateLockBadge.classList.toggle("hidden", isHO);
     }
     if (dashRateNote) {
-        dashRateNote.textContent = isHO 
-            ? "* Head Office: ૨૨ કેરેટ સોનાનો આજનો ભાવ દાખલ કરો અથવા સુધારો કરો." 
+        dashRateNote.textContent = isHO
+            ? "* Head Office: ૨૨ કેરેટ સોનાનો આજનો ભાવ દાખલ કરો અથવા સુધારો કરો."
             : "* દૈનિક રેટ ફક્ત હેડ ઓફિસ દ્વારા જ સેટ/અપડેટ કરી શકાય છે (Branch Read-Only)";
     }
 
@@ -2122,7 +2209,7 @@ function applyDailyGoldRate(val, targetDate = null, lockData = null) {
     }
 
     const rate24 = Math.round(rate22 * (24 / 22));
-    
+
     if (!state.rateHistory) state.rateHistory = [];
     state.rateHistory = state.rateHistory.filter(r => r.date !== date);
     state.rateHistory.unshift({
@@ -2286,7 +2373,7 @@ function renderDashboard() {
     if (statLoans) statLoans.textContent = totalLoans;
     if (statAmount) statAmount.textContent = "₹ " + Math.round(totalSanctioned).toLocaleString("en-IN");
     if (statWeight) statWeight.textContent = totalWeight.toFixed(3) + " g";
-    
+
     const todayStr = getTodayDateYMD();
     const activeRate22 = getActiveGoldRate22K();
 
@@ -2761,11 +2848,11 @@ function updateOrnamentsTotals() {
         if (name) names.push(`${name} (${qty})`);
 
         const netWeightInGm = netGm + (netMg / 1000);
-        
+
         // Fine Gold (Grams) Formula: (Net Weight in Gm * Purity / 22) truncated to exactly 3 decimal digits
         const rawFineGold = netWeightInGm > 0 ? (netWeightInGm * purityVal) / 22 : 0;
         const fineGoldInGm = truncateTo3Decimals(rawFineGold);
-        
+
         // Fine Gold Value (₹) Formula: fineGoldInGm (3 decimals) * Rate per 10g / 10
         const rowVal = Math.round(fineGoldInGm * (goldRatePer10g / 10));
 
@@ -3306,7 +3393,7 @@ function submitLoanEntry() {
 
         const isHO = isHeadOfficeSession();
         const branchEl = document.getElementById("loan-branch");
-        
+
         // If editing an existing loan, branchCode & branchName MUST NEVER change
         const branchCode = existingLoanData ? existingLoanData.branchCode : (isHO ? (branchEl && branchEl.value ? branchEl.value : "99") : (state.currentSession ? state.currentSession.code : "99"));
         const branchObj = state.branches.find(b => isBranchMatch(b.code, branchCode)) || { code: branchCode, name: (existingLoanData && existingLoanData.branchName ? existingLoanData.branchName : branchCode + " BRANCH") };
@@ -3314,7 +3401,7 @@ function submitLoanEntry() {
 
         const proposalNoInput = document.getElementById("unique-proposal-no");
         const proposalNo = (proposalNoInput && proposalNoInput.value.trim()) ? proposalNoInput.value.trim() : (existingLoanData && existingLoanData.loanNo ? existingLoanData.loanNo : ("GL-P-" + String(state.loans.length + 1).padStart(4, "0")));
-        
+
         const loanDateInput = document.getElementById("loan-date");
         const loanDate = (loanDateInput && loanDateInput.value) ? loanDateInput.value : (existingLoanData && existingLoanData.date ? existingLoanData.date : new Date().toISOString().split("T")[0]);
         const packetNoInput = document.getElementById("packet-no");
@@ -3401,7 +3488,7 @@ function submitLoanEntry() {
         const nomineeRelation = document.getElementById("cust-nominee-relation") ? document.getElementById("cust-nominee-relation").value.trim() : "";
         const memberNo = (isMember || isStaff) && document.getElementById("member-no") ? document.getElementById("member-no").value.trim() : "";
 
-        let loanObj = {
+        const loanObj = {
             id: isEditingExistingLoan && currentEditingLoanId ? currentEditingLoanId : ("GL-" + Date.now()),
             loanNo: proposalNo,
             date: loanDate,
@@ -3467,9 +3554,9 @@ function submitLoanEntry() {
             const idx = state.loans.findIndex(l => l.id === currentEditingLoanId);
             if (idx !== -1) {
                 const orig = state.loans[idx];
-                state.loans[idx] = { 
-                    ...orig, 
-                    ...loanObj, 
+                state.loans[idx] = {
+                    ...orig,
+                    ...loanObj,
                     id: orig.id,
                     branchCode: orig.branchCode,
                     branchName: orig.branchName,
@@ -3645,11 +3732,11 @@ function getBranchProductSeed(branchCode, productCode) {
     const bCode3 = numOnly ? numOnly.padStart(3, '0') : "099";
     const bCode1 = numOnly ? String(parseInt(numOnly)) : "99";
 
-    const branchConfig = state.settings.branchSeeds[bCode2] 
-                      || state.settings.branchSeeds[bCode3] 
-                      || state.settings.branchSeeds[rawBranch] 
-                      || state.settings.branchSeeds[bCode1] 
-                      || {};
+    const branchConfig = state.settings.branchSeeds[bCode2]
+        || state.settings.branchSeeds[bCode3]
+        || state.settings.branchSeeds[rawBranch]
+        || state.settings.branchSeeds[bCode1]
+        || {};
 
     const acSeeds = branchConfig.accountSeeds || {};
 
@@ -3674,11 +3761,11 @@ function getBranchPacketSeed(branchCode) {
     const bCode3 = numOnly ? numOnly.padStart(3, '0') : "099";
     const bCode1 = numOnly ? String(parseInt(numOnly)) : "99";
 
-    const branchConfig = state.settings.branchSeeds[bCode2] 
-                      || state.settings.branchSeeds[bCode3] 
-                      || state.settings.branchSeeds[rawBranch] 
-                      || state.settings.branchSeeds[bCode1] 
-                      || {};
+    const branchConfig = state.settings.branchSeeds[bCode2]
+        || state.settings.branchSeeds[bCode3]
+        || state.settings.branchSeeds[rawBranch]
+        || state.settings.branchSeeds[bCode1]
+        || {};
 
     if (branchConfig.lastPacketNo !== undefined && branchConfig.lastPacketNo !== null && branchConfig.lastPacketNo !== "") {
         return parseInt(branchConfig.lastPacketNo) || 0;
@@ -3696,11 +3783,11 @@ function getBranchProposalSeed(branchCode) {
     const bCode3 = numOnly ? numOnly.padStart(3, '0') : "099";
     const bCode1 = numOnly ? String(parseInt(numOnly)) : "99";
 
-    const branchConfig = state.settings.branchSeeds[bCode2] 
-                      || state.settings.branchSeeds[bCode3] 
-                      || state.settings.branchSeeds[rawBranch] 
-                      || state.settings.branchSeeds[bCode1] 
-                      || {};
+    const branchConfig = state.settings.branchSeeds[bCode2]
+        || state.settings.branchSeeds[bCode3]
+        || state.settings.branchSeeds[rawBranch]
+        || state.settings.branchSeeds[bCode1]
+        || {};
 
     return parseInt(branchConfig.lastProposalNo || 0) || 0;
 }
@@ -3713,7 +3800,7 @@ function getBranchFirst3Letters(branchCode) {
     // 1. Check state.branches shortName first (editable from Head Office)
     const branches = (state && state.branches) || DEFAULT_BRANCHES;
     const branchObj = branches.find(b => String(b.code).replace(/\D/g, '').padStart(2, '0') === bCode2 || String(b.code) === raw)
-                   || (state && state.currentSession && String(state.currentSession.code) === raw ? state.currentSession : null);
+        || (state && state.currentSession && String(state.currentSession.code) === raw ? state.currentSession : null);
     if (branchObj && branchObj.shortName && branchObj.shortName.trim()) {
         return branchObj.shortName.trim().toUpperCase();
     }
@@ -3928,7 +4015,7 @@ function initRegister() {
                 if (typeof renderReportsTable === "function") renderReportsTable();
                 if (window.FirebaseService) {
                     idsToDelete.forEach(id => {
-                        window.FirebaseService.deleteLoan(id).catch(() => {});
+                        window.FirebaseService.deleteLoan(id).catch(() => { });
                     });
                 }
                 showToast("All loans deleted.");
@@ -4004,10 +4091,10 @@ function renderRegisterTable() {
     list.forEach(loan => {
         const sancAmt = Math.round(parseFloat(loan.sanctionedAmount || 0));
         const deductions = Math.round(parseFloat(loan.totalDeductions || (
-            (parseFloat(loan.shareA || 0) + parseFloat(loan.shareB || 0) + parseFloat(loan.memberFee || 0) + 
-             parseFloat(loan.valuerFee || 0) + parseFloat(loan.stampDuty || 0) + parseFloat(loan.serviceCharge || 0) + 
-             parseFloat(loan.docCharges || 0) + parseFloat(loan.insurance || 0) + parseFloat(loan.cgst || 0) + 
-             parseFloat(loan.sgst || 0) + parseFloat(loan.otherCharges || 0))
+            (parseFloat(loan.shareA || 0) + parseFloat(loan.shareB || 0) + parseFloat(loan.memberFee || 0) +
+                parseFloat(loan.valuerFee || 0) + parseFloat(loan.stampDuty || 0) + parseFloat(loan.serviceCharge || 0) +
+                parseFloat(loan.docCharges || 0) + parseFloat(loan.insurance || 0) + parseFloat(loan.cgst || 0) +
+                parseFloat(loan.sgst || 0) + parseFloat(loan.otherCharges || 0))
         )));
         const netPaid = sancAmt - deductions;
         const accFormatted = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
@@ -4061,7 +4148,7 @@ function renderRegisterTable() {
                     loan.packetNo = newPacket.trim();
                     saveState();
                     if (window.FirebaseService && typeof window.FirebaseService.saveLoan === "function") {
-                        window.FirebaseService.saveLoan(loan).catch(() => {});
+                        window.FirebaseService.saveLoan(loan).catch(() => { });
                     }
                     renderRegisterTable();
                     showToast(`પેકેટ નંબર ${newPacket.trim()} સફળતાપૂર્વક અપડેટ થયો!`);
@@ -4130,7 +4217,7 @@ function editLoanRecord(id) {
     if (loanDateInp) {
         loanDateInp.value = loan.date || "";
     }
-    
+
     // Select and strictly lock the original branch
     const branchEl = document.getElementById("loan-branch");
     if (branchEl) {
@@ -4207,7 +4294,7 @@ function editLoanRecord(id) {
     }
     document.getElementById("valuer-select").value = loan.valuerName || "";
     document.getElementById("loan-amount").value = loan.sanctionedAmount || "";
-    
+
     const acInp = document.getElementById("loan-ac-no");
     if (acInp) {
         acInp.value = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
@@ -4361,10 +4448,10 @@ function exportRegisterCSV() {
     exportLoans.forEach(l => {
         const sanc = Math.round(parseFloat(l.sanctionedAmount || 0));
         const totalDeduct = Math.round(parseFloat(l.totalDeductions || (
-            (parseFloat(l.shareA || 0) + parseFloat(l.shareB || 0) + parseFloat(l.memberFee || 0) + 
-             parseFloat(l.valuerFee || 0) + parseFloat(l.stampDuty || 0) + parseFloat(l.serviceCharge || 0) + 
-             parseFloat(l.docCharges || 0) + parseFloat(l.insurance || 0) + parseFloat(l.cgst || 0) + 
-             parseFloat(l.sgst || 0) + parseFloat(l.otherCharges || 0))
+            (parseFloat(l.shareA || 0) + parseFloat(l.shareB || 0) + parseFloat(l.memberFee || 0) +
+                parseFloat(l.valuerFee || 0) + parseFloat(l.stampDuty || 0) + parseFloat(l.serviceCharge || 0) +
+                parseFloat(l.docCharges || 0) + parseFloat(l.insurance || 0) + parseFloat(l.cgst || 0) +
+                parseFloat(l.sgst || 0) + parseFloat(l.otherCharges || 0))
         )));
         const net = sanc - totalDeduct;
         const accFormatted = formatLoanAccountNo(l.accountNo, l.branchCode, l.loanType);
@@ -4892,12 +4979,12 @@ function getFilteredReportLoans() {
         list = list.filter(l => {
             const accFmt = formatLoanAccountNo(l.accountNo, l.branchCode, l.loanType);
             return (l.borrowerName && l.borrowerName.toLowerCase().includes(searchVal)) ||
-                   (l.accountNo && String(l.accountNo).toLowerCase().includes(searchVal)) ||
-                   (accFmt && accFmt.toLowerCase().includes(searchVal)) ||
-                   (l.customerNo && String(l.customerNo).toLowerCase().includes(searchVal)) ||
-                   (l.packetNo && String(l.packetNo).toLowerCase().includes(searchVal)) ||
-                   (l.loanNo && String(l.loanNo).toLowerCase().includes(searchVal)) ||
-                   (l.mobile && String(l.mobile).includes(searchVal));
+                (l.accountNo && String(l.accountNo).toLowerCase().includes(searchVal)) ||
+                (accFmt && accFmt.toLowerCase().includes(searchVal)) ||
+                (l.customerNo && String(l.customerNo).toLowerCase().includes(searchVal)) ||
+                (l.packetNo && String(l.packetNo).toLowerCase().includes(searchVal)) ||
+                (l.loanNo && String(l.loanNo).toLowerCase().includes(searchVal)) ||
+                (l.mobile && String(l.mobile).includes(searchVal));
         });
     }
 
@@ -5983,7 +6070,7 @@ function initBranchMaster() {
 function resetBranchMasterForm() {
     const form = document.getElementById("branch-master-form");
     if (form) form.reset();
-    
+
     const editCodeInput = document.getElementById("edit-branch-code");
     if (editCodeInput) editCodeInput.value = "";
 
@@ -6363,7 +6450,7 @@ function renderValuers() {
 
     let list = state.valuers;
     if (search) {
-        list = list.filter(v => 
+        list = list.filter(v =>
             (v.name && v.name.toLowerCase().includes(search)) ||
             (v.phone && v.phone.includes(search)) ||
             (v.address && v.address.toLowerCase().includes(search)) ||
@@ -6787,7 +6874,7 @@ function renderCustomerMasterList() {
 
     let list = state.customers;
     if (search) {
-        list = list.filter(c => 
+        list = list.filter(c =>
             (c.customerNo && c.customerNo.toLowerCase().includes(search)) ||
             (c.name && c.name.toLowerCase().includes(search)) ||
             (c.mobile && c.mobile.includes(search)) ||
@@ -6803,13 +6890,13 @@ function renderCustomerMasterList() {
 
     list.forEach((c, idx) => {
         const tr = document.createElement("tr");
-        const photoHtml = (c.photo || c.customerPhoto) 
-            ? `<img src="${c.photo || c.customerPhoto}" style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1.5px solid var(--gold);" alt="Photo">` 
+        const photoHtml = (c.photo || c.customerPhoto)
+            ? `<img src="${c.photo || c.customerPhoto}" style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1.5px solid var(--gold);" alt="Photo">`
             : `<div style="width:34px; height:34px; border-radius:50%; background:#f1f5f9; color:#94a3b8; display:flex; align-items:center; justify-content:center; font-size:14px; margin:0 auto;"><i class="fa-solid fa-user"></i></div>`;
 
         const isMem = (c.isMember === true || c.isMember === "yes" || (c.memberNo && c.memberNo.trim() !== ""));
-        const memberBadge = isMem 
-            ? `<span class="badge badge-success" title="${c.memberNo || ''}">Member${c.memberNo ? ` (${c.memberNo})` : ''}</span>` 
+        const memberBadge = isMem
+            ? `<span class="badge badge-success" title="${c.memberNo || ''}">Member${c.memberNo ? ` (${c.memberNo})` : ''}</span>`
             : `<span class="badge" style="background:#f1f5f9; color:#64748b;">Non-Member</span>`;
 
         tr.innerHTML = `
@@ -6837,7 +6924,7 @@ function renderCustomerMasterList() {
             document.getElementById("edit-customer-id").value = c.id || c.customerNo;
             document.getElementById("m-cust-no").value = c.customerNo || "";
             document.getElementById("m-cust-name").value = c.name || "";
-            
+
             const isMem = (c.isMember === true || c.isMember === "yes" || (c.memberNo && c.memberNo.trim() !== ""));
             const memSelect = document.getElementById("m-cust-is-member");
             const memGroup = document.getElementById("m-cust-member-no-group");
@@ -7330,12 +7417,12 @@ function renderCustomChargesTable() {
 
     customList.forEach((c, idx) => {
         const tr = document.createElement("tr");
-        const typeBadge = c.calcType === "percent" 
-            ? `<span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">Percent (%)</span>` 
+        const typeBadge = c.calcType === "percent"
+            ? `<span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">Percent (%)</span>`
             : `<span class="badge" style="background:#fef3c7; color:#92400e; font-weight:700;">Fixed (₹)</span>`;
-        
-        const valText = c.calcType === "percent" 
-            ? `<strong>${c.value}%</strong> ${c.maxCap ? `<br><small style="color:var(--text-muted);">Cap: ₹${c.maxCap}</small>` : ""}` 
+
+        const valText = c.calcType === "percent"
+            ? `<strong>${c.value}%</strong> ${c.maxCap ? `<br><small style="color:var(--text-muted);">Cap: ₹${c.maxCap}</small>` : ""}`
             : `<strong>₹ ${c.value}</strong>`;
 
         let condText = "તમામ લોન";
@@ -7641,7 +7728,7 @@ function renderBranchSettings(targetBranch = null) {
     const currentCode = state.currentSession ? state.currentSession.code : "99";
     const currentBranchObj = branches.find(b => String(b.code) === String(currentCode)) || (state.currentSession || { code: currentCode, name: currentCode });
     const currentName = currentBranchObj.name || (state.currentSession ? state.currentSession.name : currentCode);
-    
+
     // Maintain current dropdown selection if valid, otherwise fallback to session code or targetBranch
     let selectedBranch = targetBranch;
     if (!isHO) {
@@ -7649,7 +7736,7 @@ function renderBranchSettings(targetBranch = null) {
     } else if (!selectedBranch) {
         selectedBranch = branchSelect.value ? branchSelect.value : currentCode;
     }
-    
+
     const numOnly = String(selectedBranch).replace(/\D/g, '');
     const bCode2 = numOnly ? numOnly.padStart(2, '0') : "99";
     const bCode3 = numOnly ? numOnly.padStart(3, '0') : "099";
@@ -7688,10 +7775,10 @@ function renderBranchSettings(targetBranch = null) {
 
     if (!state.settings) state.settings = {};
     if (!state.settings.branchSeeds) state.settings.branchSeeds = {};
-    const branchConfig = state.settings.branchSeeds[bCode2] 
-                      || state.settings.branchSeeds[bCode3] 
-                      || state.settings.branchSeeds[selectedBranch] 
-                      || {};
+    const branchConfig = state.settings.branchSeeds[bCode2]
+        || state.settings.branchSeeds[bCode3]
+        || state.settings.branchSeeds[selectedBranch]
+        || {};
     const acSeeds = branchConfig.accountSeeds || {};
 
     const uniqueProds = getUniqueProductCodes();
@@ -7699,8 +7786,8 @@ function renderBranchSettings(targetBranch = null) {
 
     uniqueProds.forEach(p => {
         const pCode4 = p.pCode4;
-        const currentVal = acSeeds[pCode4] !== undefined 
-            ? acSeeds[pCode4] 
+        const currentVal = acSeeds[pCode4] !== undefined
+            ? acSeeds[pCode4]
             : (acSeeds[p.code] !== undefined ? acSeeds[p.code] : (acSeeds[p.shortCode] || 0));
 
         // Count existing loans for this branch & this product
@@ -7963,8 +8050,8 @@ function exportCompleteBackupExcel() {
             "UpdatedAt": l.updatedAt || new Date().toISOString()
         }));
 
-        const wsLoans = loansData.length > 0 
-            ? XLSX.utils.json_to_sheet(loansData) 
+        const wsLoans = loansData.length > 0
+            ? XLSX.utils.json_to_sheet(loansData)
             : XLSX.utils.aoa_to_sheet([["ID", "ProposalNo", "Date", "LoanStatus", "BranchCode", "BranchName", "AccountNo", "PacketNo", "CustomerNo", "IsMember", "IsStaff", "IsCompulsoryOD", "MemberNo", "BorrowerName", "Mobile", "Address", "SavingsAc", "DOB", "Age", "Occupation", "Religion", "Caste", "NomineeName", "NomineeRelation", "ValuerName", "LoanType", "InterestRate", "SanctionedAmount", "ValuationAmount", "GoldWeight", "GrossWeight", "GoldRate24K", "GoldRate22K", "Purpose", "ShareA", "ShareB", "MemberFee", "ValuerFee", "StampDuty", "ServiceCharge", "DocCharges", "Insurance", "CGST", "SGST", "OtherCharges", "CustomChargesJSON", "CustomChargesTotal", "TotalDeductions", "EmiAmount", "Installments", "GrievanceOfficer", "OrnamentsTableJSON", "CustomerPhoto", "OrnamentPhoto", "UpdatedAt"]]);
         XLSX.utils.book_append_sheet(wb, wsLoans, "1_Loans_Register");
 
@@ -8195,7 +8282,7 @@ function handleSecureFileSelected(file) {
         try {
             const content = e.target.result;
             const parsed = JSON.parse(content);
-            
+
             let db = null;
             let isValidVault = false;
             let checkStatus = "Unknown";
@@ -8237,7 +8324,7 @@ function handleSecureFileSelected(file) {
                 previewBox.classList.remove("hidden");
                 previewChecksum.textContent = checkStatus;
                 previewChecksum.className = checkStatus.includes("Warning") ? "badge badge-danger" : "badge badge-success";
-                
+
                 const exportDate = parsed.exportDateFormatted || parsed.exportTimestamp || "N/A";
                 const exportedBy = parsed.exportedBy || "N/A";
                 const loanCount = stats.loansCount !== undefined ? stats.loansCount : (db.loans || []).length;
@@ -8603,7 +8690,7 @@ async function getOrCreateDriveBackupFolder(accessToken) {
         const searchRes = await fetch(searchUrl, {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
-        
+
         if (searchRes.ok) {
             const searchData = await searchRes.json();
             if (searchData.files && searchData.files.length > 0) {
@@ -8907,7 +8994,7 @@ async function syncAllBackupsToGoogleDrive(isAutomated = false) {
 
     try {
         if (!isAutomated) showToast("Google Drive માં બેકઅપ અપલોડ થઈ રહ્યો છે...");
-        
+
         const folderId = await getOrCreateDriveBackupFolder(state.gdrive.accessToken);
         const uploadedFiles = [];
 
@@ -9090,7 +9177,7 @@ function importCompleteRestoreExcel(file) {
                     const ornPhoto = resolveVaultString(r["OrnamentPhoto"] || r["OrnamentPhotoBase64"] || r["goldPhoto"] || r["GoldPhoto"] || "");
 
                     return {
-                        id: String(r["ID"] || r["id"] || ("GL-" + Date.now() + Math.floor(Math.random()*1000))),
+                        id: String(r["ID"] || r["id"] || ("GL-" + Date.now() + Math.floor(Math.random() * 1000))),
                         loanNo: String(r["ProposalNo"] || r["loanNo"] || r["LoanNo"] || ("GL-P-" + (r["AccountNo"] || "0001"))),
                         date: String(r["Date"] || r["date"] || new Date().toISOString().split("T")[0]),
                         loanStatus: String(r["LoanStatus"] || r["loanStatus"] || r["Status"] || r["status"] || "New"),
@@ -9298,19 +9385,19 @@ function importCompleteRestoreExcel(file) {
             }).join("\n");
 
             alert(`✅ યુનિવર્સલ એક્સેલ ડેટાબેઝ સફળતાપૂર્વક રિસ્ટોર થયેલ છે!\n\n` +
-                  `📊 શાખા વાઇઝ સંપૂર્ણ ડેટા સારાંશ:\n` +
-                  `• કુલ લોન રેકોર્ડ્સ: ${restoredSummary.loans}\n` +
-                  (branchLines ? `${branchLines}\n` : "") +
-                  `• સભાસદ/ગ્રાહક પ્રોફાઈલ્સ: ${restoredSummary.customers}\n` +
-                  `• અધિકૃત સોની વેલ્યુઅર્સ: ${restoredSummary.valuers}\n` +
-                  `• પ્રોડક્ટ સ્કીમ્સ: ${restoredSummary.products}\n` +
-                  `• બેંક શાખાઓ: ${restoredSummary.branches}\n` +
-                  `• દૈનિક સોનાના ભાવ હિસ્ટ્રી: ${restoredSummary.rates} દિવસો\n` +
-                  `• રૂલ્સ માસ્ટર & કસ્ટમ ચાર્જીસ: ${restoredSummary.rules ? "હા (સંપૂર્ણ સેટ)" : "સાચવેલ"}\n` +
-                  `• એકાઉન્ટ સેટિંગ્સ & શાખા સીડ્સ: ${restoredSummary.settings ? "હા (તમામ શાખાઓ)" : "સાચવેલ"}\n` +
-                  `• ગ્રાહક અને દાગીનાના ફોટા: ${restoredSummary.photosCount} પુનઃસ્થાપિત\n\n` +
-                  `પોર્ટલ તમામ નવા ડેટા સાથે તાત્કાલિક રીલોડ થઈ રહ્યું છે...`);
-            
+                `📊 શાખા વાઇઝ સંપૂર્ણ ડેટા સારાંશ:\n` +
+                `• કુલ લોન રેકોર્ડ્સ: ${restoredSummary.loans}\n` +
+                (branchLines ? `${branchLines}\n` : "") +
+                `• સભાસદ/ગ્રાહક પ્રોફાઈલ્સ: ${restoredSummary.customers}\n` +
+                `• અધિકૃત સોની વેલ્યુઅર્સ: ${restoredSummary.valuers}\n` +
+                `• પ્રોડક્ટ સ્કીમ્સ: ${restoredSummary.products}\n` +
+                `• બેંક શાખાઓ: ${restoredSummary.branches}\n` +
+                `• દૈનિક સોનાના ભાવ હિસ્ટ્રી: ${restoredSummary.rates} દિવસો\n` +
+                `• રૂલ્સ માસ્ટર & કસ્ટમ ચાર્જીસ: ${restoredSummary.rules ? "હા (સંપૂર્ણ સેટ)" : "સાચવેલ"}\n` +
+                `• એકાઉન્ટ સેટિંગ્સ & શાખા સીડ્સ: ${restoredSummary.settings ? "હા (તમામ શાખાઓ)" : "સાચવેલ"}\n` +
+                `• ગ્રાહક અને દાગીનાના ફોટા: ${restoredSummary.photosCount} પુનઃસ્થાપિત\n\n` +
+                `પોર્ટલ તમામ નવા ડેટા સાથે તાત્કાલિક રીલોડ થઈ રહ્યું છે...`);
+
             window.location.reload();
         } catch (err) {
             console.error("Restore error:", err);
@@ -9414,7 +9501,7 @@ function renderPendingMemberTable() {
         const tr = document.createElement("tr");
         const accFmt = formatLoanAccountNo(loan.accountNo, loan.branchCode, loan.loanType);
         const sancAmt = parseFloat(loan.sanctionedAmount || loan.loanAmount || 0);
-        
+
         tr.innerHTML = `
             <td style="white-space:nowrap;">
                 <span style="font-weight:700; color:#1e293b; font-size:13px;">${formatDateDMY(loan.date)}</span>
@@ -9630,7 +9717,7 @@ function initImageCropper() {
                 } catch (e) {
                     console.error("Cropping error:", e);
                 }
-                try { cropperInstance.destroy(); } catch (err) {}
+                try { cropperInstance.destroy(); } catch (err) { }
                 cropperInstance = null;
             }
             if (modal) modal.classList.add("hidden");
@@ -9642,7 +9729,7 @@ function initImageCropper() {
         cancelBtn.addEventListener("click", () => {
             if (modal) modal.classList.add("hidden");
             if (cropperInstance) {
-                try { cropperInstance.destroy(); } catch (err) {}
+                try { cropperInstance.destroy(); } catch (err) { }
                 cropperInstance = null;
             }
         });
@@ -9652,7 +9739,7 @@ function initImageCropper() {
         closeBtn.addEventListener("click", () => {
             if (modal) modal.classList.add("hidden");
             if (cropperInstance) {
-                try { cropperInstance.destroy(); } catch (err) {}
+                try { cropperInstance.destroy(); } catch (err) { }
                 cropperInstance = null;
             }
         });
@@ -9910,7 +9997,7 @@ async function print4PageDocument(loan) {
         // Fast pre-optimization of photos if uncompressed (>80KB)
         let custPhoto = loan.customerPhoto || loan.photo || "";
         let ornPhoto = loan.ornamentPhoto || loan.goldPhoto || "";
-        
+
         if (custPhoto && custPhoto.length > 80000) {
             custPhoto = await compressBase64Image(custPhoto, 500, 0.85);
             loan.customerPhoto = custPhoto;
@@ -9952,7 +10039,7 @@ async function print3in1Voucher(loan) {
         if (!loan) return;
         let custPhoto = loan.customerPhoto || loan.photo || "";
         let ornPhoto = loan.ornamentPhoto || loan.goldPhoto || "";
-        
+
         if (custPhoto && custPhoto.length > 80000) {
             custPhoto = await compressBase64Image(custPhoto, 500, 0.85);
         }
@@ -9980,7 +10067,7 @@ async function print3in1Voucher(loan) {
 
 function generateSingleSanctionLetterCard(loan, copyTag, copyTitleGujarati) {
     const sanctionedAmt = parseFloat(loan.sanctionedAmount || 0);
-    
+
     // 1. Resolve exact original loan valuation recorded at sanction time
     let ornamentsValSum = 0;
     if (loan.ornamentsTable && Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0) {
@@ -9988,8 +10075,8 @@ function generateSingleSanctionLetterCard(loan, copyTag, copyTitleGujarati) {
             ornamentsValSum += parseFloat(orn.marketVal || 0);
         });
     }
-    const valuationAmt = ornamentsValSum > 0 
-        ? ornamentsValSum 
+    const valuationAmt = ornamentsValSum > 0
+        ? ornamentsValSum
         : (parseFloat(loan.valuationAmount || 0) > 0 ? parseFloat(loan.valuationAmount) : 0);
 
     const shareA = parseFloat(loan.shareA || 0);
@@ -10194,10 +10281,10 @@ function generateSingleSanctionLetterCard(loan, copyTag, copyTitleGujarati) {
 
 function generateSanctionLetter2CopiesHTML(loan, isPageBreak = false) {
     const pageBreakClass = isPageBreak ? "print-page-break" : "";
-    
+
     // Copy 1: Customer Copy
     const customerCopyHtml = generateSingleSanctionLetterCard(loan, "CUSTOMER COPY", "ગ્રાહક કોપી");
-    
+
     // Copy 2: Bank / Loan File Copy
     const bankCopyHtml = generateSingleSanctionLetterCard(loan, "BANK / LOAN FILE COPY", "બેંક લોન ફાઇલ કોપી");
 
@@ -10231,7 +10318,7 @@ async function printSanctionLetter(loan) {
         if (!loan) return;
         let custPhoto = loan.customerPhoto || loan.photo || "";
         let ornPhoto = loan.ornamentPhoto || loan.goldPhoto || "";
-        
+
         if (custPhoto && custPhoto.length > 80000) {
             custPhoto = await compressBase64Image(custPhoto, 500, 0.85);
         }
@@ -10366,7 +10453,7 @@ async function printContent(contentHtml, isLandscape = false) {
         await Promise.all(images.map(img => {
             if (img.complete) return Promise.resolve();
             if (img.decode) {
-                return img.decode().catch(() => {});
+                return img.decode().catch(() => { });
             }
             return new Promise(resolve => {
                 img.onload = resolve;
@@ -10545,8 +10632,8 @@ function generatePage2ValuationReportHTML(loan, ltv, isPageBreak = true) {
     let totalQty = 0;
     let totalGrossGm = 0, totalGrossMg = 0, totalNetGm = 0, totalNetMg = 0, totalFineGoldGm = 0, totalVal = 0;
 
-    const ornaments = (loan.ornamentsTable && Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0) 
-        ? loan.ornamentsTable 
+    const ornaments = (loan.ornamentsTable && Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0)
+        ? loan.ornamentsTable
         : [];
 
     ornaments.forEach((orn, i) => {
@@ -10801,8 +10888,8 @@ function generatePage3ReceiptsHTML(loan, isPageBreak = true) {
     let totalQty = 0;
     let totalGrossGm = 0, totalGrossMg = 0, totalNetGm = 0, totalNetMg = 0, totalFineGoldGm = 0, totalVal = 0;
 
-    const ornaments = (loan.ornamentsTable && Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0) 
-        ? loan.ornamentsTable 
+    const ornaments = (loan.ornamentsTable && Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0)
+        ? loan.ornamentsTable
         : [];
 
     ornaments.forEach((orn, i) => {
@@ -11062,10 +11149,10 @@ function generatePage4KFSHTML(loan, ltv, isPageBreak = false) {
 
     const sanctionedAmt = Math.round(parseFloat(loan.sanctionedAmount || 0));
     const totalDeductions = Math.round(parseFloat(loan.totalDeductions || (
-        (parseFloat(loan.shareA || 0) + parseFloat(loan.shareB || 0) + parseFloat(loan.memberFee || 0) + 
-         parseFloat(loan.valuerFee || 0) + parseFloat(loan.stampDuty || 0) + parseFloat(loan.serviceCharge || 0) + 
-         parseFloat(loan.docCharges || 0) + parseFloat(loan.insurance || 0) + parseFloat(loan.cgst || 0) + 
-         parseFloat(loan.sgst || 0) + parseFloat(loan.otherCharges || 0))
+        (parseFloat(loan.shareA || 0) + parseFloat(loan.shareB || 0) + parseFloat(loan.memberFee || 0) +
+            parseFloat(loan.valuerFee || 0) + parseFloat(loan.stampDuty || 0) + parseFloat(loan.serviceCharge || 0) +
+            parseFloat(loan.docCharges || 0) + parseFloat(loan.insurance || 0) + parseFloat(loan.cgst || 0) +
+            parseFloat(loan.sgst || 0) + parseFloat(loan.otherCharges || 0))
     )));
     // Disbursed Amount is equal to Sanctioned Loan Amount
     const disbursedAmt = sanctionedAmt;
@@ -11080,11 +11167,11 @@ function generatePage4KFSHTML(loan, ltv, isPageBreak = false) {
             calcNetMg += parseInt(orn.netMg || 0);
         });
     }
-    const finalGrossWeight = (calcGrossGm > 0 || calcGrossMg > 0) 
-        ? (calcGrossGm + (calcGrossMg / 1000)).toFixed(3) 
+    const finalGrossWeight = (calcGrossGm > 0 || calcGrossMg > 0)
+        ? (calcGrossGm + (calcGrossMg / 1000)).toFixed(3)
         : (loan.grossWeight ? parseFloat(loan.grossWeight).toFixed(3) : parseFloat(loan.goldWeight || 0).toFixed(3));
-    const finalNetWeight = (calcNetGm > 0 || calcNetMg > 0) 
-        ? (calcNetGm + (calcNetMg / 1000)).toFixed(3) 
+    const finalNetWeight = (calcNetGm > 0 || calcNetMg > 0)
+        ? (calcNetGm + (calcNetMg / 1000)).toFixed(3)
         : parseFloat(loan.goldWeight || 0).toFixed(3);
     const goldWt = finalNetWeight;
     const grossWt = finalGrossWeight;
@@ -12303,7 +12390,7 @@ function generateDailyVouchers3in1HTML(date, branchFilter = "") {
 
     pages.forEach((pageVouchers, pIdx) => {
         const pageBreakClass = pIdx > 0 ? "print-page-break" : "";
-        
+
         let vouchersHtml = "";
         pageVouchers.forEach((v, vIdx) => {
             const amountFormatted = parseFloat(v.amount).toFixed(2);
@@ -12442,7 +12529,7 @@ function generate3in1VoucherHTML(loan, isPageBreak = false) {
 
     pages.forEach((pageVouchers, pIdx) => {
         const pageBreakClass = (isPageBreak || pIdx > 0) ? "print-page-break" : "";
-        
+
         let vouchersHtml = "";
         pageVouchers.forEach((v, vIdx) => {
             const amountFormatted = parseFloat(v.amount).toFixed(2);
