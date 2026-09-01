@@ -1035,7 +1035,7 @@ const FirebaseService = {
         };
         if (this.db) {
             try {
-                await this.db.collection('settings').doc('valuersList').set(payload, { merge: true });
+                await this.db.collection('settings').doc('valuersList').set(payload);
             } catch (e) {}
         }
         try {
