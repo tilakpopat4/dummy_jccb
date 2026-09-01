@@ -2365,14 +2365,20 @@ function renderDashboard() {
     });
 
     const statLoans = document.getElementById("stat-total-loans");
+    const statAccounts = document.getElementById("stat-total-accounts");
     const statAmount = document.getElementById("stat-total-amount");
     const statWeight = document.getElementById("stat-total-weight");
+    const statValuers = document.getElementById("stat-total-valuers");
     const statRate = document.getElementById("stat-today-rate");
     const rateInput = document.getElementById("dashboard-gold-rate");
+    const statBranchSub = document.getElementById("stat-branch-only-loans");
 
     if (statLoans) statLoans.textContent = totalLoans;
+    if (statAccounts) statAccounts.textContent = totalLoans;
     if (statAmount) statAmount.textContent = "₹ " + Math.round(totalSanctioned).toLocaleString("en-IN");
     if (statWeight) statWeight.textContent = totalWeight.toFixed(3) + " g";
+    if (statValuers) statValuers.textContent = (state.valuers || []).length;
+    if (statBranchSub) statBranchSub.textContent = isHO ? "All Branches Combined" : (state.currentSession ? state.currentSession.name : "Branch Only");
 
     const todayStr = getTodayDateYMD();
     const activeRate22 = getActiveGoldRate22K();
@@ -3488,7 +3494,7 @@ function submitLoanEntry() {
         const nomineeRelation = document.getElementById("cust-nominee-relation") ? document.getElementById("cust-nominee-relation").value.trim() : "";
         const memberNo = (isMember || isStaff) && document.getElementById("member-no") ? document.getElementById("member-no").value.trim() : "";
 
-        const loanObj = {
+        let loanObj = {
             id: isEditingExistingLoan && currentEditingLoanId ? currentEditingLoanId : ("GL-" + Date.now()),
             loanNo: proposalNo,
             date: loanDate,
