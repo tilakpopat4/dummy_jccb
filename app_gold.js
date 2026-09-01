@@ -322,6 +322,112 @@ function isBranchMatch(codeA, codeB) {
     return String(codeA).trim().toLowerCase() === String(codeB).trim().toLowerCase();
 }
 
+// ==================== INDEXEDDB PERSISTENCE LAYER ====================
+const IDB_CONFIG = {
+    name: "JCCB_Gold_Storage_DB",
+    version: 1,
+    storeName: "app_state",
+    key: "current_state"
+};
+
+function getIndexedDB() {
+    return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+            return reject(new Error("IndexedDB not supported"));
+        }
+        const request = window.indexedDB.open(IDB_CONFIG.name, IDB_CONFIG.version);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(IDB_CONFIG.storeName)) {
+                db.createObjectStore(IDB_CONFIG.storeName);
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function saveStateToIndexedDB(stateData) {
+    try {
+        const db = await getIndexedDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction([IDB_CONFIG.storeName], "readwrite");
+            const store = tx.objectStore(IDB_CONFIG.storeName);
+            const putReq = store.put(stateData, IDB_CONFIG.key);
+            putReq.onsuccess = () => resolve(true);
+            putReq.onerror = () => reject(putReq.error);
+        });
+    } catch (err) {
+        console.warn("[IndexedDB] Save state error:", err);
+        return false;
+    }
+}
+
+async function loadStateFromIndexedDB() {
+    try {
+        const db = await getIndexedDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction([IDB_CONFIG.storeName], "readonly");
+            const store = tx.objectStore(IDB_CONFIG.storeName);
+            const getReq = store.get(IDB_CONFIG.key);
+            getReq.onsuccess = () => resolve(getReq.result || null);
+            getReq.onerror = () => reject(getReq.error);
+        });
+    } catch (err) {
+        console.warn("[IndexedDB] Load state error:", err);
+        return null;
+    }
+}
+
+async function syncFromIndexedDBOnInit() {
+    try {
+        const idbState = await loadStateFromIndexedDB();
+        if (idbState && typeof idbState === "object") {
+            let updated = false;
+            if (Array.isArray(idbState.loans) && idbState.loans.length > 0) {
+                // If IndexedDB has loans with photos or more recent loans, merge them
+                const idbMap = new Map();
+                idbState.loans.forEach(l => { if (l && l.id) idbMap.set(l.id, l); });
+
+                if (Array.isArray(state.loans)) {
+                    state.loans = state.loans.map(l => {
+                        const idbLoan = idbMap.get(l.id);
+                        if (idbLoan) {
+                            return {
+                                ...idbLoan,
+                                ...l,
+                                applicantPhoto: idbLoan.applicantPhoto || l.applicantPhoto || "",
+                                ornamentPhoto: idbLoan.ornamentPhoto || l.ornamentPhoto || "",
+                                customerPhoto: idbLoan.customerPhoto || l.customerPhoto || ""
+                            };
+                        }
+                        return l;
+                    });
+                } else {
+                    state.loans = idbState.loans;
+                }
+                updated = true;
+            }
+
+            if (Array.isArray(idbState.customers) && idbState.customers.length > 0) {
+                if (!Array.isArray(state.customers) || state.customers.length === 0) {
+                    state.customers = idbState.customers;
+                    updated = true;
+                }
+            }
+
+            if (updated) {
+                console.log("[IndexedDB] Synced high-res assets & data from IndexedDB successfully.");
+                if (typeof renderRegisterTable === "function") {
+                    try { renderRegisterTable(); } catch (e) {}
+                }
+            }
+        }
+    } catch (e) {
+        console.warn("[IndexedDB] Sync on init warning:", e);
+    }
+}
+
 let state = loadState();
 let cropperInstance = null;
 let currentPhotoTarget = null;
@@ -342,8 +448,19 @@ function loadState() {
             }
             let branches = parsed.branches;
             if (!Array.isArray(branches) || branches.length === 0) {
-                branches = DEFAULT_BRANCHES;
+                branches = JSON.parse(JSON.stringify(DEFAULT_BRANCHES));
             }
+            branches = branches.map(b => {
+                const savedPwd = localStorage.getItem(`jccb_branch_pwd_${b.code}`);
+                const pwd = (savedPwd && savedPwd.trim()) ? savedPwd.trim() : (b.password || (b.code === "99" ? "Rahul#80810" : "Admin@123"));
+                const isDef = (b.code !== "99" && pwd === "Admin@123");
+                return {
+                    ...b,
+                    password: pwd,
+                    isDefaultPassword: isDef,
+                    passwordChanged: !isDef
+                };
+            });
             let session = getActiveSession();
             let rules = parsed.rules;
             if (!rules || !rules.membership || !rules.valuation) {
@@ -413,11 +530,36 @@ function loadState() {
 }
 
 function saveState() {
+    // 1. Asynchronously save full state with high-res photos to IndexedDB (virtually unlimited quota)
+    saveStateToIndexedDB(state).catch(err => console.warn("[IndexedDB] Async state save failed:", err));
+
+    // 2. Persist to LocalStorage with automatic trimming fallback if quota is exceeded
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch (e) {
-        console.error("State saving error:", e);
-        alert("Warning: LocalStorage storage quota exceeded or storage error.");
+        console.warn("LocalStorage full, saving trimmed fallback copy to LocalStorage without heavy base64 strings:", e);
+        try {
+            // Create a lightweight copy for LocalStorage where huge base64 image strings are stripped
+            const lightState = {
+                ...state,
+                loans: Array.isArray(state.loans) ? state.loans.map(l => {
+                    const copy = { ...l };
+                    if (copy.applicantPhoto && copy.applicantPhoto.length > 500) copy.applicantPhoto = "";
+                    if (copy.ornamentPhoto && copy.ornamentPhoto.length > 500) copy.ornamentPhoto = "";
+                    if (copy.customerPhoto && copy.customerPhoto.length > 500) copy.customerPhoto = "";
+                    return copy;
+                }) : [],
+                customers: Array.isArray(state.customers) ? state.customers.map(c => {
+                    const copy = { ...c };
+                    if (copy.photo && copy.photo.length > 500) copy.photo = "";
+                    if (copy.customerPhoto && copy.customerPhoto.length > 500) copy.customerPhoto = "";
+                    return copy;
+                }) : []
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(lightState));
+        } catch (innerErr) {
+            console.warn("LocalStorage completely saturated, continuing with IndexedDB persistence:", innerErr);
+        }
     }
 }
 
@@ -427,6 +569,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try { if (typeof fn === "function") fn(); } catch (e) { console.warn(`[Init] Error in ${name}:`, e); }
     };
 
+    safeRun(syncFromIndexedDBOnInit, "syncFromIndexedDBOnInit");
     safeRun(initClock, "initClock");
     safeRun(initGlobalUppercaseEnforcer, "initGlobalUppercaseEnforcer");
     safeRun(initAuth, "initAuth");
@@ -594,7 +737,29 @@ document.addEventListener("DOMContentLoaded", () => {
             if (typeof window.FirebaseService.listenBranches === "function") {
                 window.FirebaseService.listenBranches((cloudBranches) => {
                     if (Array.isArray(cloudBranches) && cloudBranches.length > 0) {
-                        state.branches = cloudBranches;
+                        const merged = cloudBranches.map(fbB => {
+                            const localB = (state.branches || []).find(b => b.code === fbB.code);
+                            const savedPwd = localStorage.getItem(`jccb_branch_pwd_${fbB.code}`);
+                            let finalPwd = "Admin@123";
+                            if (fbB.code === "99") {
+                                finalPwd = fbB.password || (savedPwd && savedPwd.trim()) || (localB ? localB.password : "Rahul#80810");
+                            } else if (fbB.password && fbB.password !== "Admin@123") {
+                                finalPwd = fbB.password;
+                                localStorage.setItem(`jccb_branch_pwd_${fbB.code}`, finalPwd);
+                            } else if (savedPwd && savedPwd !== "Admin@123") {
+                                finalPwd = savedPwd;
+                            } else if (localB && localB.password && localB.password !== "Admin@123") {
+                                finalPwd = localB.password;
+                            }
+                            const isDef = (fbB.code !== "99" && finalPwd === "Admin@123");
+                            return {
+                                ...fbB,
+                                password: finalPwd,
+                                isDefaultPassword: isDef,
+                                passwordChanged: !isDef
+                            };
+                        });
+                        state.branches = merged;
                         saveState();
                         if (typeof populateLoginBranches === "function") populateLoginBranches();
                         if (typeof renderBranchMaster === "function") renderBranchMaster();
@@ -692,9 +857,30 @@ async function syncCloudData(isManual = false) {
         if (typeof window.FirebaseService.getBranchesList === "function") {
             const fbBranches = await window.FirebaseService.getBranchesList();
             if (Array.isArray(fbBranches) && fbBranches.length > 0) {
-                state.branches = fbBranches;
-            } else if (Array.isArray(state.branches) && state.branches.length > 0) {
-                window.FirebaseService.saveBranchesList(state.branches).catch(() => {});
+                const merged = fbBranches.map(fbB => {
+                    const localB = (state.branches || []).find(b => b.code === fbB.code);
+                    const savedPwd = localStorage.getItem(`jccb_branch_pwd_${fbB.code}`);
+                    let finalPwd = "Admin@123";
+                    if (fbB.code === "99") {
+                        finalPwd = fbB.password || (savedPwd && savedPwd.trim()) || (localB ? localB.password : "Rahul#80810");
+                    } else if (fbB.password && fbB.password !== "Admin@123") {
+                        finalPwd = fbB.password;
+                        localStorage.setItem(`jccb_branch_pwd_${fbB.code}`, finalPwd);
+                    } else if (savedPwd && savedPwd !== "Admin@123") {
+                        finalPwd = savedPwd;
+                    } else if (localB && localB.password && localB.password !== "Admin@123") {
+                        finalPwd = localB.password;
+                    }
+                    const isDef = (fbB.code !== "99" && finalPwd === "Admin@123");
+                    return {
+                        ...fbB,
+                        password: finalPwd,
+                        isDefaultPassword: isDef,
+                        passwordChanged: !isDef
+                    };
+                });
+                state.branches = merged;
+                saveState();
             }
         }
 
@@ -9112,7 +9298,7 @@ function renderPendingMemberTable() {
 }
 
 // ==================== IMAGE COMPRESSOR & PHOTO UPLOAD ====================
-function compressImageFile(file, maxDim = 800, quality = 0.85) {
+function compressImageFile(file, maxDim = 500, quality = 0.65) {
     return new Promise((resolve) => {
         if (!file) {
             resolve("");
@@ -9176,8 +9362,8 @@ function initImageCropper() {
     async function processImageFile(file, target) {
         if (!file) return;
         currentPhotoTarget = target;
-        const maxDim = target === "customer" ? 600 : 900;
-        const optimizedBase64 = await compressImageFile(file, maxDim, 0.85);
+        const maxDim = target === "customer" ? 400 : 600;
+        const optimizedBase64 = await compressImageFile(file, maxDim, 0.65);
 
         if (!optimizedBase64) return;
 
@@ -9240,11 +9426,11 @@ function initImageCropper() {
             if (cropperInstance) {
                 try {
                     const canvas = cropperInstance.getCroppedCanvas({
-                        width: currentPhotoTarget === "customer" ? 400 : 700,
-                        height: currentPhotoTarget === "customer" ? 400 : 525
+                        width: currentPhotoTarget === "customer" ? 400 : 600,
+                        height: currentPhotoTarget === "customer" ? 400 : 450
                     });
                     if (canvas) {
-                        const croppedBase64 = canvas.toDataURL("image/jpeg", 0.85);
+                        const croppedBase64 = canvas.toDataURL("image/jpeg", 0.70);
                         if (currentPhotoTarget === "customer" && custPreview) {
                             custPreview.innerHTML = `<img src="${croppedBase64}" style="width:100%; height:100%; max-height:96px; border-radius:6px; object-fit:contain;" alt="Customer Photo">`;
                         } else if (currentPhotoTarget === "ornament" && goldPreview) {
