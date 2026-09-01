@@ -10352,69 +10352,71 @@ function generatePage2ValuationReportHTML(loan, ltv, isPageBreak = true) {
     const ornamentPhotoSrc = loan.ornamentPhoto || loan.goldPhoto || "";
 
     let rowsHtml = "";
-    let totalQty = 0;
-    let totalGrossGm = 0, totalGrossMg = 0, totalNetGm = 0, totalNetMg = 0, totalFineGoldGm = 0, totalVal = 0;
+    const ornaments = (loan.ornamentsTable && Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0) 
+        ? loan.ornamentsTable 
+        : [];
 
-    if (loan.ornamentsTable && loan.ornamentsTable.length > 0) {
-        loan.ornamentsTable.forEach((orn) => {
-            const netWeight = parseFloat(orn.netGm || 0) + (parseInt(orn.netMg || 0) / 1000);
-            const purity = parseFloat(orn.purity || 22);
-            const fineGold = (orn.fineGoldGm !== undefined && orn.fineGoldGm !== null && orn.fineGoldGm !== "") ? parseFloat(orn.fineGoldGm) : truncateTo3Decimals((netWeight * purity) / 22);
+    ornaments.forEach((orn, i) => {
+        const netWeight = parseFloat(orn.netGm || 0) + (parseInt(orn.netMg || 0) / 1000);
+        const purity = parseFloat(orn.purity || 22);
+        const fineGold = (orn.fineGoldGm !== undefined && orn.fineGoldGm !== null && orn.fineGoldGm !== "") ? parseFloat(orn.fineGoldGm) : truncateTo3Decimals((netWeight * purity) / 22);
+        const valAmt = Math.round(parseFloat(orn.marketVal || 0));
 
-            totalQty += parseInt(orn.qty || 1);
-            totalGrossGm += parseFloat(orn.grossGm || 0);
-            totalGrossMg += parseInt(orn.grossMg || 0);
-            totalNetGm += parseFloat(orn.netGm || 0);
-            totalNetMg += parseInt(orn.netMg || 0);
-            totalFineGoldGm += fineGold;
-            totalVal += Math.round(parseFloat(orn.marketVal || 0));
-        });
+        totalQty += parseInt(orn.qty || 1);
+        totalGrossGm += parseFloat(orn.grossGm || 0);
+        totalGrossMg += parseInt(orn.grossMg || 0);
+        totalNetGm += parseFloat(orn.netGm || 0);
+        totalNetMg += parseInt(orn.netMg || 0);
+        totalFineGoldGm += fineGold;
+        totalVal += valAmt;
+
+        rowsHtml += `
+            <tr style="text-align:center; font-size:10px;">
+                <td style="border:1px solid #000; padding:3px 2px;">${i + 1}</td>
+                <td style="border:1px solid #000; padding:3px 4px; text-align:left;"><strong>${orn.name || ""}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${orn.qty || 1}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;">${parseInt(orn.grossGm || 0)}</td>
+                <td style="border:1px solid #000; padding:3px 2px;">${parseInt(orn.grossMg || 0)}</td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${parseInt(orn.netGm || 0)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${parseInt(orn.netMg || 0)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;">${orn.purity || 22} K</td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${fineGold.toFixed(3)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 4px; text-align:right;"><strong>₹ ${valAmt.toLocaleString("en-IN")}</strong></td>
+            </tr>
+        `;
+    });
+
+    if (ornaments.length === 0) {
+        const grossGm = parseFloat(loan.grossWeight || loan.goldWeight || 0);
+        const netGm = parseFloat(loan.goldWeight || 0);
+        const fineGold = parseFloat(loan.fineGoldGm || ((netGm * 22) / 22));
+        const valAmt = parseFloat(loan.valuationAmount || 0);
+        totalQty = 1;
+        totalGrossGm = grossGm;
+        totalNetGm = netGm;
+        totalFineGoldGm = fineGold;
+        totalVal = valAmt;
+
+        rowsHtml = `
+            <tr style="text-align:center; font-size:10px;">
+                <td style="border:1px solid #000; padding:3px 2px;">1</td>
+                <td style="border:1px solid #000; padding:3px 4px; text-align:left;"><strong>${loan.ornamentDetails || "સોનાના દાગીના"}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>1</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;">${Math.floor(grossGm)}</td>
+                <td style="border:1px solid #000; padding:3px 2px;">${Math.round((grossGm % 1) * 1000)}</td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${Math.floor(netGm)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${Math.round((netGm % 1) * 1000)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;">22 K</td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${fineGold.toFixed(3)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 4px; text-align:right;"><strong>₹ ${Math.round(valAmt).toLocaleString("en-IN")}</strong></td>
+            </tr>
+        `;
     }
 
     const normGrossGm = Math.floor(totalGrossGm + Math.floor(totalGrossMg / 1000));
     const normGrossMg = totalGrossMg % 1000;
     const normNetGm = Math.floor(totalNetGm + Math.floor(totalNetMg / 1000));
     const normNetMg = totalNetMg % 1000;
-
-    for (let i = 0; i < 10; i++) {
-        if (loan.ornamentsTable && i < loan.ornamentsTable.length) {
-            const orn = loan.ornamentsTable[i];
-            const netWeight = parseFloat(orn.netGm || 0) + (parseInt(orn.netMg || 0) / 1000);
-            const purity = parseFloat(orn.purity || 22);
-            const fineGold = (orn.fineGoldGm !== undefined && orn.fineGoldGm !== null && orn.fineGoldGm !== "") ? parseFloat(orn.fineGoldGm) : truncateTo3Decimals((netWeight * purity) / 22);
-            const valAmt = Math.round(parseFloat(orn.marketVal || 0));
-
-            rowsHtml += `
-                <tr style="text-align:center; font-size:10px;">
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${i + 1}</td>
-                    <td style="border:1px solid #000; padding:2.5px 4px; text-align:left;"><strong>${orn.name || ""}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${orn.qty || 1}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${parseInt(orn.grossGm || 0)}</td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${parseInt(orn.grossMg || 0)}</td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${parseInt(orn.netGm || 0)}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${parseInt(orn.netMg || 0)}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${orn.purity || 22} K</td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${fineGold.toFixed(3)}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 4px; text-align:right;"><strong>₹ ${valAmt.toLocaleString("en-IN")}</strong></td>
-                </tr>
-            `;
-        } else {
-            rowsHtml += `
-                <tr style="text-align:center; font-size:10px; height:18px;">
-                    <td style="border:1px solid #000; padding:2px;">${i + 1}</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                </tr>
-            `;
-        }
-    }
 
     return `
     <div class="print-page print-voucher print-requisition-form ${pageBreakClass}" style="width:210mm; height:297mm; max-height:297mm; box-sizing:border-box; padding:0.50in 0.50in 0.50in 1.00in; font-family:'Outfit', 'Noto Sans Gujarati', sans-serif; color:#000000; line-height:1.36; background-color:#ffffff; font-size:10.5px; overflow:hidden;">
@@ -10465,7 +10467,7 @@ function generatePage2ValuationReportHTML(loan, ltv, isPageBreak = true) {
             <h2 style="font-size:13.5px; font-weight:800; margin:0; text-decoration:underline;">સોનાનાં દાગીનાનો વેલ્યુએશન રિપોર્ટ</h2>
         </div>
 
-        <!-- Ornaments Valuation 10-Row Table -->
+        <!-- Ornaments Valuation Exact-Items Table -->
         <table style="width:100%; border-collapse:collapse; border:1.5px solid #000; margin-bottom:6px; font-size:9.5px;">
             <thead>
                 <tr style="background-color:#f1f5f9; text-align:center; font-weight:800;">
@@ -10502,39 +10504,42 @@ function generatePage2ValuationReportHTML(loan, ltv, isPageBreak = true) {
         </table>
 
         <!-- Valuer Undertaking -->
-        <p style="text-align:justify; margin:4px 0 6px 0; font-size:11px; line-height:1.4;">
+        <p style="text-align:justify; margin:6px 0 6px 0; font-size:11px; line-height:1.4;">
             આથી ખાતરી આપવામાં આવે છે કે ઉપર મુજબના દાગીના મેં જોઈ તપાસી અને કાળજીપૂર્વક તેની શુદ્ધતા, વજન, દર, કિંમતની આકારણી કરેલ છે અને મેં દર્શાવેલ વિગત વાજબી છે.
         </p>
 
-        <!-- Location, Date & Valuer Signature -->
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:6px; margin-bottom:8px; font-size:11px;">
-            <div style="line-height:1.4;">
+        <!-- Location, Date & Valuer Signature with Ample Space for Stamp & Signature -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px; margin-bottom:12px; font-size:11px;">
+            <div style="line-height:1.45;">
                 સ્થળ : <strong>${cleanBranch}</strong><br>
                 તારીખ :- <strong>${formatDateDMY(loan.date)}</strong>
             </div>
-            <div style="text-align:center; min-width:190px;">
+            <div style="text-align:center; min-width:200px;">
+                <!-- Dedicated vertical space for Valuer's physical Stamp -->
+                <div style="height:44px;"></div>
                 <div style="display:inline-flex; align-items:flex-end; justify-content:center; gap:4px; margin-bottom:2px; white-space:nowrap;">
                     <span style="font-weight:bold; font-size:12px;">X</span>
-                    <span style="display:inline-block; width:150px; border-bottom:1.5px solid #000000;"></span>
+                    <span style="display:inline-block; width:160px; border-bottom:1.5px solid #000000;"></span>
                 </div>
-                <div style="font-weight:700; font-size:11px;">વેલ્યુઅરની સહી</div>
+                <div style="font-weight:800; font-size:11px;">વેલ્યુઅરની સહી (સિક્કા સાથે)</div>
                 <div style="font-weight:700; font-size:10.5px;">(<strong>${loan.valuerName || "Approved Valuer"}</strong>)</div>
             </div>
         </div>
 
         <!-- Borrower Acceptance Undertaking -->
-        <p style="text-align:justify; margin:4px 0 6px 0; font-size:11px; line-height:1.4;">
+        <p style="text-align:justify; margin:6px 0 6px 0; font-size:11px; line-height:1.4;">
             ઉપરોક્ત વિગતે વેલ્યુઅરે જે શુદ્ધતા, વજન, દર, કિંમત આકારેલ છે તે વાજબી છે અને મને કબૂલ-મંજુર છે.
         </p>
 
-        <!-- Borrower Signature -->
-        <div style="display:flex; justify-content:flex-end; margin-top:4px; margin-bottom:8px; font-size:11px;">
-            <div style="text-align:center; min-width:190px;">
+        <!-- Borrower Signature with Ample Space -->
+        <div style="display:flex; justify-content:flex-end; margin-top:10px; margin-bottom:12px; font-size:11px;">
+            <div style="text-align:center; min-width:200px;">
+                <div style="height:32px;"></div>
                 <div style="display:inline-flex; align-items:flex-end; justify-content:center; gap:4px; margin-bottom:2px; white-space:nowrap;">
                     <span style="font-weight:bold; font-size:12px;">X</span>
-                    <span style="display:inline-block; width:150px; border-bottom:1.5px solid #000000;"></span>
+                    <span style="display:inline-block; width:160px; border-bottom:1.5px solid #000000;"></span>
                 </div>
-                <div style="font-weight:700; font-size:11px;">અરજદારની સહી</div>
+                <div style="font-weight:800; font-size:11px;">અરજદારની સહી</div>
                 <div style="font-weight:700; font-size:10.5px;">(<strong>${loan.borrowerName}</strong>)</div>
             </div>
         </div>
@@ -10599,70 +10604,71 @@ function generatePage3ReceiptsHTML(loan, isPageBreak = true) {
     const custPhotoSrc = loan.customerPhoto || loan.photo || "";
     const ornamentPhotoSrc = loan.ornamentPhoto || loan.goldPhoto || "";
 
-    let rowsHtml = "";
-    let totalQty = 0;
-    let totalGrossGm = 0, totalGrossMg = 0, totalNetGm = 0, totalNetMg = 0, totalFineGoldGm = 0, totalVal = 0;
+    const ornaments = (loan.ornamentsTable && Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0) 
+        ? loan.ornamentsTable 
+        : [];
 
-    if (loan.ornamentsTable && loan.ornamentsTable.length > 0) {
-        loan.ornamentsTable.forEach((orn) => {
-            const netWeight = parseFloat(orn.netGm || 0) + (parseInt(orn.netMg || 0) / 1000);
-            const purity = parseFloat(orn.purity || 22);
-            const fineGold = (orn.fineGoldGm !== undefined && orn.fineGoldGm !== null && orn.fineGoldGm !== "") ? parseFloat(orn.fineGoldGm) : parseFloat(((netWeight * purity) / 22).toFixed(3));
+    ornaments.forEach((orn, i) => {
+        const netWeight = parseFloat(orn.netGm || 0) + (parseInt(orn.netMg || 0) / 1000);
+        const purity = parseFloat(orn.purity || 22);
+        const fineGold = (orn.fineGoldGm !== undefined && orn.fineGoldGm !== null && orn.fineGoldGm !== "") ? parseFloat(orn.fineGoldGm) : parseFloat(((netWeight * purity) / 22).toFixed(3));
+        const valAmt = Math.round(parseFloat(orn.marketVal || 0));
 
-            totalQty += parseInt(orn.qty || 1);
-            totalGrossGm += parseFloat(orn.grossGm || 0);
-            totalGrossMg += parseInt(orn.grossMg || 0);
-            totalNetGm += parseFloat(orn.netGm || 0);
-            totalNetMg += parseInt(orn.netMg || 0);
-            totalFineGoldGm += fineGold;
-            totalVal += Math.round(parseFloat(orn.marketVal || 0));
-        });
+        totalQty += parseInt(orn.qty || 1);
+        totalGrossGm += parseFloat(orn.grossGm || 0);
+        totalGrossMg += parseInt(orn.grossMg || 0);
+        totalNetGm += parseFloat(orn.netGm || 0);
+        totalNetMg += parseInt(orn.netMg || 0);
+        totalFineGoldGm += fineGold;
+        totalVal += valAmt;
+
+        rowsHtml += `
+            <tr style="text-align:center; font-size:10px;">
+                <td style="border:1px solid #000; padding:3px 2px;">${i + 1}</td>
+                <td style="border:1px solid #000; padding:3px 4px; text-align:left;"><strong>${orn.name || ""}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${orn.qty || 1}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;">${parseInt(orn.grossGm || 0)}</td>
+                <td style="border:1px solid #000; padding:3px 2px;">${parseInt(orn.grossMg || 0)}</td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${parseInt(orn.netGm || 0)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${parseInt(orn.netMg || 0)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;">${orn.purity || 22} K</td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${fineGold.toFixed(3)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 4px; text-align:right;"><strong>₹ ${valAmt.toLocaleString("en-IN")}</strong></td>
+            </tr>
+        `;
+    });
+
+    if (ornaments.length === 0) {
+        const grossGm = parseFloat(loan.grossWeight || loan.goldWeight || 0);
+        const netGm = parseFloat(loan.goldWeight || 0);
+        const fineGold = parseFloat(loan.fineGoldGm || ((netGm * 22) / 22));
+        const valAmt = parseFloat(loan.valuationAmount || 0);
+        totalQty = 1;
+        totalGrossGm = grossGm;
+        totalNetGm = netGm;
+        totalFineGoldGm = fineGold;
+        totalVal = valAmt;
+
+        rowsHtml = `
+            <tr style="text-align:center; font-size:10px;">
+                <td style="border:1px solid #000; padding:3px 2px;">1</td>
+                <td style="border:1px solid #000; padding:3px 4px; text-align:left;"><strong>${loan.ornamentDetails || "સોનાના દાગીના"}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>1</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;">${Math.floor(grossGm)}</td>
+                <td style="border:1px solid #000; padding:3px 2px;">${Math.round((grossGm % 1) * 1000)}</td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${Math.floor(netGm)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${Math.round((netGm % 1) * 1000)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 2px;">22 K</td>
+                <td style="border:1px solid #000; padding:3px 2px;"><strong>${fineGold.toFixed(3)}</strong></td>
+                <td style="border:1px solid #000; padding:3px 4px; text-align:right;"><strong>₹ ${Math.round(valAmt).toLocaleString("en-IN")}</strong></td>
+            </tr>
+        `;
     }
 
     const normGrossGm = Math.floor(totalGrossGm + Math.floor(totalGrossMg / 1000));
     const normGrossMg = totalGrossMg % 1000;
     const normNetGm = Math.floor(totalNetGm + Math.floor(totalNetMg / 1000));
     const normNetMg = totalNetMg % 1000;
-
-    for (let i = 0; i < 10; i++) {
-        if (loan.ornamentsTable && i < loan.ornamentsTable.length) {
-            const orn = loan.ornamentsTable[i];
-            const netWeight = parseFloat(orn.netGm || 0) + (parseInt(orn.netMg || 0) / 1000);
-            const purity = parseFloat(orn.purity || 22);
-            const fineGold = (orn.fineGoldGm !== undefined && orn.fineGoldGm !== null && orn.fineGoldGm !== "") ? parseFloat(orn.fineGoldGm) : parseFloat(((netWeight * purity) / 22).toFixed(3));
-            const valAmt = Math.round(parseFloat(orn.marketVal || 0));
-
-            rowsHtml += `
-                <tr style="text-align:center; font-size:10px;">
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${i + 1}</td>
-                    <td style="border:1px solid #000; padding:2.5px 4px; text-align:left;"><strong>${orn.name || ""}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${orn.qty || 1}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${parseInt(orn.grossGm || 0)}</td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${parseInt(orn.grossMg || 0)}</td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${parseInt(orn.netGm || 0)}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${parseInt(orn.netMg || 0)}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;">${orn.purity || 22} K</td>
-                    <td style="border:1px solid #000; padding:2.5px 2px;"><strong>${fineGold.toFixed(3)}</strong></td>
-                    <td style="border:1px solid #000; padding:2.5px 4px; text-align:right;"><strong>₹ ${valAmt.toLocaleString("en-IN")}</strong></td>
-                </tr>
-            `;
-        } else {
-            rowsHtml += `
-                <tr style="text-align:center; font-size:10px; height:18px;">
-                    <td style="border:1px solid #000; padding:2px;">${i + 1}</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                    <td style="border:1px solid #000; padding:2px;">&nbsp;</td>
-                </tr>
-            `;
-        }
-    }
 
     return `
     <div class="print-page print-voucher print-requisition-form ${pageBreakClass}" style="width:210mm; height:297mm; max-height:297mm; box-sizing:border-box; padding:0.50in 0.50in 0.50in 1.00in; font-family:'Outfit', 'Noto Sans Gujarati', sans-serif; color:#000000; line-height:1.36; background-color:#ffffff; font-size:10.5px; overflow:hidden;">
@@ -10721,7 +10727,7 @@ function generatePage3ReceiptsHTML(loan, isPageBreak = true) {
             <h2 style="font-size:13.5px; font-weight:800; margin:0; text-decoration:underline;">ગ્રાહકને આપવાની પહોંચ</h2>
         </div>
 
-        <!-- Ornaments Valuation 10-Row Table -->
+        <!-- Ornaments Valuation Exact-Items Table -->
         <table style="width:100%; border-collapse:collapse; border:1.5px solid #000; margin-bottom:5px; font-size:9.5px;">
             <thead>
                 <tr style="background-color:#f1f5f9; text-align:center; font-weight:800;">
@@ -10762,25 +10768,25 @@ function generatePage3ReceiptsHTML(loan, isPageBreak = true) {
             સદરહુ ધિરાણ રૂ. <strong>${sanctionedAmt.toLocaleString("en-IN")}/-</strong> ની મુદત તા. <strong>${formatDateDMY(loan.date)}</strong> થી ૧ વર્ષ સુધીની છે.
         </p>
 
-        <!-- 3 Signatures in One Line across 100% width with ample signing space -->
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:20px; margin-bottom:6px; font-size:10.5px;">
-            <!-- 1. Sealed Packet Creator -->
+        <!-- 3 Signatures in One Line across 100% width with ample signing and stamp space -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:24px; margin-bottom:8px; font-size:10.5px;">
+            <!-- 1. Sealed Packet Creator (Valuer) -->
             <div style="text-align:center; width:31%;">
-                <div style="height:38px;"></div>
+                <div style="height:45px;"></div>
                 <span style="display:inline-block; width:150px; border-bottom:1.5px solid #000000; margin-bottom:4px;"></span>
-                <div style="font-weight:800; font-size:10.5px; color:#000000;">સીલબંધ પેકેટ તૈયાર કરનાર</div>
+                <div style="font-weight:800; font-size:10.5px; color:#000000;">સીલબંધ પેકેટ તૈયાર કરનાર (સિક્કો)</div>
                 <div style="font-weight:700; font-size:9.5px; margin-top:1px;">(<strong>${loan.valuerName || "Approved Valuer"}</strong>)</div>
             </div>
             <!-- 2. Ornaments Handover / Borrower -->
             <div style="text-align:center; width:31%;">
-                <div style="height:38px;"></div>
+                <div style="height:45px;"></div>
                 <span style="display:inline-block; width:150px; border-bottom:1.5px solid #000000; margin-bottom:4px;"></span>
                 <div style="font-weight:800; font-size:10.5px; color:#000000;">દાગીના સોંપનારની સહી</div>
                 <div style="font-weight:700; font-size:9.5px; margin-top:1px;">(<strong>${loan.borrowerName}</strong>)</div>
             </div>
             <!-- 3. Bank Handled (Officer & Manager) -->
             <div style="text-align:center; width:31%;">
-                <div style="height:38px;"></div>
+                <div style="height:45px;"></div>
                 <span style="display:inline-block; width:150px; border-bottom:1.5px solid #000000; margin-bottom:4px;"></span>
                 <div style="font-weight:800; font-size:10.5px; color:#000000;">બેંક વતી દાગીના સંભાળ્યા</div>
                 <div style="display:flex; justify-content:space-around; font-weight:800; font-size:9.5px; margin-top:2px; padding:0 6px;">
@@ -10790,7 +10796,7 @@ function generatePage3ReceiptsHTML(loan, isPageBreak = true) {
         </div>
 
         <!-- Location & Date Below Signatures -->
-        <div style="margin-top:3px; margin-bottom:4px; font-size:10.5px; font-weight:700; line-height:1.4;">
+        <div style="margin-top:4px; margin-bottom:4px; font-size:10.5px; font-weight:700; line-height:1.4;">
             <div>સ્થળ : <strong>${cleanBranch}</strong></div>
             <div>તારીખ :- <strong>${formatDateDMY(loan.date)}</strong></div>
         </div>
