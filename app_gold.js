@@ -3401,7 +3401,7 @@ function submitLoanEntry() {
         const nomineeRelation = document.getElementById("cust-nominee-relation") ? document.getElementById("cust-nominee-relation").value.trim() : "";
         const memberNo = (isMember || isStaff) && document.getElementById("member-no") ? document.getElementById("member-no").value.trim() : "";
 
-        const loanObj = {
+        let loanObj = {
             id: isEditingExistingLoan && currentEditingLoanId ? currentEditingLoanId : ("GL-" + Date.now()),
             loanNo: proposalNo,
             date: loanDate,
