@@ -53,7 +53,7 @@ window.logAuditEvent = async function(action, details, meta = {}) {
 };
 
 /**
- * Supabase Backend Service Adapter (Powers app_gold.js & management.js seamlessly)
+ * Supabase Backend Service Adapter
  */
 window.FirebaseService = {
   isInitialized: true,
@@ -77,16 +77,46 @@ window.FirebaseService = {
     } catch (e) {}
   },
 
+  async updateDeviceHeartbeat(sessionData) {
+    if (!_supabase || !sessionData) return { success: true, isTerminated: false };
+    try {
+      const sid = String(sessionData.sessionId || sessionData.id || ('sess_' + (sessionData.branchCode || '99'))).trim();
+      const { data } = await _supabase.from('active_sessions').upsert({
+        id: sid,
+        branch_id: String(sessionData.branchCode || '99'),
+        operator_name: String(sessionData.operator || sessionData.operatorName || 'Operator'),
+        ip_address: sessionData.ip || 'Office IP',
+        user_agent: navigator.userAgent,
+        status: 'active',
+        last_heartbeat: new Date().toISOString()
+      }, { onConflict: 'id' }).select('status').single();
+
+      if (data && data.status === 'terminated') {
+        return { success: true, isTerminated: true };
+      }
+      return { success: true, isTerminated: false };
+    } catch (e) {
+      return { success: true, isTerminated: false };
+    }
+  },
+
+  async deleteActiveSession(sid) {
+    if (!_supabase || !sid) return;
+    try {
+      await _supabase.from('active_sessions').delete().eq('id', sid);
+    } catch (e) {}
+  },
+
   async getDailyRates() {
     if (!_supabase) return null;
     try {
-      const { data, error } = await _supabase
+      const { data } = await _supabase
         .from('rates')
         .select('*')
         .order('rate_date', { ascending: false })
         .limit(1)
         .single();
-      if (error || !data) return null;
+      if (!data) return null;
       return {
         rate22K: data.rate_22k,
         rate24K: data.rate_24k,
@@ -108,16 +138,14 @@ window.FirebaseService = {
         is_locked: !!rateObj.isLocked,
         updated_by: (window.currentSession && window.currentSession.operator) || 'ADMIN'
       }, { onConflict: 'rate_date' });
-    } catch (e) {
-      console.warn("[Supabase] Rate save error:", e);
-    }
+    } catch (e) {}
   },
 
   async getRules() {
     if (!_supabase) return null;
     try {
       const { data } = await _supabase.from('rules_master').select('rules_json').eq('id', 'rulesMaster').single();
-      return data ? data.rules_json : null;
+      return data && data.rules_json ? data.rules_json : null;
     } catch (e) {
       return null;
     }
@@ -138,7 +166,7 @@ window.FirebaseService = {
     return { branchSeeds: {} };
   },
 
-  async saveSettings() {
+  async saveSettings(settingsObj) {
     return true;
   },
 
@@ -160,11 +188,11 @@ window.FirebaseService = {
   },
 
   async getValuersList() {
-    if (!_supabase) return [];
+    if (!_supabase) return { list: [], deletedIds: [] };
     try {
       const { data } = await _supabase.from('valuers').select('*');
-      if (!Array.isArray(data)) return [];
-      return data.map(v => ({
+      if (!Array.isArray(data)) return { list: [], deletedIds: [] };
+      const list = data.map(v => ({
         id: v.id,
         name: v.name,
         phone: v.phone,
@@ -172,8 +200,9 @@ window.FirebaseService = {
         savingsAc: v.savings_account,
         branchCode: v.branch_id
       }));
+      return { list, deletedIds: [] };
     } catch (e) {
-      return [];
+      return { list: [], deletedIds: [] };
     }
   },
 
@@ -209,6 +238,22 @@ window.FirebaseService = {
     } catch (e) {
       return [];
     }
+  },
+
+  async saveProductsList(productsList) {
+    if (!_supabase || !Array.isArray(productsList)) return;
+    try {
+      const records = productsList.map(p => ({
+        id: p.id || p.code || ('prod_' + Date.now()),
+        code: p.code || 'GL',
+        name: p.name || 'Product Scheme',
+        min_amount: parseFloat(p.minAmt || p.min_amount || 0),
+        max_amount: parseFloat(p.maxAmt || p.max_amount || 999999999),
+        interest_rate: parseFloat(p.rate || p.interest_rate || 11.5),
+        scheme_type: p.type || 'bullet'
+      }));
+      await _supabase.from('products').upsert(records, { onConflict: 'id' });
+    } catch (e) {}
   },
 
   async getLoans() {
@@ -258,9 +303,7 @@ window.FirebaseService = {
         updated_by: String((window.currentSession && window.currentSession.operator) || 'OPERATOR')
       };
       await _supabase.from('loans').upsert(loanRecord, { onConflict: 'id' });
-    } catch (e) {
-      console.warn("[Supabase] Loan save error:", e);
-    }
+    } catch (e) {}
   },
 
   async deleteLoan(loanId) {
@@ -268,39 +311,63 @@ window.FirebaseService = {
     try {
       await _supabase.from('loans').delete().eq('id', String(loanId).trim());
     } catch (e) {}
-  }
+  },
+
+  // Realtime Listeners
+  listenDailyRates(cb) {
+    if (!_supabase || typeof cb !== 'function') return;
+    _supabase.from('rates').select('*').order('rate_date', { ascending: false }).limit(1).single().then(({ data }) => {
+      if (data) cb({ rate22K: data.rate_22k, rate24K: data.rate_24k, isLocked: data.is_locked, date: data.rate_date });
+    });
+  },
+
+  listenRules(cb) {
+    if (!_supabase || typeof cb !== 'function') return;
+    _supabase.from('rules_master').select('rules_json').eq('id', 'rulesMaster').single().then(({ data }) => {
+      if (data && data.rules_json) cb(data.rules_json);
+    });
+  },
+
+  listenLoans(branchCode, cb) {
+    if (!_supabase || typeof cb !== 'function') return;
+    let q = _supabase.from('loans').select('*');
+    if (branchCode && branchCode !== '99') q = q.eq('branch_id', branchCode);
+    q.then(({ data }) => { if (Array.isArray(data)) cb(data); });
+  },
+
+  listenBranches(cb) {
+    if (!_supabase || typeof cb !== 'function') return;
+    _supabase.from('branches').select('*').order('branch_code').then(({ data }) => {
+      if (Array.isArray(data)) cb(data.map(b => ({ code: b.branch_code, name: b.branch_name, nameGuj: b.branch_name_guj })));
+    });
+  },
+
+  listenValuers(cb) {
+    if (!_supabase || typeof cb !== 'function') return;
+    _supabase.from('valuers').select('*').then(({ data }) => {
+      if (Array.isArray(data)) cb(data.map(v => ({ id: v.id, name: v.name, phone: v.phone, branchCode: v.branch_id })), []);
+    });
+  },
+
+  listenProducts(cb) {
+    if (!_supabase || typeof cb !== 'function') return;
+    _supabase.from('products').select('*').then(({ data }) => {
+      if (Array.isArray(data)) cb(data);
+    });
+  },
+
+  listenCustomers(cb) {
+    if (!_supabase || typeof cb !== 'function') return;
+    _supabase.from('customers').select('*').then(({ data }) => {
+      if (Array.isArray(data)) cb(data);
+    });
+  },
+
+  listenDeletedLoans(cb) {},
+  listenSettings(cb) {}
 };
 
-// Realtime listeners adapter for app_gold.js
-window.FirebaseService.listenRates = function(cb) {
-  if (!_supabase || typeof cb !== 'function') return;
-  _supabase.from('rates').select('*').order('rate_date', { ascending: false }).limit(1).single().then(({ data }) => {
-    if (data) cb({ rate22K: data.rate_22k, rate24K: data.rate_24k, isLocked: data.is_locked, date: data.rate_date });
-  });
-};
-
-window.FirebaseService.listenRules = function(cb) {
-  if (!_supabase || typeof cb !== 'function') return;
-  _supabase.from('rules_master').select('rules_json').eq('id', 'rulesMaster').single().then(({ data }) => {
-    if (data && data.rules_json) cb(data.rules_json);
-  });
-};
-
-window.FirebaseService.listenLoans = function(branchCode, cb) {
-  if (!_supabase || typeof cb !== 'function') return;
-  let q = _supabase.from('loans').select('*');
-  if (branchCode && branchCode !== '99') q = q.eq('branch_id', branchCode);
-  q.then(({ data }) => { if (Array.isArray(data)) cb(data); });
-};
-
-window.FirebaseService.listenCustomers = function(cb) {
-  if (!_supabase || typeof cb !== 'function') return;
-  _supabase.from('customers').select('*').then(({ data }) => {
-    if (Array.isArray(data)) cb(data);
-  });
-};
-
-// Health Check
+// Auto Health Check & Live Sync Trigger
 (async () => {
   if (!_supabase) return;
   const { error } = await _supabase.from('loans').select('count', { count: 'exact', head: true });
