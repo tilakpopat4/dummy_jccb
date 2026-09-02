@@ -339,7 +339,7 @@ window.FirebaseService = {
   async getLoans(branchCode = null) {
     if (!_supabase) return [];
     try {
-      let query = _supabase.from('loans').select('*, loan_ornaments(*)');
+      let query = _supabase.from('loans').select('*, loan_ornaments(*), customers(*)');
       if (branchCode && branchCode !== '99') {
         query = query.eq('branch_id', String(branchCode).padStart(2, '0'));
       }
@@ -347,6 +347,7 @@ window.FirebaseService = {
       if (error || !Array.isArray(data)) return [];
 
       return data.map(l => {
+        const cust = l.customers || {};
         const ornaments = (l.loan_ornaments || []).map(o => ({
           itemType: o.item_type || 'Other',
           name: o.item_name || 'Gold Ornament',
@@ -365,8 +366,12 @@ window.FirebaseService = {
           amount: parseFloat(o.valuation_amount || 0)
         }));
 
-        const custPh = l.customer_photo_url || l.CustomerPhoto || l.customer_photo || l.customerPhoto || l.photo || '';
+        const custPh = cust.photo_url || cust.photo || l.customer_photo_url || l.CustomerPhoto || l.customer_photo || l.customerPhoto || l.photo || '';
         const ornPh = l.ornament_photo_url || l.OrnamentPhoto || l.ornament_photo || l.ornamentPhoto || l.goldPhoto || '';
+
+        const borrowerName = String(cust.full_name || l.borrower_name || l.BorrowerName || l.name || '').trim();
+        const pktNo = String(l.packet_no || l.PacketNo || '').trim();
+        const cNo = String(l.customer_no || cust.customer_no || l.CustomerNo || '').trim();
 
         return {
           id: String(l.id || l.loan_no || l.ID),
@@ -376,18 +381,19 @@ window.FirebaseService = {
           proposalNo: String(l.proposal_no || l.ProposalNo || ''),
           branchCode: String(l.branch_id || l.BranchCode || '99'),
           branchName: String(l.branch_name || l.BranchName || ''),
-          borrowerName: String(l.borrower_name || l.BorrowerName || l.name || ''),
-          mobile: String(l.mobile || l.Mobile || ''),
-          address: String(l.address || l.Address || ''),
-          savingsAc: String(l.savings_account || l.SavingsAc || ''),
-          customerNo: String(l.customer_no || l.CustomerNo || ''),
-          customerId: String(l.customer_no || l.CustomerNo || ''),
+          borrowerName: borrowerName,
+          name: borrowerName,
+          mobile: String(cust.mobile || l.mobile || l.Mobile || ''),
+          address: String(cust.address || l.address || l.Address || ''),
+          savingsAc: String(cust.savings_account || l.savings_account || l.SavingsAc || ''),
+          customerNo: cNo,
+          customerId: cNo,
           date: l.loan_date || l.Date || '',
           loanStatus: l.loan_status || l.LoanStatus || 'New',
           loanType: l.loan_type || l.LoanType || 'GW-3725',
-          packetNo: l.packet_no || l.PacketNo || '',
-          isMember: !!(l.is_member || l.IsMember || l.member_no || l.MemberNo),
-          memberNo: String(l.member_no || l.MemberNo || ''),
+          packetNo: pktNo,
+          isMember: !!(cust.is_member || l.is_member || l.IsMember || cust.member_no || l.member_no || l.MemberNo),
+          memberNo: String(cust.member_no || l.member_no || l.MemberNo || ''),
           interestRate: parseFloat(l.interest_rate || l.InterestRate || 11.5),
           sanctionedAmount: parseFloat(l.sanctioned_amount || l.SanctionedAmount || l.loanAmount || 0),
           loanAmount: parseFloat(l.sanctioned_amount || l.SanctionedAmount || l.loanAmount || 0),

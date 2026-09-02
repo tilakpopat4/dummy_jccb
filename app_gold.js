@@ -1101,7 +1101,28 @@ async function syncCloudData(isManual = false) {
                 seen.add(id);
                 const local = (state.loans || []).find(x => String(x.id || x.loanId).trim() === id);
                 if (local) {
-                    mergedLoans.push({ ...local, ...cl, id: id, loanId: id });
+                    const bName = cl.borrowerName || local.borrowerName || local.name || cl.name || '';
+                    const pktNo = cl.packetNo || local.packetNo || '';
+                    const cNo = cl.customerNo || local.customerNo || '';
+                    const cPhoto = cl.customerPhoto || local.customerPhoto || local.photo || '';
+                    const oPhoto = cl.ornamentPhoto || local.ornamentPhoto || local.goldPhoto || '';
+                    const orns = (Array.isArray(cl.ornamentsTable) && cl.ornamentsTable.length > 0) ? cl.ornamentsTable : (local.ornamentsTable || []);
+
+                    mergedLoans.push({
+                        ...local,
+                        ...cl,
+                        borrowerName: bName,
+                        name: bName,
+                        packetNo: pktNo,
+                        customerNo: cNo,
+                        customerPhoto: cPhoto,
+                        photo: cPhoto,
+                        ornamentPhoto: oPhoto,
+                        goldPhoto: oPhoto,
+                        ornamentsTable: orns,
+                        id: id,
+                        loanId: id
+                    });
                 } else {
                     mergedLoans.push({ ...cl, id: id, loanId: id });
                 }
