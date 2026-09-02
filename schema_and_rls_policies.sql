@@ -177,15 +177,20 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 );
 
 -- =============================================================================
--- 3. INDEXES FOR HIGH-SPEED MULTI-TERMINAL SEARCH
+-- 3. INDEXES FOR HIGH-SPEED MULTI-TERMINAL SEARCH & REPORTING
 -- =============================================================================
 CREATE INDEX IF NOT EXISTS idx_loans_branch ON public.loans(branch_id);
 CREATE INDEX IF NOT EXISTS idx_loans_customer ON public.loans(customer_no);
 CREATE INDEX IF NOT EXISTS idx_loans_account ON public.loans(account_no);
 CREATE INDEX IF NOT EXISTS idx_loans_packet ON public.loans(packet_no);
+CREATE INDEX IF NOT EXISTS idx_loans_proposal ON public.loans(proposal_no);
+CREATE INDEX IF NOT EXISTS idx_loans_date_status ON public.loans(loan_date DESC, loan_status);
 CREATE INDEX IF NOT EXISTS idx_customers_branch ON public.customers(branch_id);
 CREATE INDEX IF NOT EXISTS idx_customers_mobile ON public.customers(mobile);
+CREATE INDEX IF NOT EXISTS idx_customers_name ON public.customers(full_name);
 CREATE INDEX IF NOT EXISTS idx_loan_ornaments_loan ON public.loan_ornaments(loan_id);
+CREATE INDEX IF NOT EXISTS idx_rates_date ON public.rates(rate_date DESC);
+CREATE INDEX IF NOT EXISTS idx_valuers_branch ON public.valuers(branch_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON public.audit_logs(event_timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_active_sessions_status ON public.active_sessions(status, last_heartbeat);
 
