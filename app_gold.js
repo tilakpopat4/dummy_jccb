@@ -711,6 +711,14 @@ document.addEventListener("DOMContentLoaded", () => {
                             lockedBy: cloudRates.lockedBy
                         });
                     }
+                    if (cloudRates && Array.isArray(cloudRates.history) && cloudRates.history.length > 0) {
+                        const histMap = new Map();
+                        (state.rateHistory || []).forEach(r => { if (r.date) histMap.set(r.date, r); });
+                        cloudRates.history.forEach(r => { if (r.date) histMap.set(r.date, r); });
+                        state.rateHistory = Array.from(histMap.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
+                        saveState();
+                        if (typeof renderGoldRateMaster === "function") renderGoldRateMaster();
+                    }
                 });
             }
 
@@ -941,6 +949,12 @@ async function syncCloudData(isManual = false) {
                     lockedBy: fbRates.lockedBy
                 });
             }
+        }
+        if (fbRates && Array.isArray(fbRates.history) && fbRates.history.length > 0) {
+            const histMap = new Map();
+            (state.rateHistory || []).forEach(r => { if (r.date) histMap.set(r.date, r); });
+            fbRates.history.forEach(r => { if (r.date) histMap.set(r.date, r); });
+            state.rateHistory = Array.from(histMap.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
         }
 
         // 2. Sync Settings & Branch Seeds

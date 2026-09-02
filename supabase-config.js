@@ -110,18 +110,26 @@ window.FirebaseService = {
   async getDailyRates() {
     if (!_supabase) return null;
     try {
-      const { data } = await _supabase
+      const { data, error } = await _supabase
         .from('rates')
         .select('*')
-        .order('rate_date', { ascending: false })
-        .limit(1)
-        .single();
-      if (!data) return null;
+        .order('rate_date', { ascending: false });
+      if (error || !Array.isArray(data) || data.length === 0) return null;
+
+      const latest = data[0];
+      const history = data.map(r => ({
+        date: r.rate_date,
+        rate22K: parseFloat(r.rate_22k || 0),
+        rate24K: parseFloat(r.rate_24k || 0),
+        updatedBy: r.updated_by || 'HEAD OFFICE'
+      }));
+
       return {
-        rate22K: data.rate_22k,
-        rate24K: data.rate_24k,
-        isLocked: data.is_locked,
-        date: data.rate_date
+        rate22K: latest.rate_22k,
+        rate24K: latest.rate_24k,
+        isLocked: latest.is_locked,
+        date: latest.rate_date,
+        history: history
       };
     } catch (e) {
       return null;
@@ -413,10 +421,24 @@ window.FirebaseService = {
   // Realtime Listeners (Active Live WebSockets across PCs)
   listenDailyRates(cb) {
     if (!_supabase || typeof cb !== 'function') return;
-    const fetchLatest = () => {
-      _supabase.from('rates').select('*').order('rate_date', { ascending: false }).limit(1).single().then(({ data }) => {
-        if (data) cb({ rate22K: data.rate_22k, rate24K: data.rate_24k, isLocked: data.is_locked, date: data.rate_date });
-      });
+    const fetchLatest = async () => {
+      const { data } = await _supabase.from('rates').select('*').order('rate_date', { ascending: false });
+      if (Array.isArray(data) && data.length > 0) {
+        const latest = data[0];
+        const history = data.map(r => ({
+          date: r.rate_date,
+          rate22K: parseFloat(r.rate_22k || 0),
+          rate24K: parseFloat(r.rate_24k || 0),
+          updatedBy: r.updated_by || 'HEAD OFFICE'
+        }));
+        cb({
+          rate22K: latest.rate_22k,
+          rate24K: latest.rate_24k,
+          isLocked: latest.is_locked,
+          date: latest.rate_date,
+          history: history
+        });
+      }
     };
     fetchLatest();
     _supabase.channel('public:rates')
