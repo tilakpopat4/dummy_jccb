@@ -131,14 +131,32 @@ window.FirebaseService = {
   async saveDailyRates(rateObj) {
     if (!_supabase || !rateObj) return;
     try {
-      await _supabase.from('rates').upsert({
-        rate_date: rateObj.date || new Date().toISOString().split('T')[0],
-        rate_22k: parseFloat(rateObj.rate22K || rateObj.rate24K || 0),
-        rate_24k: parseFloat(rateObj.rate24K || rateObj.rate22K || 0),
+      let dStr = rateObj.date;
+      if (!dStr || dStr.length !== 10) {
+        dStr = new Date().toISOString().split('T')[0];
+      }
+      const r22 = parseFloat(rateObj.rate22K || rateObj.rate22 || rateObj.rate24K || 0);
+      const r24 = parseFloat(rateObj.rate24K || rateObj.rate24 || (r22 * (24 / 22)) || 0);
+
+      const payload = {
+        rate_date: dStr,
+        rate_22k: r22,
+        rate_24k: r24,
         is_locked: !!rateObj.isLocked,
         updated_by: (window.currentSession && window.currentSession.operator) || 'ADMIN'
-      }, { onConflict: 'rate_date' });
-    } catch (e) {}
+      };
+
+      const { data, error } = await _supabase.from('rates').upsert(payload, { onConflict: 'rate_date' }).select();
+      if (error) {
+        console.error("[Supabase] Rate save failed:", error.message || error);
+        return false;
+      }
+      console.log("✅ [Supabase] Daily Gold Rate Saved Successfully:", payload);
+      return true;
+    } catch (e) {
+      console.error("[Supabase] Rate save exception:", e);
+      return false;
+    }
   },
 
   async getRules() {
