@@ -4202,7 +4202,7 @@ function renderRegisterTable() {
                 <strong style="font-weight:800; color:#334155;">${loan.packetNo || "-"}</strong>
                 `}
             </td>
-            <td style="min-width:160px; font-weight:700;">${loan.borrowerName}</td>
+            <td style="min-width:160px; font-weight:700;">${loan.borrowerName || loan.name || (state.customers ? (state.customers.find(c => String(c.customerNo || c.id).trim() === String(loan.customerNo || '').trim()) || {}).name : '') || '-'}</td>
             <td style="white-space:nowrap; text-align:center;"><span class="badge badge-gold">${loan.loanType || "GW-3725"}</span></td>
             <td style="text-align:right; white-space:nowrap; font-weight:800;">₹ ${sancAmt.toLocaleString("en-IN")}</td>
             <td style="text-align:right; white-space:nowrap;">${parseFloat(loan.goldWeight || 0).toFixed(3)} g</td>
