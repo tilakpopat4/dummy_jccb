@@ -924,19 +924,29 @@ async function syncCloudData(isManual = false) {
             }
         }
 
-        // 8. Sync Loans (Pure Supabase Single Source of Truth)
+        // 8. Sync Loans (Smart Resilient Cloud Sync)
         const fbLoans = await window.FirebaseService.getLoans();
-        if (Array.isArray(fbLoans)) {
+        if (Array.isArray(fbLoans) && fbLoans.length > 0) {
             state.loans = fbLoans;
+        } else if ((!Array.isArray(fbLoans) || fbLoans.length === 0) && Array.isArray(state.loans) && state.loans.length > 0) {
+            console.log("[Supabase] Auto-syncing local loans to cloud:", state.loans.length);
+            if (typeof window.uploadRestoredStateToSupabase === "function") {
+                window.uploadRestoredStateToSupabase(state).catch(e => console.warn(e));
+            }
         }
 
-        // 9. Sync Customers Directory (Pure Supabase Single Source of Truth)
+        // 9. Sync Customers Directory (Smart Resilient Cloud Sync)
         if (typeof window.FirebaseService.getCustomers === "function") {
             const fbCusts = await window.FirebaseService.getCustomers();
-            if (Array.isArray(fbCusts)) {
+            if (Array.isArray(fbCusts) && fbCusts.length > 0) {
                 state.customers = fbCusts;
                 if (typeof renderCustomerMasterList === "function") renderCustomerMasterList();
                 if (typeof renderCustomerMasterTable === "function") renderCustomerMasterTable();
+            } else if ((!Array.isArray(fbCusts) || fbCusts.length === 0) && Array.isArray(state.customers) && state.customers.length > 0) {
+                console.log("[Supabase] Auto-syncing local customers to cloud:", state.customers.length);
+                if (typeof window.uploadRestoredStateToSupabase === "function") {
+                    window.uploadRestoredStateToSupabase(state).catch(e => console.warn(e));
+                }
             }
         }
 
@@ -9411,12 +9421,18 @@ function importCompleteRestoreExcel(file) {
                 `• ગ્રાહક અને દાગીનાના ફોટા: ${restoredSummary.photosCount} પુનઃસ્થાપિત\n\n` +
                 `ડેટાબેઝ ક્લાઉડ સાથે સિંક થઈ રહ્યું છે...`);
 
+            renderDashboard();
+            renderRegisterTable();
+            renderCustomerMasterList();
+            if (typeof renderReportsTable === "function") renderReportsTable();
+
             if (typeof window.uploadRestoredStateToSupabase === "function") {
-                window.uploadRestoredStateToSupabase(state).finally(() => {
-                    window.location.reload();
+                window.uploadRestoredStateToSupabase(state).then(() => {
+                    console.log("[Supabase] Restored state verified in central database.");
+                    showToast("✅ તમામ ડેટા ક્લાઉડ ડેટાબેઝમાં સુરક્ષિત સેવ થઈ ગયો છે!");
+                }).catch(err => {
+                    console.warn("[Supabase] Restore cloud push warning:", err);
                 });
-            } else {
-                window.location.reload();
             }
         } catch (err) {
             console.error("Restore error:", err);
