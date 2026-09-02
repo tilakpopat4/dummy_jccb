@@ -9133,34 +9133,51 @@ function importCompleteRestoreExcel(file) {
             };
 
             // 0. Pre-build Photo & Large String Vault Map
-            const vaultSheet = findSheet("vault") || findSheet("photo");
+            const vaultSheet = findSheet("vault") || findSheet("photo") || findSheet("image");
             const vaultMap = {};
             if (vaultSheet) {
                 const vaultRows = XLSX.utils.sheet_to_json(vaultSheet);
                 const grouped = {};
                 vaultRows.forEach(r => {
-                    const key = r["VaultKey"] || r["Key"] || r["vaultKey"];
-                    const idx = parseInt(r["ChunkIndex"] || 0);
-                    const chunk = String(r["DataChunk"] || r["Chunk"] || "");
+                    const rawKey = r["VaultKey"] || r["Key"] || r["vaultKey"] || r["ID"] || r["id"] || "";
+                    const key = String(rawKey).trim();
+                    const idx = parseInt(r["ChunkIndex"] || r["Index"] || r["chunkIndex"] || 0);
+                    const chunk = String(r["DataChunk"] || r["Chunk"] || r["dataChunk"] || r["Base64"] || r["Data"] || "");
                     if (key) {
                         if (!grouped[key]) grouped[key] = [];
                         grouped[key][idx] = chunk;
+                        const lowerKey = key.toLowerCase();
+                        if (!grouped[lowerKey]) grouped[lowerKey] = [];
+                        grouped[lowerKey][idx] = chunk;
                     }
                 });
+
                 Object.keys(grouped).forEach(k => {
-                    vaultMap[k] = grouped[k].join("");
+                    const chunks = grouped[k];
+                    let fullStr = "";
+                    for (let i = 0; i < chunks.length; i++) {
+                        if (chunks[i] !== undefined && chunks[i] !== null) fullStr += chunks[i];
+                    }
+                    vaultMap[k] = fullStr;
                 });
             }
 
             const resolveVaultString = (refStr) => {
                 if (!refStr) return "";
-                const str = String(refStr).trim();
+                let str = String(refStr).trim();
                 if (str.startsWith("VAULT_REF:")) {
                     const key = str.substring("VAULT_REF:".length).trim();
-                    const resolved = vaultMap[key] || "";
-                    if (resolved) restoredSummary.photosCount++;
-                    return resolved;
+                    str = vaultMap[key] || vaultMap[key.toLowerCase()] || "";
                 }
+                if (!str) return "";
+
+                if (!str.startsWith("data:image/") && !str.startsWith("http://") && !str.startsWith("https://") && !str.startsWith("blob:")) {
+                    if (str.startsWith("/9j/") || str.startsWith("iVBORw0KGgo") || str.startsWith("R0lGOD") || str.startsWith("UklGR")) {
+                        const mime = str.startsWith("/9j/") ? "image/jpeg" : (str.startsWith("iVBORw0KGgo") ? "image/png" : "image/jpeg");
+                        str = `data:${mime};base64,${str}`;
+                    }
+                }
+
                 if (str.startsWith("data:image/")) {
                     restoredSummary.photosCount++;
                 }
@@ -9171,23 +9188,25 @@ function importCompleteRestoreExcel(file) {
             const loansSheet = findSheet("loan");
             if (loansSheet) {
                 const rawLoans = XLSX.utils.sheet_to_json(loansSheet);
-                state.loans = rawLoans.map(r => {
-                    const rawBCode = String(r["BranchCode"] || r["branchCode"] || "99").replace(/\D/g, '');
+                state.loans = rawLoans.map((r, idx) => {
+                    const rawBCode = String(r["BranchCode"] || r["Branch Code"] || r["branchCode"] || "99").replace(/\D/g, '');
                     const bCode = rawBCode ? rawBCode.padStart(2, "0") : "99";
-                    const bName = String(r["BranchName"] || r["branchName"] || "");
+                    const bName = String(r["BranchName"] || r["Branch Name"] || r["branchName"] || "");
 
                     // Track branch-wise count
                     restoredSummary.branchBreakdown[bCode] = (restoredSummary.branchBreakdown[bCode] || 0) + 1;
 
                     // Parse ornaments table
                     let ornTable = [];
-                    const rawOrn = r["OrnamentsTableJSON"] || r["ornamentsTableJSON"] || r["ornamentsTable"];
+                    const rawOrn = r["OrnamentsTableJSON"] || r["ornamentsTableJSON"] || r["Ornaments Desc"] || r["ornamentsTable"];
                     if (rawOrn) {
                         try {
                             const parsed = JSON.parse(resolveVaultString(rawOrn));
                             ornTable = Array.isArray(parsed) ? parsed : [];
                         } catch (e) {
-                            console.warn("Ornaments table parse warning:", e);
+                            if (typeof rawOrn === "string" && rawOrn.trim().length > 0) {
+                                ornTable = [{ itemType: "Other", itemName: rawOrn, qty: 1, grossWeight: parseFloat(r["Gross Weight"] || r["Gold Weight"] || 0), netWeight: parseFloat(r["Gold Weight"] || 0), purity: "22K", valuationRate: parseFloat(r["Market Rate"] || 0), itemValuation: parseFloat(r["Market Value"] || 0) }];
+                            }
                         }
                     }
 
@@ -9203,60 +9222,88 @@ function importCompleteRestoreExcel(file) {
                         }
                     }
 
-                    const custPhoto = resolveVaultString(r["CustomerPhoto"] || r["CustomerPhotoBase64"] || r["photo"] || r["Photo"] || "");
-                    const ornPhoto = resolveVaultString(r["OrnamentPhoto"] || r["OrnamentPhotoBase64"] || r["goldPhoto"] || r["GoldPhoto"] || "");
+                    const loanId = String(r["ID"] || r["id"] || ("GL-" + Date.now() + Math.floor(Math.random() * 1000)));
+                    let custPhoto = resolveVaultString(r["CustomerPhoto"] || r["CustomerPhotoBase64"] || r["photo"] || r["Photo"] || r["applicantPhoto"] || "");
+                    let ornPhoto = resolveVaultString(r["OrnamentPhoto"] || r["OrnamentPhotoBase64"] || r["goldPhoto"] || r["GoldPhoto"] || "");
+
+                    if (!custPhoto && vaultMap[`LOAN_${loanId}_cust_photo`]) {
+                        custPhoto = resolveVaultString(vaultMap[`LOAN_${loanId}_cust_photo`]);
+                    }
+                    if (!ornPhoto && vaultMap[`LOAN_${loanId}_orn_photo`]) {
+                        ornPhoto = resolveVaultString(vaultMap[`LOAN_${loanId}_orn_photo`]);
+                    }
+
+                    const pktNo = String(r["PacketNo"] || r["Packet No"] || r["packetNo"] || r["Packet"] || r["Packet Number"] || r["packet_no"] || r["પેકેટ નં"] || "").trim();
+                    const cNo = String(r["CustomerNo"] || r["Customer No"] || r["Customer ID"] || r["CustomerID"] || r["customerNo"] || r["customer_no"] || r["Cust No"] || r["Cust ID"] || r["ગ્રાહક નં"] || "").trim();
+                    const memNo = String(r["MemberNo"] || r["Member No"] || r["memberNo"] || r["Member"] || r["સભાસદ નં"] || "").trim();
+                    const isMem = (r["IsMember"] === "Yes" || r["Is Member"] === "Yes" || r["IsMember"] === true || r["Is Member"] === true || r["isMember"] === "Yes" || r["isMember"] === true || !!memNo);
+                    const lType = String(r["LoanType"] || r["Loan Type"] || r["Product Code"] || r["loanType"] || "GW-3725").trim();
+                    const propNo = String(r["ProposalNo"] || r["Proposal No"] || r["Unique Proposal No"] || r["proposalNo"] || r["loanNo"] || r["Loan No"] || ("GL-P-" + (r["AccountNo"] || r["Account No"] || "0001"))).trim();
+                    const accNo = formatLoanAccountNo(r["AccountNo"] || r["Account No"] || r["accountNo"] || r["Account"] || "", bCode, lType);
+                    const bNameGuj = String(r["BorrowerName"] || r["Borrower Name"] || r["Name"] || r["Customer Name"] || r["borrowerName"] || "").trim();
+                    const savAc = String(r["SavingsAc"] || r["Savings Ac"] || r["Savings A/c"] || r["Savings Account"] || r["savingsAc"] || "").trim();
+                    const mob = String(r["Mobile"] || r["Mobile No"] || r["mobile"] || r["Phone"] || "").trim();
+                    const addr = String(r["Address"] || r["address"] || "").trim();
+                    const gWeight = parseFloat(r["GoldWeight"] || r["Gold Weight"] || r["goldWeight"] || r["Net Weight"] || 0);
+                    const grWeight = parseFloat(r["GrossWeight"] || r["Gross Weight"] || r["grossWeight"] || r["Gross Wt"] || gWeight);
+                    const sancAmt = parseFloat(r["SanctionedAmount"] || r["Sanctioned Amount"] || r["Loan Amount"] || r["LoanAmount"] || r["sanctionedAmount"] || 0);
+                    const valAmt = parseFloat(r["ValuationAmount"] || r["Valuation Amount"] || r["Market Value"] || r["valuationAmount"] || 0);
+                    const intRate = parseFloat(r["InterestRate"] || r["Interest Rate"] || r["interestRate"] || r["Rate of Interest"] || 11.50);
 
                     return {
-                        id: String(r["ID"] || r["id"] || ("GL-" + Date.now() + Math.floor(Math.random() * 1000))),
-                        loanNo: String(r["ProposalNo"] || r["loanNo"] || r["LoanNo"] || ("GL-P-" + (r["AccountNo"] || "0001"))),
+                        id: loanId,
+                        loanNo: propNo,
                         date: String(r["Date"] || r["date"] || new Date().toISOString().split("T")[0]),
-                        loanStatus: String(r["LoanStatus"] || r["loanStatus"] || r["Status"] || r["status"] || "New"),
+                        loanStatus: String(r["LoanStatus"] || r["Loan Status"] || r["loanStatus"] || r["Status"] || r["status"] || "New"),
                         branchCode: bCode,
                         branchName: bName,
-                        accountNo: formatLoanAccountNo(r["AccountNo"] || r["accountNo"] || "", bCode, r["LoanType"] || r["loanType"]),
-                        packetNo: String(r["PacketNo"] || r["packetNo"] || ""),
-                        customerNo: String(r["CustomerNo"] || r["customerNo"] || ""),
-                        isMember: (r["IsMember"] === "Yes" || r["IsMember"] === true || r["isMember"] === "Yes" || r["isMember"] === true || !!r["MemberNo"] || !!r["memberNo"]),
-                        memberNo: String(r["MemberNo"] || r["memberNo"] || ""),
-                        borrowerName: String(r["BorrowerName"] || r["borrowerName"] || r["Name"] || ""),
-                        mobile: String(r["Mobile"] || r["mobile"] || ""),
-                        address: String(r["Address"] || r["address"] || ""),
-                        savingsAc: String(r["SavingsAc"] || r["savingsAc"] || ""),
+                        accountNo: accNo,
+                        packetNo: pktNo,
+                        customerNo: cNo,
+                        isMember: isMem,
+                        memberNo: memNo,
+                        borrowerName: bNameGuj,
+                        mobile: mob,
+                        address: addr,
+                        savingsAc: savAc,
                         dob: String(r["DOB"] || r["dob"] || r["BirthDate"] || r["birthDate"] || r["જન્મતારીખ"] || "").trim(),
                         age: String(r["Age"] || r["age"] || (r["DOB"] || r["dob"] ? calculateAgeFromDOB(r["DOB"] || r["dob"], r["Date"] || r["date"]) : "")),
                         occupation: String(r["Occupation"] || r["occupation"] || ""),
                         religion: String(r["Religion"] || r["religion"] || ""),
                         caste: String(r["Caste"] || r["caste"] || ""),
-                        nomineeName: String(r["NomineeName"] || r["nomineeName"] || ""),
-                        nomineeRelation: String(r["NomineeRelation"] || r["nomineeRelation"] || ""),
-                        valuerName: String(r["ValuerName"] || r["valuerName"] || ""),
-                        loanType: String(r["LoanType"] || r["loanType"] || "GW-3725"),
-                        interestRate: parseFloat(r["InterestRate"] || r["interestRate"] || 11.50),
-                        sanctionedAmount: parseFloat(r["SanctionedAmount"] || r["sanctionedAmount"] || 0),
-                        valuationAmount: parseFloat(r["ValuationAmount"] || r["valuationAmount"] || 0),
-                        goldWeight: parseFloat(r["GoldWeight"] || r["goldWeight"] || 0),
-                        grossWeight: parseFloat(r["GrossWeight"] || r["grossWeight"] || r["GoldWeight"] || r["goldWeight"] || 0),
-                        purpose: String(r["Purpose"] || r["purpose"] || ""),
-                        shareA: parseFloat(r["ShareA"] || r["shareA"] || 0),
-                        shareB: parseFloat(r["ShareB"] || r["shareB"] || 0),
-                        memberFee: parseFloat(r["MemberFee"] || r["memberFee"] || 0),
-                        valuerFee: parseFloat(r["ValuerFee"] || r["valuerFee"] || 0),
-                        stampDuty: parseFloat(r["StampDuty"] || r["stampDuty"] || 0),
-                        serviceCharge: parseFloat(r["ServiceCharge"] || r["serviceCharge"] || 0),
-                        docCharges: parseFloat(r["DocCharges"] || r["docCharges"] || 0),
+                        nomineeName: String(r["NomineeName"] || r["Nominee Name"] || r["nomineeName"] || ""),
+                        nomineeRelation: String(r["NomineeRelation"] || r["Nominee Relation"] || r["nomineeRelation"] || ""),
+                        valuerName: String(r["ValuerName"] || r["Valuer Name"] || r["Valuer ID"] || r["valuerName"] || ""),
+                        loanType: lType,
+                        interestRate: intRate,
+                        sanctionedAmount: sancAmt,
+                        valuationAmount: valAmt,
+                        goldWeight: gWeight,
+                        grossWeight: grWeight,
+                        purpose: String(r["Purpose"] || r["Loan Purpose"] || r["purpose"] || ""),
+                        shareA: parseFloat(r["ShareA"] || r["Share A"] || r["shareA"] || 0),
+                        shareB: parseFloat(r["ShareB"] || r["Share B"] || r["shareB"] || 0),
+                        memberFee: parseFloat(r["MemberFee"] || r["Member Fee"] || r["memberFee"] || 0),
+                        valuerFee: parseFloat(r["ValuerFee"] || r["Valuer Fee"] || r["valuerFee"] || 0),
+                        stampDuty: parseFloat(r["StampDuty"] || r["Stamp Duty"] || r["stampDuty"] || 0),
+                        serviceCharge: parseFloat(r["ServiceCharge"] || r["Service Charge"] || r["serviceCharge"] || 0),
+                        docCharges: parseFloat(r["DocCharges"] || r["Doc Charges"] || r["docCharges"] || 0),
                         insurance: parseFloat(r["Insurance"] || r["insurance"] || 0),
                         cgst: parseFloat(r["CGST"] || r["cgst"] || 0),
                         sgst: parseFloat(r["SGST"] || r["sgst"] || 0),
-                        otherCharges: parseFloat(r["OtherCharges"] || r["otherCharges"] || 0),
+                        otherCharges: parseFloat(r["OtherCharges"] || r["Other Charges"] || r["otherCharges"] || 0),
                         customCharges: customCharges,
                         customChargesTotal: parseFloat(r["CustomChargesTotal"] || r["customChargesTotal"] || 0),
-                        totalDeductions: parseFloat(r["TotalDeductions"] || r["totalDeductions"] || 0),
+                        totalDeductions: parseFloat(r["TotalDeductions"] || r["Total Deductions"] || r["totalDeductions"] || 0),
                         emiAmount: parseFloat(r["EmiAmount"] || r["emiAmount"] || 0),
                         installments: parseInt(r["Installments"] || r["installments"] || 36),
                         grievanceOfficer: String(r["GrievanceOfficer"] || r["grievanceOfficer"] || "Amrutlal Valjibhai Chavda"),
                         ornamentsTable: ornTable,
                         customerPhoto: custPhoto,
+                        photo: custPhoto,
+                        applicantPhoto: custPhoto,
                         ornamentPhoto: ornPhoto,
+                        goldPhoto: ornPhoto,
                         updatedAt: String(r["UpdatedAt"] || r["updatedAt"] || new Date().toISOString())
                     };
                 });
@@ -9267,24 +9314,72 @@ function importCompleteRestoreExcel(file) {
             const custSheet = findSheet("cust");
             if (custSheet) {
                 const rawCustomers = XLSX.utils.sheet_to_json(custSheet);
-                state.customers = rawCustomers.map((c, idx) => ({
-                    id: String(c["id"] || c["ID"] || ("CUST-" + (idx + 1))),
-                    customerNo: String(c["customerNo"] || c["CustomerNo"] || ""),
-                    name: String(c["name"] || c["Name"] || ""),
-                    isMember: (c["isMember"] === "Yes" || c["isMember"] === true || c["IsMember"] === "Yes" || c["IsMember"] === true),
-                    memberNo: String(c["memberNo"] || c["MemberNo"] || ""),
-                    address: String(c["address"] || c["Address"] || ""),
-                    savingsAc: String(c["savingsAc"] || c["SavingsAc"] || ""),
-                    dob: String(c["dob"] || c["DOB"] || c["BirthDate"] || c["birthDate"] || c["જન્મતારીખ"] || "").trim(),
-                    age: String(c["age"] || c["Age"] || ""),
-                    occupation: String(c["occupation"] || c["Occupation"] || ""),
-                    religion: String(c["religion"] || c["Religion"] || ""),
-                    caste: String(c["caste"] || c["Caste"] || ""),
-                    mobile: String(c["mobile"] || c["Mobile"] || ""),
-                    nomineeName: String(c["nomineeName"] || c["NomineeName"] || ""),
-                    nomineeRelation: String(c["nomineeRelation"] || c["NomineeRelation"] || ""),
-                    photo: resolveVaultString(c["photo"] || c["Photo"] || c["customerPhoto"] || c["CustomerPhoto"] || "")
-                }));
+                state.customers = rawCustomers.map((c, idx) => {
+                    const cId = String(c["id"] || c["ID"] || c["Customer ID"] || c["CustomerID"] || ("CUST-" + (idx + 1)));
+                    const cNo = String(c["customerNo"] || c["CustomerNo"] || c["Customer No"] || c["Customer ID"] || c["CustomerID"] || c["Cust No"] || "").trim();
+                    let custPhoto = resolveVaultString(c["photo"] || c["Photo"] || c["customerPhoto"] || c["CustomerPhoto"] || "");
+                    if (!custPhoto && vaultMap[`CUST_${cId}_photo`]) {
+                        custPhoto = resolveVaultString(vaultMap[`CUST_${cId}_photo`]);
+                    }
+                    if (!custPhoto && vaultMap[`CUST_${cNo}_photo`]) {
+                        custPhoto = resolveVaultString(vaultMap[`CUST_${cNo}_photo`]);
+                    }
+
+                    const memNo = String(c["memberNo"] || c["MemberNo"] || c["Member No"] || "");
+                    const isMem = (c["isMember"] === "Yes" || c["isMember"] === true || c["IsMember"] === "Yes" || c["Is Member"] === "Yes" || !!memNo);
+
+                    return {
+                        id: cId,
+                        customerNo: cNo,
+                        name: String(c["name"] || c["Name"] || c["Customer Name"] || c["Borrower Name"] || ""),
+                        isMember: isMem,
+                        memberNo: memNo,
+                        address: String(c["address"] || c["Address"] || ""),
+                        savingsAc: String(c["savingsAc"] || c["SavingsAc"] || c["Savings Ac"] || c["Savings A/c"] || ""),
+                        dob: String(c["dob"] || c["DOB"] || c["BirthDate"] || c["birthDate"] || c["જન્મતારીખ"] || "").trim(),
+                        age: String(c["age"] || c["Age"] || ""),
+                        occupation: String(c["occupation"] || c["Occupation"] || ""),
+                        religion: String(c["religion"] || c["Religion"] || ""),
+                        caste: String(c["caste"] || c["Caste"] || ""),
+                        mobile: String(c["mobile"] || c["Mobile"] || c["Phone"] || ""),
+                        nomineeName: String(c["nomineeName"] || c["NomineeName"] || c["Nominee Name"] || ""),
+                        nomineeRelation: String(c["nomineeRelation"] || c["NomineeRelation"] || c["Nominee Relation"] || ""),
+                        photo: custPhoto,
+                        customerPhoto: custPhoto
+                    };
+                });
+                restoredSummary.customers = state.customers.length;
+            }
+
+            // Auto-reconstruct Customer Master from Loans if Customer sheet was missing or empty
+            if (!state.customers || state.customers.length === 0) {
+                const custMap = new Map();
+                (state.loans || []).forEach(l => {
+                    const cNo = (l.customerNo || l.accountNo || l.borrowerName || '').trim();
+                    if (cNo && !custMap.has(cNo)) {
+                        custMap.set(cNo, {
+                            id: 'CUST_' + cNo.replace(/\W/g, '_'),
+                            customerNo: cNo,
+                            name: l.borrowerName || 'Customer ' + cNo,
+                            mobile: l.mobile || '',
+                            address: l.address || '',
+                            savingsAc: l.savingsAc || '',
+                            dob: l.dob || '',
+                            age: l.age || '',
+                            occupation: l.occupation || '',
+                            religion: l.religion || '',
+                            caste: l.caste || '',
+                            nomineeName: l.nomineeName || '',
+                            nomineeRelation: l.nomineeRelation || '',
+                            isMember: !!(l.isMember || l.memberNo),
+                            memberNo: l.memberNo || '',
+                            photo: l.customerPhoto || l.photo || '',
+                            customerPhoto: l.customerPhoto || l.photo || '',
+                            branchCode: l.branchCode || '99'
+                        });
+                    }
+                });
+                state.customers = Array.from(custMap.values());
                 restoredSummary.customers = state.customers.length;
             }
 
@@ -9394,6 +9489,43 @@ function importCompleteRestoreExcel(file) {
                         state.settings = { ...state.settings, ...row };
                         restoredSummary.settings = true;
                     }
+                }
+            }
+
+            // 8b. Dedicated Seeds Sheet (Branch Packet Seeds, Product Account Seeds)
+            const seedsSheet = findSheet("seed");
+            if (seedsSheet) {
+                const rawSeeds = XLSX.utils.sheet_to_json(seedsSheet);
+                if (Array.isArray(rawSeeds) && rawSeeds.length > 0) {
+                    if (!state.settings) state.settings = {};
+                    if (!state.settings.branchSeeds) state.settings.branchSeeds = {};
+
+                    rawSeeds.forEach(s => {
+                        const bCodeRaw = String(s["Branch Code"] || s["BranchCode"] || s["branchCode"] || s["Code"] || "99").replace(/\D/g, '');
+                        const bCode2 = bCodeRaw.padStart(2, '0');
+                        const pCode = String(s["Product Code"] || s["ProductCode"] || s["productCode"] || s["Product"] || "3725").trim();
+                        const pCodeMatch = pCode.match(/\d+/);
+                        const pCode4 = pCodeMatch ? pCodeMatch[0].padStart(4, '0') : pCode;
+                        const accSeed = parseInt(s["Account Seed"] || s["AccountSeed"] || s["accountSeed"] || 0);
+                        const pktSeed = parseInt(s["Last Packet Seed"] || s["Packet Seed"] || s["PacketSeed"] || s["packetSeed"] || s["lastPacketNo"] || 0);
+
+                        if (!state.settings.branchSeeds[bCode2]) {
+                            state.settings.branchSeeds[bCode2] = {
+                                accountSeeds: {},
+                                lastPacketNo: 0,
+                                lastProposalNo: 0
+                            };
+                        }
+
+                        if (accSeed > 0) {
+                            state.settings.branchSeeds[bCode2].accountSeeds[pCode4] = accSeed;
+                            state.settings.branchSeeds[bCode2].accountSeeds[pCode] = accSeed;
+                        }
+                        if (pktSeed > 0) {
+                            state.settings.branchSeeds[bCode2].lastPacketNo = Math.max(state.settings.branchSeeds[bCode2].lastPacketNo || 0, pktSeed);
+                        }
+                    });
+                    restoredSummary.settings = true;
                 }
             }
 
