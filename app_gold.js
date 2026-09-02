@@ -1579,8 +1579,38 @@ function showApp() {
     try { if (typeof renderProductMaster === "function") renderProductMaster(); } catch (e) { console.warn("renderProductMaster error:", e); }
     try { if (typeof renderRulesMaster === "function") renderRulesMaster(); } catch (e) { console.warn("renderRulesMaster error:", e); }
     try { if (typeof renderCustomerMasterList === "function") renderCustomerMasterList(); } catch (e) { console.warn("renderCustomerMasterList error:", e); }
-    try { if (typeof renderBranchSettings === "function") renderBranchSettings(); } catch (e) { console.warn("renderBranchSettings error:", e); }
     try { if (typeof updateHeaderGoldRate === "function") updateHeaderGoldRate(); } catch (e) { console.warn("updateHeaderGoldRate error:", e); }
+    
+    // One-time polite prompt on login asking user to clean legacy offline cache for pure cloud sync
+    setTimeout(() => {
+        try { checkAndPromptLocalCacheDeletion(); } catch (e) { }
+    }, 400);
+}
+
+function checkAndPromptLocalCacheDeletion() {
+    const PROMPT_KEY = "jccb_cache_cleared_prompt_v3";
+    if (localStorage.getItem(PROMPT_KEY)) return;
+
+    const isHO = isHeadOfficeSession();
+    // Do not prompt Head Office if they are performing the restore
+    const shouldClear = confirm(
+        "📢 કેન્દ્રીય ક્લાઉડ સિંક સૂચના (Central Cloud Sync Notice):\n\n" +
+        "શું તમે આ કમ્પ્યુટરનો જૂનો લોકલ ઓફલાઇન કેશ ડેટા સાફ કરી હેડ ઓફિસ સાથે 100% સિંક કરવા માંગો છો?\n" +
+        "(Would you like to clear legacy offline cache to ensure 100% live sync with Head Office?)\n\n" +
+        "• 'OK' = જૂનો કેશ સાફ કરી સેન્ટ્રલ ડેટા સિંક કરો (Recommended)\n" +
+        "• 'Cancel' = ચાલુ રાખો (Keep current)"
+    );
+
+    if (shouldClear) {
+        state.loans = [];
+        state.customers = [];
+        if (window.indexedDB) {
+            try { indexedDB.deleteDatabase("jccb_gold_db"); } catch (e) { }
+        }
+        saveState();
+        if (typeof syncCloudData === "function") syncCloudData(true);
+    }
+    localStorage.setItem(PROMPT_KEY, "true");
 }
 
 function updateBranchContextUI() {
