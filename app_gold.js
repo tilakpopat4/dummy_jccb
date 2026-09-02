@@ -8047,6 +8047,20 @@ function initBackupRestore() {
         });
     }
 
+    const wipeBtn = document.getElementById("btn-wipe-local-cache");
+    if (wipeBtn) {
+        wipeBtn.addEventListener("click", () => {
+            if (confirm("આ પ્રક્રિયા બ્રાઉઝરની તમામ જૂની લોકલ કેશ અને અસ્થાયી ડેટા સાફ કરશે. શું તમે આગળ વધવા માંગો છો?")) {
+                localStorage.clear();
+                if (window.indexedDB) {
+                    try { indexedDB.deleteDatabase("jccb_gold_db"); } catch (e) { }
+                }
+                alert("બ્રાઉઝર લોકલ કેશ સાફ થઈ ગઈ છે. પેજ રીલોડ થઈ રહ્યું છે...");
+                window.location.reload();
+            }
+        });
+    }
+
     updateBackupStats();
 }
 
