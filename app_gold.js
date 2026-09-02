@@ -211,85 +211,7 @@ const DEFAULT_RULES = {
 };
 
 // Permanent Base Loans
-const PERMANENT_LOANS = [
-    {
-        id: "GL-1787739373314",
-        loanId: "GL-1787739373314",
-        loanNo: "GL-P-004-0001",
-        proposalNo: "GL-P-004-0001",
-        accountNo: "004-3725-00000001",
-        savingsAc: "004135800002228",
-        date: "2026-08-25",
-        branchCode: "04",
-        branchId: "04",
-        branchName: "04 KODINAR BRANCH",
-        packetNo: "101",
-        customerNo: "280442",
-        borrowerName: "SATARBHAI KASAMBHAI JOKIYA",
-        customerName: "SATARBHAI KASAMBHAI JOKIYA",
-        mobile: "9978875286",
-        address: "BRAHMAN SHERI, MU. LALPUR,  TAL : JAMNAGAR",
-        dob: "1965-06-01",
-        age: "61",
-        occupation: "FARMING",
-        religion: "MUSLIM",
-        caste: "MUSLIM",
-        purpose: "FOR FARMING",
-        nomineeName: "KADARBHAI SATARBHAI JOKIYA",
-        nomineeRelation: "SON",
-        loanType: "GW-3725",
-        sanctionedAmount: 83000,
-        loanAmount: 83000,
-        sanctionAmount: 83000,
-        valuationAmount: 125896,
-        interestRate: 11.5,
-        installments: 36,
-        emiAmount: 0,
-        isMember: false,
-        memberNo: "",
-        grossWeight: "10.000",
-        goldWeight: 10,
-        goldRate22K: 125896,
-        goldRate24K: 137341,
-        valuerName: "SURYAKANT HIMMATLAL LUHAR",
-        valuerFee: 250,
-        docCharges: 50,
-        serviceCharge: 208,
-        cgst: 23,
-        sgst: 23,
-        stampDuty: 210,
-        insurance: 50,
-        shareA: 0,
-        shareB: 50,
-        memberFee: 0,
-        otherCharges: 0,
-        customChargesTotal: 0,
-        customCharges: [],
-        totalDeductions: 864,
-        loanStatus: "New",
-        status: "Active",
-        grievanceOfficer: "Amrutlal Valjibhai Chavda",
-        createdBy: "SYSTEM",
-        createdAt: "2026-08-29T12:44:47.502Z",
-        updatedBy: "SYSTEM",
-        updatedAt: "2026-08-31T05:17:27.395Z",
-        customerPhoto: "",
-        ornamentPhoto: "",
-        ornamentsTable: [
-            {
-                name: "HEARING",
-                qty: 2,
-                purity: "19",
-                grossGm: 10,
-                grossMg: 130,
-                netGm: 10,
-                netMg: 0,
-                fineGoldGm: 8.636,
-                marketVal: 118608
-            }
-        ]
-    }
-];
+const PERMANENT_LOANS = [];
 
 const DEFAULT_STATE = {
     currentSession: null,
@@ -302,7 +224,12 @@ const DEFAULT_STATE = {
     rateHistory: [
         { date: "2026-08-21", rate22K: 72000, rate24K: Math.round(72000 * (24 / 22)) }
     ],
-    loans: PERMANENT_LOANS,
+    loans: [],
+    deletedLoanIds: [],
+    branches: DEFAULT_BRANCHES,
+    products: DEFAULT_PRODUCTS,
+    valuers: DEFAULT_VALUERS,
+    customers: [],
     deletedLoanIds: [],
     branches: DEFAULT_BRANCHES,
     products: DEFAULT_PRODUCTS,
@@ -460,52 +387,8 @@ async function loadStateFromIndexedDB() {
 }
 
 async function syncFromIndexedDBOnInit() {
-    try {
-        const idbState = await loadStateFromIndexedDB();
-        if (idbState && typeof idbState === "object") {
-            let updated = false;
-            if (Array.isArray(idbState.loans) && idbState.loans.length > 0) {
-                // If IndexedDB has loans with photos or more recent loans, merge them
-                const idbMap = new Map();
-                idbState.loans.forEach(l => { if (l && l.id) idbMap.set(l.id, l); });
-
-                if (Array.isArray(state.loans)) {
-                    state.loans = state.loans.map(l => {
-                        const idbLoan = idbMap.get(l.id);
-                        if (idbLoan) {
-                            return {
-                                ...idbLoan,
-                                ...l,
-                                applicantPhoto: idbLoan.applicantPhoto || l.applicantPhoto || "",
-                                ornamentPhoto: idbLoan.ornamentPhoto || l.ornamentPhoto || "",
-                                customerPhoto: idbLoan.customerPhoto || l.customerPhoto || ""
-                            };
-                        }
-                        return l;
-                    });
-                } else {
-                    state.loans = idbState.loans;
-                }
-                updated = true;
-            }
-
-            if (Array.isArray(idbState.customers) && idbState.customers.length > 0) {
-                if (!Array.isArray(state.customers) || state.customers.length === 0) {
-                    state.customers = idbState.customers;
-                    updated = true;
-                }
-            }
-
-            if (updated) {
-                console.log("[IndexedDB] Synced high-res assets & data from IndexedDB successfully.");
-                if (typeof renderRegisterTable === "function") {
-                    try { renderRegisterTable(); } catch (e) { }
-                }
-            }
-        }
-    } catch (e) {
-        console.warn("[IndexedDB] Sync on init warning:", e);
-    }
+    // Pure Cloud-First architecture: State is populated strictly from central Supabase database
+    return;
 }
 
 let state = loadState();
@@ -548,20 +431,7 @@ function loadState() {
             if (!Array.isArray(rules.customCharges)) {
                 rules.customCharges = [];
             }
-            let loans = parsed.loans || [];
-            if (Array.isArray(loans)) {
-                loans = loans.map(l => ({
-                    ...l,
-                    accountNo: formatLoanAccountNo(l.accountNo, l.branchCode, l.loanType)
-                }));
-            } else {
-                loans = [];
-            }
-            PERMANENT_LOANS.forEach(permLoan => {
-                if (!loans.some(l => l.id === permLoan.id || l.proposalNo === permLoan.proposalNo)) {
-                    loans.push(JSON.parse(JSON.stringify(permLoan)));
-                }
-            });
+            let loans = [];
 
             let rateHist = Array.isArray(parsed.rateHistory) ? parsed.rateHistory : [...DEFAULT_STATE.rateHistory];
 
