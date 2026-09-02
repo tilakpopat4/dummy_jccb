@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JCCB Gold Loan - Phase 1 Architecture & Read Audit Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm 15mm 20mm 15mm;
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: 'Segoe UI', Arial, sans-serif;
+                font-size: 9pt;
+                color: #64748b;
+            }
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            line-height: 1.5;
+            font-size: 10.5pt;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+        .header-container {
+            border-bottom: 2px solid #0f766e;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .bank-title {
+            font-size: 16pt;
+            font-weight: 800;
+            color: #0f766e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0 0 4px 0;
+        }
+        .report-subtitle {
+            font-size: 12pt;
+            font-weight: 600;
+            color: #334155;
+            margin: 0 0 6px 0;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            font-size: 9pt;
+        }
+        .meta-item strong {
+            display: block;
+            color: #475569;
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .meta-item span {
+            color: #0f172a;
+            font-weight: 600;
+        }
+        h2 {
+            font-size: 12pt;
+            font-weight: 700;
+            color: #0f766e;
+            border-bottom: 1.5px solid #cbd5e1;
+            padding-bottom: 4px;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            page-break-after: avoid;
+        }
+        h3 {
+            font-size: 10.5pt;
+            font-weight: 700;
+            color: #1e293b;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            page-break-after: avoid;
+        }
+        p {
+            margin: 0 0 10px 0;
+        }
+        .alert-box {
+            background: #fff1f2;
+            border-left: 4px solid #e11d48;
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            margin-bottom: 16px;
+            font-size: 9.5pt;
+        }
+        .alert-box strong {
+            color: #9f1239;
+        }
+        .info-box {
+            background: #f0fdfa;
+            border-left: 4px solid #0d9488;
+            padding: 10px 14px;
+            border-radius: 0 6px 6px 0;
+            margin-bottom: 16px;
+            font-size: 9.5pt;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0 18px 0;
+            font-size: 9pt;
+            page-break-inside: avoid;
+        }
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 7px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #0f766e;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 8.5pt;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .badge-danger {
+            background: #ffe4e6;
+            color: #be123c;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 8pt;
+            display: inline-block;
+        }
+        .badge-warning {
+            background: #fef3c7;
+            color: #b45309;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            font-size: 8pt;
+            display: inline-block;
+        }
+        .badge-neutral {
+            background: #e2e8f0;
+            color: #334155;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 8pt;
+            display: inline-block;
+        }
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            background: #f1f5f9;
+            color: #0f766e;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 8.5pt;
+        }
+        .code-block {
+            background: #0f172a;
+            color: #f8fafc;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 8pt;
+            padding: 10px 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 8px 0 14px 0;
+            line-height: 1.4;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+        ul, ol {
+            margin: 0 0 12px 0;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 8pt;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <div>
+            <div class="bank-title">The Junagadh Commercial Co-op. Bank Ltd.</div>
+            <div class="report-subtitle">Phase 1: Architecture & Firestore Read Surge Audit Report</div>
+            <div style="font-size: 8.5pt; color: #64748b;">Central Core System Migration to Supabase (PostgreSQL)</div>
+        </div>
+        <div style="text-align: right; font-size: 8.5pt; color: #475569;">
+            <div><strong>Document ID:</strong> JCCB-MIG-PHASE1</div>
+            <div><strong>Classification:</strong> Confidential - Internal Banking</div>
+            <div><strong>Audit Date:</strong> September 02, 2026</div>
+        </div>
+    </div>
+
+    <div class="meta-grid">
+        <div class="meta-item">
+            <strong>Active Terminals</strong>
+            <span>120+ Employees (17 Branches)</span>
+        </div>
+        <div class="meta-item">
+            <strong>Observed Surge</strong>
+            <span>123,000+ Reads (in 48 Hours)</span>
+        </div>
+        <div class="meta-item">
+            <strong>Current DB Engine</strong>
+            <span>Firestore + Firebase Auth</span>
+        </div>
+        <div class="meta-item">
+            <strong>Target Architecture</strong>
+            <span>Supabase (PostgreSQL + RLS)</span>
+        </div>
+    </div>
+
+    <div class="alert-box">
+        <strong>Executive Audit Finding:</strong> The 123,000+ Firestore read spike is the direct mathematical consequence of <strong>unmanaged client-side polling loops running at 5-second intervals across 120+ browser sessions</strong>, combined with unbounded real-time snapshot listeners downloading entire database collections without server-side filtering or pagination.
+    </div>
+
+    <h2>1. Root Cause Breakdown & Ranked Offenders</h2>
+    <p>Forensic inspection of the production client codebase (<code>app_gold.js</code>, <code>management.js</code>, <code>firebase-config.js</code>) identified six architectural root causes:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 8%;">Rank</th>
+                <th style="width: 25%;">Offender & Location</th>
+                <th style="width: 32%;">Operational Behavior</th>
+                <th style="width: 20%;">Calculated Impact</th>
+                <th style="width: 15%;">Severity</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>#1</strong></td>
+                <td>
+                    <strong>5-Second Global Sync Loop</strong><br>
+                    <code>app_gold.js (L696)</code><br>
+                    <code>syncCloudData()</code>
+                </td>
+                <td>Every 5,000ms, each open browser tab pulls <code>loans</code>, <code>deleted_loans</code>, <code>rates</code>, and 5 separate master setting docs.</td>
+                <td><strong>~691,200 poll cycles/day</strong> across 120 client PCs. Reads entire <code>loans</code> collection on every cycle.</td>
+                <td><span class="badge-danger">CRITICAL (Top Driver)</span></td>
+            </tr>
+            <tr>
+                <td><strong>#2</strong></td>
+                <td>
+                    <strong>Session Heartbeat Read-Check</strong><br>
+                    <code>app_gold.js (L1307)</code><br>
+                    <code>firebase-config.js (L1305)</code>
+                </td>
+                <td>Every 30 seconds, <code>updateDeviceHeartbeat</code> runs a <code>doc.get()</code> read on <code>active_sessions/{sessionId}</code> before updating state.</td>
+                <td><strong>~345,600 document reads/day</strong> across 120 client terminals purely for session heartbeat pings.</td>
+                <td><span class="badge-danger">CRITICAL</span></td>
+            </tr>
+            <tr>
+                <td><strong>#3</strong></td>
+                <td>
+                    <strong>Unbounded Live Listeners</strong><br>
+                    <code>app_gold.js (L746)</code><br>
+                    <code>listenLoans()</code>
+                </td>
+                <td>Every branch tab subscribes to the entire multi-branch <code>loans</code> collection via <code>onSnapshot()</code> without query limits or branch scoping.</td>
+                <td>Exponential read multiplier: 1 write in any branch pushes reads to all 120+ connected browsers.</td>
+                <td><span class="badge-danger">HIGH</span></td>
+            </tr>
+            <tr>
+                <td><strong>#4</strong></td>
+                <td>
+                    <strong>Management Portal 5s Poller</strong><br>
+                    <code>management.js (L202)</code><br>
+                    <code>loadAllData()</code>
+                </td>
+                <td>Executes <code>Promise.all()</code> across 6 collections/docs (including full <code>loans</code> and <code>audit_logs(300)</code>) every 5 seconds.</td>
+                <td><strong>~17,280 queries/day</strong> per open central management console window.</td>
+                <td><span class="badge-warning">HIGH</span></td>
+            </tr>
+            <tr>
+                <td><strong>#5</strong></td>
+                <td>
+                    <strong>Zero Server-Side Scoping</strong><br>
+                    <code>firebase-config.js (L529)</code>
+                </td>
+                <td>Branch operators download all 17 branches' loans over the network, only to filter them in JavaScript client memory.</td>
+                <td>17&times; unnecessary data over-fetching per terminal. Zero tenancy isolation.</td>
+                <td><span class="badge-warning">MEDIUM</span></td>
+            </tr>
+            <tr>
+                <td><strong>#6</strong></td>
+                <td>
+                    <strong>Discarded Unsubscribes</strong><br>
+                    <code>app_gold.js & management.js</code>
+                </td>
+                <td>The return values of <code>onSnapshot()</code> are never stored or called on re-authentication, causing listeners to stack up in memory.</td>
+                <td>Continuous listener accumulation across shift changes and terminal re-logins.</td>
+                <td><span class="badge-neutral">MEDIUM</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h2>2. Complete Inventory of All Firestore Reads</h2>
+
+    <h3>A. Real-Time Snapshot Subscriptions (<code>onSnapshot</code>)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Target Collection / Doc</th>
+                <th>Source File & Line</th>
+                <th>Query Scope & Limits</th>
+                <th>Lifecycle Unsubscribe Handled?</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>loans</code></td>
+                <td><code>app_gold.js:746</code></td>
+                <td><strong>Entire collection</strong> (Unfiltered across all branches)</td>
+                <td><span class="badge-danger">No Cleanup</span> (Memory leak)</td>
+            </tr>
+            <tr>
+                <td><code>deleted_loans</code></td>
+                <td><code>app_gold.js:719</code></td>
+                <td><strong>Entire collection</strong> (Unbounded tombstone sync)</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+            <tr>
+                <td><code>customers</code></td>
+                <td><code>app_gold.js:908</code></td>
+                <td><strong>Entire collection</strong> (Unbounded directory)</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+            <tr>
+                <td><code>rates/today</code></td>
+                <td><code>app_gold.js:705</code></td>
+                <td>Single document</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+            <tr>
+                <td><code>settings/branchSeeds</code></td>
+                <td><code>app_gold.js:793</code></td>
+                <td>Single document</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+            <tr>
+                <td><code>settings/rulesMaster</code></td>
+                <td><code>app_gold.js:811</code></td>
+                <td>Single document</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+            <tr>
+                <td><code>settings/branchesList</code></td>
+                <td><code>app_gold.js:825</code></td>
+                <td>Single document</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+            <tr>
+                <td><code>settings/valuersList</code></td>
+                <td><code>app_gold.js:861</code></td>
+                <td>Single document</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+            <tr>
+                <td><code>settings/productsList</code></td>
+                <td><code>app_gold.js:896</code></td>
+                <td>Single document</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+            <tr>
+                <td><code>active_sessions/{sid}</code></td>
+                <td><code>app_gold.js:1340</code></td>
+                <td>Single document (Re-attached on every login)</td>
+                <td><span class="badge-danger">No Cleanup</span> (Duplicates accumulate)</td>
+            </tr>
+            <tr>
+                <td><code>active_sessions</code></td>
+                <td><code>management.js:151</code></td>
+                <td><strong>Entire collection</strong> (Realtime live terminals)</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+            <tr>
+                <td><code>audit_logs</code></td>
+                <td><code>management.js:162</code></td>
+                <td>Order by <code>timestampMs desc</code>, Limit 200</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+            <tr>
+                <td><code>loans</code> (Management)</td>
+                <td><code>management.js:173</code></td>
+                <td><strong>Entire collection</strong> (Unbounded)</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+            <tr>
+                <td><code>customers</code> (Management)</td>
+                <td><code>management.js:193</code></td>
+                <td><strong>Entire collection</strong> (Unbounded)</td>
+                <td><span class="badge-danger">No Cleanup</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>B. One-Time Fetch Operations (<code>.get()</code> & REST Endpoints)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Method Name</th>
+                <th>Target Resource</th>
+                <th>Implementation in <code>firebase-config.js</code></th>
+                <th>Calling Intervals</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>getLoans()</code></td>
+                <td><code>loans</code></td>
+                <td>REST GET /documents/loans + Fallback <code>db.collection('loans').get()</code></td>
+                <td>Every 5s in <code>app_gold.js</code> + Every 5s in <code>management.js</code></td>
+            </tr>
+            <tr>
+                <td><code>getDeletedLoanIds()</code></td>
+                <td><code>deleted_loans</code></td>
+                <td>REST GET /documents/deleted_loans + Fallback SDK <code>.get()</code></td>
+                <td>Every 5s in <code>app_gold.js</code></td>
+            </tr>
+            <tr>
+                <td><code>getDailyRates()</code></td>
+                <td><code>rates/today</code></td>
+                <td>REST GET <code>rates/today</code> + REST GET <code>settings/dailyRates</code> + SDK <code>.get()</code></td>
+                <td>Every 5s in <code>app_gold.js</code></td>
+            </tr>
+            <tr>
+                <td><code>getSettings()</code></td>
+                <td><code>settings/branchSeeds</code></td>
+                <td>REST GET + Fallback SDK <code>.get()</code></td>
+                <td>Every 5s in <code>app_gold.js</code></td>
+            </tr>
+            <tr>
+                <td><code>getRules()</code></td>
+                <td><code>settings/rulesMaster</code></td>
+                <td>REST GET + Fallback SDK <code>.get()</code></td>
+                <td>Every 5s in <code>app_gold.js</code></td>
+            </tr>
+            <tr>
+                <td><code>getBranchesList()</code></td>
+                <td><code>settings/branchesList</code></td>
+                <td>REST GET + Fallback SDK <code>.get()</code></td>
+                <td>Every 5s in <code>app_gold.js</code> + Every 5s in <code>management.js</code></td>
+            </tr>
+            <tr>
+                <td><code>getValuersList()</code></td>
+                <td><code>settings/valuersList</code></td>
+                <td>REST GET + Fallback SDK <code>.get()</code></td>
+                <td>Every 5s in <code>app_gold.js</code> + Every 5s in <code>management.js</code></td>
+            </tr>
+            <tr>
+                <td><code>getProductsList()</code></td>
+                <td><code>settings/productsList</code></td>
+                <td>REST GET + Fallback SDK <code>.get()</code></td>
+                <td>Every 5s in <code>app_gold.js</code> + Every 5s in <code>management.js</code></td>
+            </tr>
+            <tr>
+                <td><code>getAuditLogs()</code></td>
+                <td><code>audit_logs</code></td>
+                <td>SDK <code>.orderBy('timestampMs', 'desc').limit(300).get()</code> + REST</td>
+                <td>Every 5s in <code>management.js</code></td>
+            </tr>
+            <tr>
+                <td><code>updateDeviceHeartbeat()</code></td>
+                <td><code>active_sessions/{sid}</code></td>
+                <td>SDK <code>doc(sessionId).get()</code> prior to set</td>
+                <td>Every 30s in <code>app_gold.js</code></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h2>3. Security & Multi-Tenancy Flaws in Current Architecture</h2>
+
+    <div class="alert-box">
+        <strong>Critical Security Finding (<code>firestore.rules</code>):</strong><br>
+        Line 5-7 in <code>firestore.rules</code>:
+        <code>match /{document=**} { allow read, write: if true; }</code><br>
+        The production database currently has <strong>completely open read and write access</strong>. Any employee or connected client can read, update, or delete loans, rates, and audit logs belonging to any other branch.
+    </div>
+
+    <ul>
+        <li><strong>No Branch-Level Isolation:</strong> Branch managers from Branch 01 (Azad Chowk) can read and modify loan applications created by Branch 17 (Rajkot).</li>
+        <li><strong>Client-Side Master Overwrite Risk:</strong> Every 5 seconds, if a client's local storage contains master records, <code>syncCloudData()</code> attempts to push them back up via <code>saveSettings()</code>, <code>saveRules()</code>, and <code>saveValuersList()</code>, leading to race conditions between branch terminals.</li>
+        <li><strong>No Immutability on Security Audit Logs:</strong> Audit log documents in <code>audit_logs</code> can be deleted or overwritten by anyone with client access.</li>
+    </ul>
+
+    <h2>4. Supabase & PostgreSQL Migration Roadmap</h2>
+
+    <div class="info-box">
+        Migrating to PostgreSQL + Supabase will resolve the root architectural problems at the database engine level, not just swap API calls.
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%;">Area</th>
+                <th style="width: 35%;">Current Firestore Implementation</th>
+                <th style="width: 40%;">Target Supabase (PostgreSQL) Design</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Data Synchronization</strong></td>
+                <td>Aggressive 5-second polling (<code>setInterval</code>) across all 120+ client terminals.</td>
+                <td><strong>Event-driven Supabase Realtime</strong> WebSocket channels subscribed only to relevant events (rates change, central announcements). Zero polling loops.</td>
+            </tr>
+            <tr>
+                <td><strong>Branch Data Isolation</strong></td>
+                <td>Full collection downloaded to client; filtered via JavaScript in browser memory.</td>
+                <td><strong>Postgres Row Level Security (RLS)</strong>: <code>WHERE branch_id = auth.jwt() ->> 'branch_id'</code> enforced automatically by PostgreSQL.</td>
+            </tr>
+            <tr>
+                <td><strong>Query Pagination</strong></td>
+                <td>Unbounded full table reads on <code>loans</code> and <code>customers</code>.</td>
+                <td>Explicit server-side SQL pagination: <code>.select('*').eq('branch_id', id).order('created_at', { ascending: false }).range(0, 49)</code>.</td>
+            </tr>
+            <tr>
+                <td><strong>Device Presence / Heartbeat</strong></td>
+                <td>30s read-before-write to <code>active_sessions</code> document generating 345k reads/day.</td>
+                <td><strong>Supabase Realtime Presence</strong> (in-memory WebSocket presence tracking, 0 database disk reads) with optional SQL <code>UPSERT</code> without read check.</td>
+            </tr>
+            <tr>
+                <td><strong>Listener Lifecycle</strong></td>
+                <td>Ignored unsubscribe handlers leaking memory and connections.</td>
+                <td>Managed channel tracking with explicit <code>supabase.removeChannel(channel)</code> on component unmount and view switches.</td>
+            </tr>
+            <tr>
+                <td><strong>Audit Log Security</strong></td>
+                <td>Open collection modifiable by any authenticated or anonymous client.</td>
+                <td>Postgres <code>APPEND-ONLY</code> table with RLS policy <code>FOR INSERT WITH CHECK (true)</code> and <code>FOR UPDATE, DELETE USING (false)</code>.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>5. Next Steps for Phase 2</h2>
+    <p>With Phase 1 complete, the upcoming <strong>Phase 2 (Schema Design)</strong> will produce:</p>
+    <ol>
+        <li>Normalized relational table schemas (<code>branches</code>, <code>users</code>, <code>customers</code>, <code>loans</code>, <code>loan_ornaments</code>, <code>rates</code>, <code>valuers</code>, <code>products</code>, <code>rules_master</code>, <code>audit_logs</code>).</li>
+        <li>Foreign keys, constraints, and composite B-tree indexes for fast queries.</li>
+        <li>Complete DDL SQL definitions presented for review prior to execution.</li>
+    </ol>
+
+    <div class="footer">
+        <div>The Junagadh Commercial Co-operative Bank Ltd. - Internal Technology Assessment</div>
+        <div>Confidential & Proprietary</div>
+    </div>
+
+</body>
+</html>

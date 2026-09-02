@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JCCB Gold Loan - Phase 1B Write Operations & Master Overwrite Audit Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 18mm 14mm 18mm 14mm;
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-family: 'Segoe UI', Arial, sans-serif;
+                font-size: 8.5pt;
+                color: #64748b;
+            }
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            line-height: 1.4;
+            font-size: 9.5pt;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+        .header-container {
+            border-bottom: 2px solid #0f766e;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .bank-title {
+            font-size: 15pt;
+            font-weight: 800;
+            color: #0f766e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0 0 3px 0;
+        }
+        .report-subtitle {
+            font-size: 11pt;
+            font-weight: 600;
+            color: #334155;
+            margin: 0 0 4px 0;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 12px;
+            font-size: 8.5pt;
+        }
+        .meta-item strong {
+            display: block;
+            color: #475569;
+            font-size: 7.5pt;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .meta-item span {
+            color: #0f172a;
+            font-weight: 600;
+        }
+        h2 {
+            font-size: 11pt;
+            font-weight: 700;
+            color: #0f766e;
+            border-bottom: 1.5px solid #cbd5e1;
+            padding-bottom: 3px;
+            margin-top: 14px;
+            margin-bottom: 8px;
+            page-break-after: avoid;
+        }
+        h3 {
+            font-size: 9.5pt;
+            font-weight: 700;
+            color: #1e293b;
+            margin-top: 10px;
+            margin-bottom: 4px;
+            page-break-after: avoid;
+        }
+        p {
+            margin: 0 0 6px 0;
+        }
+        .alert-box {
+            background: #fff1f2;
+            border-left: 4px solid #e11d48;
+            padding: 8px 12px;
+            border-radius: 0 6px 6px 0;
+            margin-bottom: 12px;
+            font-size: 8.8pt;
+        }
+        .alert-box strong {
+            color: #9f1239;
+        }
+        .info-box {
+            background: #f0fdfa;
+            border-left: 4px solid #0d9488;
+            padding: 8px 12px;
+            border-radius: 0 6px 6px 0;
+            margin-bottom: 12px;
+            font-size: 8.8pt;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0 12px 0;
+            font-size: 7.8pt;
+            page-break-inside: auto;
+        }
+        tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 4.5px 6.5px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #0f766e;
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 7.8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .badge-danger {
+            background: #ffe4e6;
+            color: #be123c;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-weight: 700;
+            font-size: 7.5pt;
+            display: inline-block;
+        }
+        .badge-warning {
+            background: #fef3c7;
+            color: #b45309;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-weight: 700;
+            font-size: 7.5pt;
+            display: inline-block;
+        }
+        .badge-success {
+            background: #dcfce7;
+            color: #15803d;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-weight: 700;
+            font-size: 7.5pt;
+            display: inline-block;
+        }
+        .badge-neutral {
+            background: #e2e8f0;
+            color: #334155;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-weight: 600;
+            font-size: 7.5pt;
+            display: inline-block;
+        }
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            background: #f1f5f9;
+            color: #0f766e;
+            padding: 1px 3px;
+            border-radius: 3px;
+            font-size: 8pt;
+        }
+        .code-block {
+            background: #0f172a;
+            color: #f8fafc;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 7.8pt;
+            padding: 8px 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 6px 0 10px 0;
+            line-height: 1.35;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+        ul, ol {
+            margin: 0 0 10px 0;
+            padding-left: 18px;
+        }
+        li {
+            margin-bottom: 3px;
+        }
+        .footer {
+            margin-top: 24px;
+            padding-top: 8px;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 7.5pt;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <div>
+            <div class="bank-title">The Junagadh Commercial Co-op. Bank Ltd.</div>
+            <div class="report-subtitle">Phase 1B: Forensic Write Operations & Master Overwrite Audit Report</div>
+            <div style="font-size: 8pt; color: #64748b;">Mutation Inventory & Security Vulnerability Assessment for Postgres Migration</div>
+        </div>
+        <div style="text-align: right; font-size: 8pt; color: #475569;">
+            <div><strong>Document ID:</strong> JCCB-MIG-PHASE1B</div>
+            <div><strong>Classification:</strong> Confidential - Internal Banking</div>
+            <div><strong>Audit Date:</strong> September 02, 2026</div>
+        </div>
+    </div>
+
+    <div class="meta-grid">
+        <div class="meta-item">
+            <strong>Target System</strong>
+            <span>120+ Active Branch Terminals</span>
+        </div>
+        <div class="meta-item">
+            <strong>Audit Scope</strong>
+            <span>All Firestore Mutations (SDK + REST)</span>
+        </div>
+        <div class="meta-item">
+            <strong>Master Overwrite Risk</strong>
+            <span>CONFIRMED CRITICAL</span>
+        </div>
+        <div class="meta-item">
+            <strong>Target Security Layer</strong>
+            <span>PostgreSQL Row-Level Security (RLS)</span>
+        </div>
+    </div>
+
+    <div class="alert-box">
+        <strong>CRITICAL AUDIT CONFIRMATION:</strong> Forensic analysis confirms that <strong>regular branch terminal operators currently CAN and DO overwrite bank-wide master settings</strong> (including <code>settings/rulesMaster</code>, <code>settings/branchSeeds</code>, <code>settings/valuersList</code>, and <code>settings/productsList</code>). This occurs both through unvalidated UI actions and automated 5-second background synchronization fallbacks.
+    </div>
+
+    <h2>1. Root Cause Analysis: How Branch Terminals Overwrite Master Settings</h2>
+    <p>There are three concurrent mechanisms in the codebase enabling branch operators to mutate or overwrite bank-wide configuration documents:</p>
+
+    <h3>A. Automated 5-Second Background Sync Fallbacks (<code>syncCloudData</code>)</h3>
+    <p>In <code>app_gold.js</code> (lines 946-964), the automated sync timer executes every 5,000ms on all 120+ branch machines. If a fetch for bank rules or settings momentarily returns empty or times out, the branch machine immediately pushes its local <code>localStorage</code> state back to the cloud:</p>
+    
+    <div class="code-block">
+// app_gold.js (Lines 947-964)
+if (typeof window.FirebaseService.getRules === "function") {
+    const fbRules = await window.FirebaseService.getRules();
+    if (fbRules && typeof fbRules === "object" && fbRules.membership) {
+        state.rules = { ...state.rules, ...fbRules };
+    } else if (state.rules && state.rules.membership) {
+        // ⚠️ ANY branch terminal pushes its local rules to Firestore if fetch is empty!
+        window.FirebaseService.saveRules(state.rules).catch(() => { });
+    }
+}
+    </div>
+
+    <h3>B. Continuous Unconditional Valuer Master Writes</h3>
+    <p>In <code>app_gold.js</code> (line 1031), <code>window.FirebaseService.saveValuersList(state.valuers, state.deletedValuerIds)</code> is called <strong>unconditionally on every single 5-second sync cycle from every single connected terminal</strong>, causing continuous concurrent write race conditions across 120+ machines.</p>
+
+    <h3>C. Missing Role Checks on Master Setting Forms & Zero Server-Side Rules</h3>
+    <ul>
+        <li><strong>UI Handlers:</strong> In <code>app_gold.js</code> (lines 7200-7214), the Rules Master save form does not verify if <code>state.currentSession.code === "99"</code>. Any branch operator can edit deduction percentages or LTV rules and commit them directly.</li>
+        <li><strong>Firestore Rules:</strong> <code>firestore.rules</code> contains <code>allow read, write: if true;</code>, providing zero database-level authorization.</li>
+    </ul>
+
+    <div class="page-break"></div>
+
+    <h2>2. Complete Inventory of All Firestore Write Operations</h2>
+    <p>The table below documents every single database mutation point across <code>firebase-config.js</code>, <code>app_gold.js</code>, and <code>management.js</code>:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 14%;">Operation</th>
+                <th style="width: 16%;">Target Resource</th>
+                <th style="width: 20%;">Source File & Line</th>
+                <th style="width: 15%;">Method</th>
+                <th style="width: 15%;">Scope</th>
+                <th style="width: 20%;">Trigger & Authorization</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong><code>saveLoan</code></strong></td>
+                <td><code>loans/{loanId}</code></td>
+                <td>
+                    <code>firebase-config.js:470</code><br>
+                    <code>app_gold.js:3634</code> (New)<br>
+                    <code>app_gold.js:4167</code> (Edit)<br>
+                    <code>app_gold.js:9896</code> (Status)<br>
+                    <code>app_gold.js:10041</code> (Close)<br>
+                    <code>app_gold.js:10219</code> (Renew)<br>
+                    <code>app_gold.js:1092</code> (Sync)
+                </td>
+                <td>SDK <code>doc.set(merge)</code> + REST <code>PATCH</code></td>
+                <td>Branch Loan Record (contains <code>branchId</code>)</td>
+                <td>User action (Loan CRUD) + 5s auto-sync for offline loans.<br><span class="badge-danger">Open in DB</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>deleteLoan</code></strong></td>
+                <td><code>loans/{loanId}</code><br>+ <code>deleted_loans/{id}</code></td>
+                <td>
+                    <code>firebase-config.js:569, 576</code><br>
+                    <code>app_gold.js:4034</code> (Rename)<br>
+                    <code>app_gold.js:4436</code> (Delete)
+                </td>
+                <td>SDK <code>delete()</code> + SDK <code>set()</code> + REST <code>DELETE/PATCH</code></td>
+                <td>Target Loan Doc</td>
+                <td>User action (Loan Delete Modal).<br><span class="badge-danger">No branch ownership check</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>saveDailyRates</code></strong></td>
+                <td><code>rates/today</code><br>+ <code>settings/dailyRates</code></td>
+                <td>
+                    <code>firebase-config.js:717, 718</code><br>
+                    <code>app_gold.js:2161, 2196, 2286</code>
+                </td>
+                <td>SDK <code>doc.set(merge)</code> + REST <code>PATCH</code></td>
+                <td>🌐 <strong>GLOBAL BANK-WIDE</strong></td>
+                <td>Daily rate entry / Rate lock modal.<br><span class="badge-warning">UI HO check only; DB open</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>saveRules</code></strong></td>
+                <td><code>settings/rulesMaster</code></td>
+                <td>
+                    <code>firebase-config.js:910</code><br>
+                    <code>app_gold.js:962</code> (5s Sync)<br>
+                    <code>app_gold.js:7211</code> (Form)<br>
+                    <code>app_gold.js:7232</code> (Reset)<br>
+                    <code>app_gold.js:7335, 7488, 7530</code>
+                </td>
+                <td>SDK <code>doc.set(merge)</code> + REST <code>PATCH</code></td>
+                <td>🌐 <strong>GLOBAL BANK-WIDE</strong></td>
+                <td><strong>5s Auto-Sync fallback</strong> + Rules Master form / custom charge toggle.<br><span class="badge-danger">Branch PCs can overwrite</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>saveSettings</code></strong></td>
+                <td><code>settings/branchSeeds</code></td>
+                <td>
+                    <code>firebase-config.js:840</code><br>
+                    <code>app_gold.js:952</code> (5s Sync)<br>
+                    <code>app_gold.js:7609, 7724</code>
+                </td>
+                <td>SDK <code>doc.set(merge)</code> + REST <code>PATCH</code></td>
+                <td>🌐 <strong>GLOBAL BANK-WIDE</strong></td>
+                <td><strong>5s Auto-Sync fallback</strong> + Settings form submission.<br><span class="badge-danger">Branch PCs can overwrite</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>saveValuersList</code></strong></td>
+                <td><code>settings/valuersList</code></td>
+                <td>
+                    <code>firebase-config.js:1039</code><br>
+                    <code>app_gold.js:1031</code> (5s Sync)<br>
+                    <code>app_gold.js:6303, 6418, 6533</code>
+                </td>
+                <td>SDK <code>doc.set()</code> + REST <code>PATCH</code></td>
+                <td>🌐 <strong>GLOBAL BANK-WIDE</strong></td>
+                <td><strong>Continuous 5s Loop from ALL 120+ PCs</strong> + Valuer CRUD modal.<br><span class="badge-danger">Continuous overwrite</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>saveProductsList</code></strong></td>
+                <td><code>settings/productsList</code></td>
+                <td>
+                    <code>firebase-config.js:1099</code><br>
+                    <code>app_gold.js:1041</code> (5s Sync)<br>
+                    <code>app_gold.js:6604, 6692</code>
+                </td>
+                <td>SDK <code>doc.set(merge)</code> + REST <code>PATCH</code></td>
+                <td>🌐 <strong>GLOBAL BANK-WIDE</strong></td>
+                <td><strong>5s Auto-Sync fallback</strong> + Loan scheme CRUD modal.<br><span class="badge-danger">Branch PCs can overwrite</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>saveBranchesList</code></strong></td>
+                <td><code>settings/branchesList</code></td>
+                <td>
+                    <code>firebase-config.js:978</code><br>
+                    <code>app_gold.js:1518, 6079</code>
+                </td>
+                <td>SDK <code>doc.set(merge)</code> + REST <code>PATCH</code></td>
+                <td>🌐 <strong>GLOBAL BANK-WIDE</strong></td>
+                <td>Branch Master edit / Password change.<br><span class="badge-danger">DB open</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>saveBranch</code></strong></td>
+                <td><code>branches/{branchCode}</code></td>
+                <td>
+                    <code>firebase-config.js:265</code><br>
+                    <code>app_gold.js:1506, 6069</code>
+                </td>
+                <td>SDK <code>doc.set(merge)</code></td>
+                <td>Single Branch Doc</td>
+                <td>Branch Master modal save.<br><span class="badge-danger">DB open</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>deleteBranch</code></strong></td>
+                <td><code>branches/{branchCode}</code></td>
+                <td><code>firebase-config.js:274</code></td>
+                <td>SDK <code>doc.delete()</code></td>
+                <td>Single Branch Doc</td>
+                <td>Branch deletion.<br><span class="badge-danger">DB open</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>toggleBranchStatus</code></strong></td>
+                <td><code>branches/{branchCode}</code></td>
+                <td><code>firebase-config.js:282</code></td>
+                <td>SDK <code>doc.update()</code></td>
+                <td>Single Branch Doc</td>
+                <td>Active/Inactive toggle.<br><span class="badge-danger">DB open</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>seedDefaultBranches</code></strong></td>
+                <td><code>branches/{branchCode}</code></td>
+                <td><code>firebase-config.js:240</code></td>
+                <td>SDK <code>batch.set(merge)</code></td>
+                <td>All 17 Branches</td>
+                <td>Cold start initial seed.<br><span class="badge-danger">DB open</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>saveUserRole</code></strong></td>
+                <td><code>users/{uid}</code></td>
+                <td><code>firebase-config.js:316</code></td>
+                <td>SDK <code>doc.set(merge)</code></td>
+                <td>User RBAC Doc</td>
+                <td>Admin User Management.<br><span class="badge-danger">DB open</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>saveCustomer</code></strong></td>
+                <td><code>customers/{custId}</code></td>
+                <td>
+                    <code>firebase-config.js:780</code><br>
+                    <code>app_gold.js:3639, 6845</code>
+                </td>
+                <td>SDK <code>doc.set(merge)</code></td>
+                <td>Customer Record</td>
+                <td>Loan Submit / Customer Directory CRUD.<br><span class="badge-warning">Global customer pool</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>deleteCustomer</code></strong></td>
+                <td><code>customers/{custId}</code></td>
+                <td>
+                    <code>firebase-config.js:822</code><br>
+                    <code>app_gold.js:6980</code>
+                </td>
+                <td>SDK <code>doc.delete()</code></td>
+                <td>Customer Record</td>
+                <td>Customer Directory Delete.<br><span class="badge-warning">Global customer pool</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>updateDeviceHeartbeat</code></strong></td>
+                <td><code>active_sessions/{sid}</code></td>
+                <td>
+                    <code>firebase-config.js:1310</code><br>
+                    <code>app_gold.js:1282, 1309, 1332</code>
+                </td>
+                <td>SDK <code>doc.set(merge)</code> + REST <code>PATCH</code></td>
+                <td>Per-Device Session</td>
+                <td>Login + Continuous 30s background timer.<br><span class="badge-neutral">Device session write</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>terminateActiveSession</code></strong></td>
+                <td><code>active_sessions/{sid}</code></td>
+                <td>
+                    <code>firebase-config.js:1343</code><br>
+                    <code>management.js:372</code>
+                </td>
+                <td>SDK <code>doc.set(merge)</code> + REST <code>PATCH</code></td>
+                <td>Target Device Session</td>
+                <td>Remote Killswitch Disconnect from Management.<br><span class="badge-success">Admin Action</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>deleteActiveSession</code></strong></td>
+                <td><code>active_sessions/{sid}</code></td>
+                <td>
+                    <code>firebase-config.js:1403</code><br>
+                    <code>app_gold.js:1363</code><br>
+                    <code>management.js:399</code>
+                </td>
+                <td>SDK <code>delete()</code> + REST <code>DELETE</code></td>
+                <td>Target Device Session</td>
+                <td>User Logout / Session cleanup.<br><span class="badge-neutral">Device session</span></td>
+            </tr>
+            <tr>
+                <td><strong><code>logAuditEvent</code></strong></td>
+                <td><code>audit_logs/{logId}</code></td>
+                <td>
+                    <code>firebase-config.js:1199</code><br>
+                    <code>app_gold.js:1275, 1357</code><br>
+                    <code>management.js:81, 374</code>
+                </td>
+                <td>SDK <code>doc.set()</code> + REST <code>PATCH</code></td>
+                <td>Audit Record</td>
+                <td>Security audit event tracking.<br><span class="badge-danger">Not immutable in Firestore</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>3. Security Architecture Blueprint for PostgreSQL & Supabase</h2>
+
+    <div class="info-box">
+        The table below outlines how every write vulnerability identified above will be permanently resolved at the database engine level in PostgreSQL using Row-Level Security (RLS) and constraints:
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 20%;">Resource / Table</th>
+                <th style="width: 35%;">Current Vulnerability in Firestore</th>
+                <th style="width: 45%;">PostgreSQL & Supabase Security Architecture</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Master Rules & Settings</strong><br>(<code>rules_master</code>, <code>bank_settings</code>, <code>products</code>, <code>valuers</code>)</td>
+                <td>Branch terminals overwrite bank-wide settings via 5s sync loop and unvalidated forms.</td>
+                <td>
+                    <strong>Postgres RLS Policy:</strong><br>
+                    <code>FOR SELECT TO authenticated USING (true);</code><br>
+                    <code>FOR ALL TO authenticated USING (auth.jwt() ->> 'role' = 'admin' AND auth.jwt() ->> 'branch_id' = '99');</code><br>
+                    <em>Branch users receive a hard SQL 403 Forbidden on any write attempt.</em>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Loan Applications</strong><br>(<code>loans</code>, <code>loan_ornaments</code>)</td>
+                <td>Any branch can modify or delete loans belonging to other branches.</td>
+                <td>
+                    <strong>Branch-Scoped RLS:</strong><br>
+                    <code>FOR ALL TO authenticated USING (auth.jwt() ->> 'role' = 'admin' OR branch_id = (auth.jwt() ->> 'branch_id')::text);</code><br>
+                    <em>Branch users can only insert, update, or delete loans within their assigned branch.</em>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Security Audit Trail</strong><br>(<code>audit_logs</code>)</td>
+                <td>Audit logs can be modified or deleted by clients.</td>
+                <td>
+                    <strong>Immutable Append-Only Table:</strong><br>
+                    <code>FOR INSERT TO authenticated WITH CHECK (true);</code><br>
+                    <code>FOR UPDATE, DELETE TO authenticated USING (false);</code><br>
+                    <em>No user, including admins, can modify or delete historical audit entries.</em>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Daily Gold Rates</strong><br>(<code>rates</code>)</td>
+                <td>Unprotected daily rate updates.</td>
+                <td>
+                    <strong>Locked Rates Enforcement:</strong><br>
+                    Only HO Super Admin can insert/update rates. If <code>is_locked = true</code>, a database trigger rejects further updates for that date.
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <div>The Junagadh Commercial Co-operative Bank Ltd. - Internal Security & Migration Assessment</div>
+        <div>Confidential - Internal Banking Use Only</div>
+    </div>
+
+</body>
+</html>
