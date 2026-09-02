@@ -1,6 +1,6 @@
 // supabase-config.js - Central Supabase Client & Complete Backend Adapter
-const SUPABASE_URL = "https://qsfsmomphgotmfcpfhkd.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_2FO68n0R0yCmB_PyUyVOFQ_2oIUZEQA";
+const SUPABASE_URL = "https://wgbwbczysupfdnxtuprl.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_RVfvimRS_MIarMKCn7pvGw_JQn1gmka";
 
 // Initialize Supabase Client
 const _supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
