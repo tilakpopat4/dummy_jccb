@@ -690,8 +690,21 @@ window.uploadRestoredStateToSupabase = async function(appState) {
   console.log("⏳ Uploading restored data to Supabase in background...");
 
   try {
+    // 0. Ensure all branches exist in branches table
+    const branchPayload = (appState.branches || []).map(b => ({
+      branch_code: String(b.code || '99').replace(/\D/g, '').padStart(2, '0') || '99',
+      branch_name: b.name || (b.code + ' BRANCH'),
+      branch_name_guj: b.gujName || b.name || '',
+      is_head_office: (b.code === '99' || !!b.isHO),
+      is_active: true
+    }));
+    if (branchPayload.length > 0) {
+      const { error: bErr } = await _supabase.from('branches').upsert(branchPayload, { onConflict: 'branch_code' });
+      if (bErr) console.warn("Branches upsert notice:", bErr);
+    }
+
     // 1. Upload Rules Master
-    if (appState.rules) {
+    if (appState.rules && typeof appState.rules === 'object') {
       await _supabase.from('rules_master').upsert({
         id: 'rulesMaster',
         rules_json: appState.rules,
@@ -717,20 +730,19 @@ window.uploadRestoredStateToSupabase = async function(appState) {
     // 3. Upload Valuers
     if (Array.isArray(appState.valuers) && appState.valuers.length > 0) {
       const valuerPayload = appState.valuers.map(v => ({
-        id: v.id || ('val_' + Date.now()),
+        id: String(v.id || ('val_' + Date.now())),
         name: v.name || 'Valuer',
         phone: v.phone || '',
         address: v.address || '',
         savings_account: v.savingsAc || '',
-        branch_id: String(v.branch || v.branchCode || '99').replace(/\D/g, '') || '99'
+        branch_id: String(v.branch || v.branchCode || '99').replace(/\D/g, '').padStart(2, '0') || '99'
       }));
-      await _supabase.from('valuers').upsert(valuerPayload, { onConflict: 'id' });
     }
 
     // 4. Upload Products
     if (Array.isArray(appState.products) && appState.products.length > 0) {
       const prodPayload = appState.products.map(p => ({
-        id: p.id || p.code || ('prod_' + Date.now()),
+        id: String(p.id || p.code || ('prod_' + Date.now())),
         code: p.code || 'GL',
         name: p.name || 'Product Scheme',
         min_amount: parseFloat(p.minAmt || 0),
@@ -741,31 +753,74 @@ window.uploadRestoredStateToSupabase = async function(appState) {
       await _supabase.from('products').upsert(prodPayload, { onConflict: 'id' });
     }
 
-    // 5. Upload Customers in Chunks of 50
-    if (Array.isArray(appState.customers) && appState.customers.length > 0) {
-      const custPayload = appState.customers.map(c => ({
-        customer_no: String(c.customerNo || c.id || ('CUST_' + Date.now())),
-        branch_id: String(c.branchCode || '99').replace(/\D/g, '') || '99',
-        full_name: String(c.name || c.borrowerName || c.full_name || c.BorrowerName || 'Customer'),
-        mobile: String(c.mobile || ''),
-        address: String(c.address || ''),
-        savings_account: String(c.savingsAc || c.savings_account || ''),
-        dob: c.dob && c.dob.length === 10 ? c.dob : null,
-        age: parseInt(c.age || 0) || null,
-        occupation: String(c.occupation || ''),
-        religion: String(c.religion || ''),
-        caste: String(c.caste || ''),
-        nominee_name: String(c.nomineeName || c.nominee_name || ''),
-        nominee_relation: String(c.nomineeRelation || c.nominee_relation || ''),
-        is_member: !!(c.isMember || c.is_member || c.memberNo || c.member_no),
-        member_no: String(c.memberNo || c.member_no || ''),
-        photo_url: String(c.photo || c.customerPhoto || c.photo_url || '')
-      }));
+    // 5. Build Unified Customer Profiles Map (From state.customers + all state.loans)
+    const custMap = new Map();
+    if (Array.isArray(appState.customers)) {
+      appState.customers.forEach(c => {
+        const cNo = String(c.customerNo || c.id || '').trim();
+        if (cNo) {
+          custMap.set(cNo, {
+            customer_no: cNo,
+            branch_id: String(c.branchCode || '99').replace(/\D/g, '').padStart(2, '0') || '99',
+            full_name: String(c.name || c.borrowerName || c.full_name || c.BorrowerName || 'Customer'),
+            mobile: String(c.mobile || ''),
+            address: String(c.address || ''),
+            savings_account: String(c.savingsAc || c.savings_account || ''),
+            dob: c.dob && c.dob.length === 10 ? c.dob : null,
+            age: parseInt(c.age || 0) || null,
+            occupation: String(c.occupation || ''),
+            religion: String(c.religion || ''),
+            caste: String(c.caste || ''),
+            nominee_name: String(c.nomineeName || c.nominee_name || ''),
+            nominee_relation: String(c.nomineeRelation || c.nominee_relation || ''),
+            is_member: !!(c.isMember || c.is_member || c.memberNo || c.member_no),
+            member_no: String(c.memberNo || c.member_no || ''),
+            photo_url: String(c.photo || c.customerPhoto || c.photo_url || '')
+          });
+        }
+      });
+    }
 
-      for (let i = 0; i < custPayload.length; i += 50) {
-        const chunk = custPayload.slice(i, i + 50);
-        await _supabase.from('customers').upsert(chunk, { onConflict: 'customer_no' });
-      }
+    if (Array.isArray(appState.loans)) {
+      appState.loans.forEach(l => {
+        const cNo = String(l.customerNo || l.customerId || ('CUST_' + (l.id || Date.now()))).trim();
+        const bCode = String(l.branchCode || '99').replace(/\D/g, '').padStart(2, '0') || '99';
+        const bName = String(l.borrowerName || l.customerName || l.name || 'Customer').trim();
+        const ph = l.customerPhoto || l.photo || l.applicantPhoto || '';
+
+        if (!custMap.has(cNo)) {
+          custMap.set(cNo, {
+            customer_no: cNo,
+            branch_id: bCode,
+            full_name: bName,
+            mobile: String(l.mobile || ''),
+            address: String(l.address || ''),
+            savings_account: String(l.savingsAc || ''),
+            dob: l.dob && l.dob.length === 10 ? l.dob : null,
+            age: parseInt(l.age || 0) || null,
+            occupation: String(l.occupation || ''),
+            religion: String(l.religion || ''),
+            caste: String(l.caste || ''),
+            nominee_name: String(l.nomineeName || ''),
+            nominee_relation: String(l.nomineeRelation || ''),
+            is_member: !!(l.isMember || l.memberNo),
+            member_no: String(l.memberNo || ''),
+            photo_url: ph
+          });
+        } else {
+          const existing = custMap.get(cNo);
+          if ((!existing.full_name || existing.full_name === 'Customer') && bName) existing.full_name = bName;
+          if (!existing.photo_url && ph) existing.photo_url = ph;
+          if (!existing.mobile && l.mobile) existing.mobile = String(l.mobile);
+        }
+      });
+    }
+
+    const custPayload = Array.from(custMap.values());
+    for (let i = 0; i < custPayload.length; i += 50) {
+      const chunk = custPayload.slice(i, i + 50);
+      const { error: custErr } = await _supabase.from('customers').upsert(chunk, { onConflict: 'customer_no' });
+      if (custErr) console.error("❌ Customers upsert error:", custErr);
     }
 
     // 6. Upload Loans in Chunks of 50
@@ -775,9 +830,8 @@ window.uploadRestoredStateToSupabase = async function(appState) {
 
       appState.loans.forEach(l => {
         const lid = String(l.id || l.loanId || ('loan_' + Date.now())).trim();
-        const bCode = String(l.branchCode || '99').replace(/\D/g, '') || '99';
-        const cNo = String(l.customerNo || l.customerId || ('CUST_' + lid));
-        const custPh = l.customerPhoto || l.photo || l.applicantPhoto || '';
+        const bCode = String(l.branchCode || '99').replace(/\D/g, '').padStart(2, '0') || '99';
+        const cNo = String(l.customerNo || l.customerId || ('CUST_' + lid)).trim();
         const ornPh = l.ornamentPhoto || l.goldPhoto || '';
 
         loanPayload.push({
@@ -816,7 +870,6 @@ window.uploadRestoredStateToSupabase = async function(appState) {
           updated_by: 'RESTORE_ENGINE'
         });
 
-        // Ornaments extraction
         if (Array.isArray(l.ornamentsTable)) {
           l.ornamentsTable.forEach((orn, idx) => {
             ornamentsPayload.push({
@@ -835,19 +888,21 @@ window.uploadRestoredStateToSupabase = async function(appState) {
 
       for (let i = 0; i < loanPayload.length; i += 50) {
         const chunk = loanPayload.slice(i, i + 50);
-        await _supabase.from('loans').upsert(chunk, { onConflict: 'id' });
+        const { error: loanErr } = await _supabase.from('loans').upsert(chunk, { onConflict: 'id' });
+        if (loanErr) console.error("❌ Loans upsert error:", loanErr);
       }
 
       if (ornamentsPayload.length > 0) {
         for (let i = 0; i < ornamentsPayload.length; i += 50) {
           const ornChunk = ornamentsPayload.slice(i, i + 50);
-          await _supabase.from('loan_ornaments').insert(ornChunk);
+          const { error: ornErr } = await _supabase.from('loan_ornaments').insert(ornChunk);
+          if (ornErr) console.warn("Loan ornaments insert notice:", ornErr);
         }
       }
     }
 
     // 7. Log Audit Event
-    await window.logAuditEvent("RESTORE_COMPLETED", `Restored ${appState.loans ? appState.loans.length : 0} loans and ${appState.customers ? appState.customers.length : 0} customers into database`, {
+    await window.logAuditEvent("RESTORE_COMPLETED", `Restored ${appState.loans ? appState.loans.length : 0} loans and ${custPayload.length} customers into database`, {
       branchCode: '99',
       operator: 'ADMIN'
     });
