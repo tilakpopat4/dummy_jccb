@@ -480,6 +480,22 @@ window.FirebaseService = {
       const custPh = loan.customerPhoto || loan.photo || loan.applicantPhoto || '';
       const ornPh = loan.ornamentPhoto || loan.goldPhoto || '';
 
+      // 1. Ensure customer record exists in customers table first
+      if (cNo && cNo !== 'CUST_UNKNOWN') {
+        await _supabase.from('customers').upsert({
+          customer_no: cNo,
+          branch_id: bCode,
+          full_name: String(loan.borrowerName || loan.name || 'Customer'),
+          mobile: String(loan.mobile || ''),
+          address: String(loan.address || ''),
+          savings_account: String(loan.savingsAc || ''),
+          is_member: !!loan.isMember,
+          member_no: String(loan.memberNo || ''),
+          photo_url: custPh
+        }, { onConflict: 'customer_no' });
+      }
+
+      // 2. Save loan record
       const loanRecord = {
         id: loanId,
         loan_no: String(loan.loanNo || loan.accountNo || loanId),
@@ -487,10 +503,6 @@ window.FirebaseService = {
         proposal_no: String(loan.proposalNo || ''),
         branch_id: bCode,
         customer_no: cNo,
-        borrower_name: String(loan.borrowerName || ''),
-        mobile: String(loan.mobile || ''),
-        address: String(loan.address || ''),
-        savings_account: String(loan.savingsAc || ''),
         loan_date: loan.date || new Date().toISOString().split('T')[0],
         loan_status: String(loan.loanStatus || 'New'),
         loan_type: String(loan.loanType || loan.productCode || 'GW-3725'),
@@ -515,8 +527,6 @@ window.FirebaseService = {
         emi_amount: parseFloat(loan.emiAmount || 0),
         installments: parseInt(loan.installments || 36),
         valuer_name: String(loan.valuerName || ''),
-        grievance_officer: String(loan.grievanceOfficer || 'Amrutlal Valjibhai Chavda'),
-        customer_photo_url: custPh,
         ornament_photo_url: ornPh,
         created_by: String((window.currentSession && window.currentSession.operator) || 'OPERATOR'),
         updated_by: String((window.currentSession && window.currentSession.operator) || 'OPERATOR')
@@ -524,22 +534,7 @@ window.FirebaseService = {
 
       await _supabase.from('loans').upsert(loanRecord, { onConflict: 'id' });
 
-      // Save customer profile automatically
-      if (cNo && cNo !== 'CUST_UNKNOWN') {
-        await _supabase.from('customers').upsert({
-          customer_no: cNo,
-          branch_id: bCode,
-          full_name: String(loan.borrowerName || 'Customer'),
-          mobile: String(loan.mobile || ''),
-          address: String(loan.address || ''),
-          savings_account: String(loan.savingsAc || ''),
-          is_member: !!loan.isMember,
-          member_no: String(loan.memberNo || ''),
-          photo_url: custPh
-        }, { onConflict: 'customer_no' });
-      }
-
-      // Save ornaments
+      // 3. Save ornaments
       if (Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0) {
         const ornRows = loan.ornamentsTable.map((o, idx) => ({
           loan_id: loanId,
@@ -792,10 +787,6 @@ window.uploadRestoredStateToSupabase = async function(appState) {
           proposal_no: String(l.proposalNo || ''),
           branch_id: bCode,
           customer_no: cNo,
-          borrower_name: String(l.borrowerName || ''),
-          mobile: String(l.mobile || ''),
-          address: String(l.address || ''),
-          savings_account: String(l.savingsAc || ''),
           loan_date: l.date || new Date().toISOString().split('T')[0],
           loan_status: String(l.loanStatus || 'New'),
           loan_type: String(l.loanType || l.productCode || 'GW-3725'),
@@ -820,7 +811,6 @@ window.uploadRestoredStateToSupabase = async function(appState) {
           total_deductions: parseFloat(l.totalDeductions || l.totalCharges || 0),
           emi_amount: parseFloat(l.emiAmount || 0),
           installments: parseInt(l.installments || 36),
-          customer_photo_url: custPh,
           ornament_photo_url: ornPh,
           created_by: 'RESTORE_ENGINE',
           updated_by: 'RESTORE_ENGINE'
