@@ -1,4 +1,4 @@
-// supabase-config.js - Central Supabase Client & Backend Adapter
+// supabase-config.js - Central Supabase Client & Complete Backend Adapter
 const SUPABASE_URL = "https://qsfsmomphgotmfcpfhkd.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_2FO68n0R0yCmB_PyUyVOFQ_2oIUZEQA";
 
@@ -53,7 +53,7 @@ window.logAuditEvent = async function(action, details, meta = {}) {
 };
 
 /**
- * Supabase Backend Service Adapter
+ * Supabase Backend Service Adapter (Provides seamless Firebase-compatible interface)
  */
 window.FirebaseService = {
   isInitialized: true,
@@ -78,44 +78,97 @@ window.FirebaseService = {
   },
 
   async updateDeviceHeartbeat(sessionData) {
-    if (!_supabase || !sessionData) return { success: true, isTerminated: false };
+    if (!_supabase) return null;
     try {
-      const sid = String(sessionData.sessionId || sessionData.id || ('sess_' + (sessionData.branchCode || '99'))).trim();
-      const { data } = await _supabase.from('active_sessions').upsert({
-        id: sid,
-        branch_id: String(sessionData.branchCode || '99'),
-        operator_name: String(sessionData.operator || sessionData.operatorName || 'Operator'),
-        ip_address: sessionData.ip || 'Office IP',
-        user_agent: navigator.userAgent,
+      let sessionId = localStorage.getItem("jccb_device_session_id");
+      if (!sessionId) {
+        sessionId = `DEV_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        localStorage.setItem("jccb_device_session_id", sessionId);
+      }
+
+      const branchCode = sessionData.branchCode || (window.currentSession ? window.currentSession.code : '99');
+      const operator = sessionData.operator || (window.currentSession ? window.currentSession.operator : 'Operator');
+
+      const payload = {
+        id: sessionId,
+        session_id: sessionId,
+        branch_id: String(branchCode).replace(/\D/g, '').padStart(2, '0') || '99',
+        operator_name: String(operator),
         status: 'active',
         last_heartbeat: new Date().toISOString()
-      }, { onConflict: 'id' }).select('status').single();
+      };
 
-      if (data && data.status === 'terminated') {
-        return { success: true, isTerminated: true };
-      }
-      return { success: true, isTerminated: false };
+      await _supabase.from('active_sessions').upsert(payload, { onConflict: 'id' });
+      return { ...payload, isOnline: true, terminated: false };
     } catch (e) {
-      return { success: true, isTerminated: false };
+      return null;
     }
   },
 
-  async deleteActiveSession(sid) {
-    if (!_supabase || !sid) return;
+  async getActiveSessions() {
+    if (!_supabase) return [];
     try {
-      await _supabase.from('active_sessions').delete().eq('id', sid);
+      const { data } = await _supabase.from('active_sessions').select('*').order('last_heartbeat', { ascending: false });
+      if (!Array.isArray(data)) return [];
+      return data.map(s => ({
+        id: s.id,
+        sessionId: s.id || s.session_id,
+        branchCode: s.branch_id || '99',
+        branchName: `Branch ${s.branch_id || '99'}`,
+        operator: s.operator_name || 'Operator',
+        ip: s.ip_address || 'Office IP',
+        loginTime: s.created_at || s.last_heartbeat,
+        lastPing: s.last_heartbeat,
+        lastPingMs: new Date(s.last_heartbeat || Date.now()).getTime(),
+        isOnline: (Date.now() - new Date(s.last_heartbeat || 0).getTime() < 120000),
+        status: s.status || 'active',
+        terminated: s.status === 'terminated'
+      }));
+    } catch (e) {
+      return [];
+    }
+  },
+
+  async terminateActiveSession(sessionId) {
+    if (!_supabase || !sessionId) return;
+    try {
+      await _supabase.from('active_sessions').update({ status: 'terminated' }).eq('id', sessionId);
     } catch (e) {}
+  },
+
+  async deleteActiveSession(sessionId) {
+    if (!_supabase || !sessionId) return;
+    try {
+      await _supabase.from('active_sessions').delete().eq('id', sessionId);
+    } catch (e) {}
+  },
+
+  async getAuditLogs(limitCount = 200) {
+    if (!_supabase) return [];
+    try {
+      const { data } = await _supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(limitCount);
+      if (!Array.isArray(data)) return [];
+      return data.map(l => ({
+        id: l.id,
+        action: l.event_action || 'EVENT',
+        details: l.details || '',
+        branchCode: l.branch_id || '99',
+        branchName: `Branch ${l.branch_id || '99'}`,
+        operator: l.actor_name || 'System',
+        timestamp: l.created_at,
+        timestampMs: new Date(l.created_at).getTime(),
+        ip: 'Office Network'
+      }));
+    } catch (e) {
+      return [];
+    }
   },
 
   async getDailyRates() {
     if (!_supabase) return null;
     try {
-      const { data, error } = await _supabase
-        .from('rates')
-        .select('*')
-        .order('rate_date', { ascending: false });
+      const { data, error } = await _supabase.from('rates').select('*').order('rate_date', { ascending: false });
       if (error || !Array.isArray(data) || data.length === 0) return null;
-
       const latest = data[0];
       const history = data.map(r => ({
         date: r.rate_date,
@@ -123,7 +176,6 @@ window.FirebaseService = {
         rate24K: parseFloat(r.rate_24k || 0),
         updatedBy: r.updated_by || 'HEAD OFFICE'
       }));
-
       return {
         rate22K: latest.rate_22k,
         rate24K: latest.rate_24k,
@@ -137,7 +189,7 @@ window.FirebaseService = {
   },
 
   async saveDailyRates(rateObj) {
-    if (!_supabase || !rateObj) return;
+    if (!_supabase || !rateObj) return false;
     try {
       let dStr = rateObj.date;
       if (!dStr || dStr.length !== 10) {
@@ -154,7 +206,7 @@ window.FirebaseService = {
         updated_by: (window.currentSession && window.currentSession.operator) || 'ADMIN'
       };
 
-      const { data, error } = await _supabase.from('rates').upsert(payload, { onConflict: 'rate_date' }).select();
+      const { error } = await _supabase.from('rates').upsert(payload, { onConflict: 'rate_date' });
       if (error) {
         console.error("[Supabase] Rate save failed:", error.message || error);
         return false;
@@ -218,30 +270,32 @@ window.FirebaseService = {
     try {
       const { data } = await _supabase.from('valuers').select('*');
       if (!Array.isArray(data)) return { list: [], deletedIds: [] };
-      const list = data.map(v => ({
-        id: v.id,
-        name: v.name,
-        phone: v.phone,
-        address: v.address,
-        savingsAc: v.savings_account,
-        branchCode: v.branch_id
-      }));
-      return { list, deletedIds: [] };
+      return {
+        list: data.map(v => ({
+          id: v.id,
+          name: v.name,
+          phone: v.phone,
+          address: v.address,
+          savingsAc: v.savings_account,
+          branch: v.branch_id
+        })),
+        deletedIds: []
+      };
     } catch (e) {
       return { list: [], deletedIds: [] };
     }
   },
 
-  async saveValuersList(valuersList) {
-    if (!_supabase || !Array.isArray(valuersList)) return;
+  async saveValuersList(list) {
+    if (!_supabase || !Array.isArray(list)) return;
     try {
-      const records = valuersList.map(v => ({
+      const records = list.map(v => ({
         id: v.id || ('val_' + Date.now()),
         name: v.name || 'Valuer',
         phone: v.phone || '',
         address: v.address || '',
         savings_account: v.savingsAc || '',
-        branch_id: v.branchCode || '99'
+        branch_id: String(v.branch || '99').replace(/\D/g, '') || '99'
       }));
       await _supabase.from('valuers').upsert(records, { onConflict: 'id' });
     } catch (e) {}
@@ -282,65 +336,87 @@ window.FirebaseService = {
     } catch (e) {}
   },
 
-  async getLoans() {
+  async getLoans(branchCode = null) {
     if (!_supabase) return [];
     try {
-      const { data, error } = await _supabase.from('loans').select('*, loan_ornaments(*)');
+      let query = _supabase.from('loans').select('*, loan_ornaments(*)');
+      if (branchCode && branchCode !== '99') {
+        query = query.eq('branch_id', String(branchCode).padStart(2, '0'));
+      }
+      const { data, error } = await query;
       if (error || !Array.isArray(data)) return [];
+
       return data.map(l => {
         const ornaments = (l.loan_ornaments || []).map(o => ({
+          itemType: o.item_type || 'Other',
           name: o.item_name || 'Gold Ornament',
+          itemName: o.item_name || 'Gold Ornament',
           qty: o.quantity || 1,
           quantity: o.quantity || 1,
           grossWeight: parseFloat(o.gross_weight_grams || 0),
           grossWt: parseFloat(o.gross_weight_grams || 0),
           netWeight: parseFloat(o.net_weight_grams || 0),
           netWt: parseFloat(o.net_weight_grams || 0),
-          purity: o.purity_karat || 22,
+          purity: o.purity_karat ? (String(o.purity_karat) + 'K') : '22K',
           karat: o.purity_karat || 22,
+          valuationRate: parseFloat(o.valuation_rate || 0),
+          itemValuation: parseFloat(o.valuation_amount || 0),
           valuation: parseFloat(o.valuation_amount || 0),
           amount: parseFloat(o.valuation_amount || 0)
         }));
 
+        const custPh = l.customer_photo_url || l.CustomerPhoto || l.customer_photo || l.customerPhoto || l.photo || '';
+        const ornPh = l.ornament_photo_url || l.OrnamentPhoto || l.ornament_photo || l.ornamentPhoto || l.goldPhoto || '';
+
         return {
-          id: String(l.id || l.loan_no),
-          loanId: String(l.id || l.loan_no),
-          loanNo: String(l.loan_no || l.id),
-          accountNo: String(l.account_no || l.loan_no || l.id),
-          proposalNo: String(l.proposal_no || ''),
-          branchCode: String(l.branch_id || '99'),
-          customerNo: String(l.customer_no || ''),
-          customerId: String(l.customer_no || ''),
-          date: l.loan_date || '',
-          loanStatus: l.loan_status || 'New',
-          loanType: l.loan_type || 'GOLD_LOAN',
-          packetNo: l.packet_no || '',
-          sanctionedAmount: parseFloat(l.sanctioned_amount || 0),
-          loanAmount: parseFloat(l.sanctioned_amount || 0),
-          valuationAmount: parseFloat(l.valuation_amount || 0),
-          marketValue: parseFloat(l.valuation_amount || 0),
-          goldWeight: parseFloat(l.gold_weight || 0),
-          grossWeight: parseFloat(l.gross_weight || 0),
-          interestRate: parseFloat(l.interest_rate || 11.5),
-          valuerName: l.valuer_name || '',
-          valuerFee: parseFloat(l.valuer_fee || 0),
-          docCharges: parseFloat(l.doc_charges || 0),
-          serviceCharge: parseFloat(l.service_charge || 0),
-          cgst: parseFloat(l.cgst || 0),
-          sgst: parseFloat(l.sgst || 0),
-          stampDuty: parseFloat(l.stamp_duty || 0),
-          insurance: parseFloat(l.insurance || 0),
-          shareA: parseFloat(l.share_a || 0),
-          shareB: parseFloat(l.share_b || 0),
-          memberFee: parseFloat(l.member_fee || 0),
-          otherCharges: parseFloat(l.other_charges || 0),
-          totalDeductions: parseFloat(l.total_deductions || 0),
-          totalCharges: parseFloat(l.total_deductions || 0),
-          emiAmount: parseFloat(l.emi_amount || 0),
-          installments: parseInt(l.installments || 36),
+          id: String(l.id || l.loan_no || l.ID),
+          loanId: String(l.id || l.loan_no || l.ID),
+          loanNo: String(l.loan_no || l.ProposalNo || l.id),
+          accountNo: String(l.account_no || l.AccountNo || l.loan_no || l.id),
+          proposalNo: String(l.proposal_no || l.ProposalNo || ''),
+          branchCode: String(l.branch_id || l.BranchCode || '99'),
+          branchName: String(l.branch_name || l.BranchName || ''),
+          borrowerName: String(l.borrower_name || l.BorrowerName || l.name || ''),
+          mobile: String(l.mobile || l.Mobile || ''),
+          address: String(l.address || l.Address || ''),
+          savingsAc: String(l.savings_account || l.SavingsAc || ''),
+          customerNo: String(l.customer_no || l.CustomerNo || ''),
+          customerId: String(l.customer_no || l.CustomerNo || ''),
+          date: l.loan_date || l.Date || '',
+          loanStatus: l.loan_status || l.LoanStatus || 'New',
+          loanType: l.loan_type || l.LoanType || 'GW-3725',
+          packetNo: l.packet_no || l.PacketNo || '',
+          isMember: !!(l.is_member || l.IsMember || l.member_no || l.MemberNo),
+          memberNo: String(l.member_no || l.MemberNo || ''),
+          interestRate: parseFloat(l.interest_rate || l.InterestRate || 11.5),
+          sanctionedAmount: parseFloat(l.sanctioned_amount || l.SanctionedAmount || l.loanAmount || 0),
+          loanAmount: parseFloat(l.sanctioned_amount || l.SanctionedAmount || l.loanAmount || 0),
+          valuationAmount: parseFloat(l.valuation_amount || l.ValuationAmount || 0),
+          goldWeight: parseFloat(l.gold_weight || l.GoldWeight || 0),
+          grossWeight: parseFloat(l.gross_weight || l.GrossWeight || 0),
+          purpose: String(l.purpose || l.Purpose || ''),
+          shareA: parseFloat(l.share_a || l.ShareA || 0),
+          shareB: parseFloat(l.share_b || l.ShareB || 0),
+          memberFee: parseFloat(l.member_fee || l.MemberFee || 0),
+          valuerFee: parseFloat(l.valuer_fee || l.ValuerFee || 0),
+          stampDuty: parseFloat(l.stamp_duty || l.StampDuty || 0),
+          serviceCharge: parseFloat(l.service_charge || l.ServiceCharge || 0),
+          docCharges: parseFloat(l.doc_charges || l.DocCharges || 0),
+          insurance: parseFloat(l.insurance || l.Insurance || 0),
+          cgst: parseFloat(l.cgst || l.CGST || 0),
+          sgst: parseFloat(l.sgst || l.SGST || 0),
+          otherCharges: parseFloat(l.other_charges || l.OtherCharges || 0),
+          totalDeductions: parseFloat(l.total_deductions || l.TotalDeductions || 0),
+          emiAmount: parseFloat(l.emi_amount || l.EmiAmount || 0),
+          installments: parseInt(l.installments || l.Installments || 36),
+          valuerName: String(l.valuer_name || l.ValuerName || ''),
+          grievanceOfficer: String(l.grievance_officer || l.GrievanceOfficer || 'Amrutlal Valjibhai Chavda'),
           ornamentsTable: ornaments,
-          customerPhoto: l.ornament_photo_url || '',
-          ornamentPhoto: l.ornament_photo_url || '',
+          customerPhoto: custPh,
+          photo: custPh,
+          applicantPhoto: custPh,
+          ornamentPhoto: ornPh,
+          goldPhoto: ornPh,
           createdAt: l.created_at || new Date().toISOString(),
           updatedAt: l.updated_at || new Date().toISOString()
         };
@@ -356,26 +432,30 @@ window.FirebaseService = {
     try {
       const { data, error } = await _supabase.from('customers').select('*');
       if (error || !Array.isArray(data)) return [];
-      return data.map(c => ({
-        id: String(c.customer_no || c.id),
-        customerNo: String(c.customer_no || c.id),
-        name: c.full_name || 'Customer',
-        borrowerName: c.full_name || 'Customer',
-        mobile: c.mobile || '',
-        address: c.address || '',
-        savingsAc: c.savings_account || '',
-        dob: c.dob || '',
-        age: c.age || '',
-        occupation: c.occupation || '',
-        religion: c.religion || '',
-        caste: c.caste || '',
-        nomineeName: c.nominee_name || '',
-        nomineeRelation: c.nominee_relation || '',
-        isMember: !!c.is_member,
-        memberNo: c.member_no || '',
-        photo: c.photo_url || '',
-        branchCode: c.branch_id || '99'
-      }));
+      return data.map(c => {
+        const ph = c.photo || c.photo_url || c.customerPhoto || '';
+        return {
+          id: String(c.customer_no || c.id || c.customerNo),
+          customerNo: String(c.customer_no || c.customerNo || c.id),
+          name: c.full_name || c.name || c.BorrowerName || 'Customer',
+          borrowerName: c.full_name || c.name || c.BorrowerName || 'Customer',
+          mobile: c.mobile || '',
+          address: c.address || '',
+          savingsAc: c.savings_account || c.savingsAc || '',
+          dob: c.dob || '',
+          age: c.age || '',
+          occupation: c.occupation || '',
+          religion: c.religion || '',
+          caste: c.caste || '',
+          nomineeName: c.nominee_name || c.nomineeName || '',
+          nomineeRelation: c.nominee_relation || c.nomineeRelation || '',
+          isMember: !!(c.is_member || c.isMember || c.member_no || c.memberNo),
+          memberNo: c.member_no || c.memberNo || '',
+          photo: ph,
+          customerPhoto: ph,
+          branchCode: c.branch_id || c.branchCode || '99'
+        };
+      });
     } catch (e) {
       return [];
     }
@@ -389,26 +469,119 @@ window.FirebaseService = {
     if (!_supabase || !loan) return;
     try {
       const loanId = String(loan.id || loan.loanId || ('loan_' + Date.now())).trim();
+      const bCode = String(loan.branchCode || (window.currentSession ? window.currentSession.code : '99')).replace(/\D/g, '').padStart(2, '0');
+      const cNo = String(loan.customerNo || loan.customerId || ('CUST_' + loanId)).trim();
+      const custPh = loan.customerPhoto || loan.photo || loan.applicantPhoto || '';
+      const ornPh = loan.ornamentPhoto || loan.goldPhoto || '';
+
       const loanRecord = {
         id: loanId,
         loan_no: String(loan.loanNo || loan.accountNo || loanId),
-        account_no: String(loan.accountNo || loan.accNo || loanId),
+        account_no: String(loan.accountNo || loanId),
         proposal_no: String(loan.proposalNo || ''),
-        branch_id: String(loan.branchCode || (window.currentSession ? window.currentSession.code : '99')),
-        customer_no: String(loan.customerNo || loan.customerId || 'CUST_UNKNOWN'),
+        branch_id: bCode,
+        customer_no: cNo,
+        borrower_name: String(loan.borrowerName || ''),
+        mobile: String(loan.mobile || ''),
+        address: String(loan.address || ''),
+        savings_account: String(loan.savingsAc || ''),
         loan_date: loan.date || new Date().toISOString().split('T')[0],
         loan_status: String(loan.loanStatus || 'New'),
-        loan_type: String(loan.loanType || loan.productCode || 'GOLD_LOAN'),
+        loan_type: String(loan.loanType || loan.productCode || 'GW-3725'),
+        packet_no: String(loan.packetNo || ''),
         sanctioned_amount: parseFloat(loan.sanctionedAmount || loan.loanAmount || 0),
         valuation_amount: parseFloat(loan.valuationAmount || loan.marketValue || 0),
         gold_weight: parseFloat(loan.goldWeight || 0),
         gross_weight: parseFloat(loan.grossWeight || 0),
         interest_rate: parseFloat(loan.interestRate || 11.5),
+        share_a: parseFloat(loan.shareA || 0),
+        share_b: parseFloat(loan.shareB || 0),
+        member_fee: parseFloat(loan.memberFee || 0),
+        valuer_fee: parseFloat(loan.valuerFee || 0),
+        stamp_duty: parseFloat(loan.stampDuty || 0),
+        service_charge: parseFloat(loan.serviceCharge || 0),
+        doc_charges: parseFloat(loan.docCharges || 0),
+        insurance: parseFloat(loan.insurance || 0),
+        cgst: parseFloat(loan.cgst || 0),
+        sgst: parseFloat(loan.sgst || 0),
+        other_charges: parseFloat(loan.otherCharges || 0),
+        total_deductions: parseFloat(loan.totalDeductions || 0),
+        emi_amount: parseFloat(loan.emiAmount || 0),
+        installments: parseInt(loan.installments || 36),
+        valuer_name: String(loan.valuerName || ''),
+        grievance_officer: String(loan.grievanceOfficer || 'Amrutlal Valjibhai Chavda'),
+        customer_photo_url: custPh,
+        ornament_photo_url: ornPh,
         created_by: String((window.currentSession && window.currentSession.operator) || 'OPERATOR'),
         updated_by: String((window.currentSession && window.currentSession.operator) || 'OPERATOR')
       };
+
       await _supabase.from('loans').upsert(loanRecord, { onConflict: 'id' });
-    } catch (e) {}
+
+      // Save customer profile automatically
+      if (cNo && cNo !== 'CUST_UNKNOWN') {
+        await _supabase.from('customers').upsert({
+          customer_no: cNo,
+          branch_id: bCode,
+          full_name: String(loan.borrowerName || 'Customer'),
+          mobile: String(loan.mobile || ''),
+          address: String(loan.address || ''),
+          savings_account: String(loan.savingsAc || ''),
+          is_member: !!loan.isMember,
+          member_no: String(loan.memberNo || ''),
+          photo_url: custPh
+        }, { onConflict: 'customer_no' });
+      }
+
+      // Save ornaments
+      if (Array.isArray(loan.ornamentsTable) && loan.ornamentsTable.length > 0) {
+        const ornRows = loan.ornamentsTable.map((o, idx) => ({
+          loan_id: loanId,
+          item_index: idx + 1,
+          item_name: o.name || o.itemName || 'Gold Ornament',
+          quantity: parseInt(o.qty || o.quantity || 1),
+          gross_weight_grams: parseFloat(o.grossWeight || o.grossWt || 0),
+          net_weight_grams: parseFloat(o.netWeight || o.netWt || 0),
+          purity_karat: parseInt(String(o.purity || o.karat || 22).replace(/\D/g, '') || 22),
+          valuation_amount: parseFloat(o.valuation || o.amount || o.itemValuation || 0)
+        }));
+        await _supabase.from('loan_ornaments').delete().eq('loan_id', loanId);
+        await _supabase.from('loan_ornaments').insert(ornRows);
+      }
+    } catch (e) {
+      console.warn("[Supabase] saveLoan error:", e);
+    }
+  },
+
+  async saveCustomer(cust) {
+    if (!_supabase || !cust) return;
+    try {
+      const cNo = String(cust.customerNo || cust.id || ('CUST_' + Date.now())).trim();
+      const bCode = String(cust.branchCode || (window.currentSession ? window.currentSession.code : '99')).replace(/\D/g, '').padStart(2, '0');
+      const photo = cust.photo || cust.customerPhoto || '';
+
+      await _supabase.from('customers').upsert({
+        customer_no: cNo,
+        branch_id: bCode,
+        full_name: String(cust.name || cust.borrowerName || 'Customer'),
+        mobile: String(cust.mobile || ''),
+        address: String(cust.address || ''),
+        savings_account: String(cust.savingsAc || ''),
+        dob: cust.dob && cust.dob.length === 10 ? cust.dob : null,
+        age: parseInt(cust.age || 0) || null,
+        occupation: String(cust.occupation || ''),
+        religion: String(cust.religion || ''),
+        caste: String(cust.caste || ''),
+        nominee_name: String(cust.nomineeName || ''),
+        nominee_relation: String(cust.nomineeRelation || ''),
+        is_member: !!cust.isMember,
+        member_no: String(cust.memberNo || ''),
+        photo_url: photo
+      }, { onConflict: 'customer_no' });
+      console.log("✅ [Supabase] Customer profile saved:", cNo);
+    } catch (e) {
+      console.warn("[Supabase] saveCustomer error:", e);
+    }
   },
 
   async deleteLoan(loanId) {
@@ -422,23 +595,8 @@ window.FirebaseService = {
   listenDailyRates(cb) {
     if (!_supabase || typeof cb !== 'function') return;
     const fetchLatest = async () => {
-      const { data } = await _supabase.from('rates').select('*').order('rate_date', { ascending: false });
-      if (Array.isArray(data) && data.length > 0) {
-        const latest = data[0];
-        const history = data.map(r => ({
-          date: r.rate_date,
-          rate22K: parseFloat(r.rate_22k || 0),
-          rate24K: parseFloat(r.rate_24k || 0),
-          updatedBy: r.updated_by || 'HEAD OFFICE'
-        }));
-        cb({
-          rate22K: latest.rate_22k,
-          rate24K: latest.rate_24k,
-          isLocked: latest.is_locked,
-          date: latest.rate_date,
-          history: history
-        });
-      }
+      const rates = await this.getDailyRates();
+      if (rates) cb(rates);
     };
     fetchLatest();
     _supabase.channel('public:rates')
@@ -461,10 +619,9 @@ window.FirebaseService = {
 
   listenLoans(branchCode, cb) {
     if (!_supabase || typeof cb !== 'function') return;
-    const fetchLoans = () => {
-      let q = _supabase.from('loans').select('*');
-      if (branchCode && branchCode !== '99') q = q.eq('branch_id', branchCode);
-      q.then(({ data }) => { if (Array.isArray(data)) cb(data); });
+    const fetchLoans = async () => {
+      const loans = await this.getLoans(branchCode);
+      if (Array.isArray(loans)) cb(loans);
     };
     fetchLoans();
     _supabase.channel('public:loans')
@@ -513,17 +670,15 @@ window.FirebaseService = {
 
   listenCustomers(cb) {
     if (!_supabase || typeof cb !== 'function') return;
-    const fetchCusts = () => {
-      _supabase.from('customers').select('*').then(({ data }) => {
-        if (Array.isArray(data)) cb(data);
-      });
+    const fetchCusts = async () => {
+      const custs = await this.getCustomers();
+      if (Array.isArray(custs)) cb(custs);
     };
     fetchCusts();
     _supabase.channel('public:customers')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, fetchCusts)
       .subscribe();
-  },
-
+  }
 };
 
 /**
@@ -603,7 +758,7 @@ window.uploadRestoredStateToSupabase = async function(appState) {
         nominee_relation: c.nomineeRelation || '',
         is_member: !!c.isMember,
         member_no: c.memberNo || '',
-        photo_url: c.photo || ''
+        photo_url: c.photo || c.customerPhoto || ''
       }));
 
       for (let i = 0; i < custPayload.length; i += 50) {
@@ -621,6 +776,8 @@ window.uploadRestoredStateToSupabase = async function(appState) {
         const lid = String(l.id || l.loanId || ('loan_' + Date.now())).trim();
         const bCode = String(l.branchCode || '99').replace(/\D/g, '') || '99';
         const cNo = String(l.customerNo || l.customerId || ('CUST_' + lid));
+        const custPh = l.customerPhoto || l.photo || l.applicantPhoto || '';
+        const ornPh = l.ornamentPhoto || l.goldPhoto || '';
 
         loanPayload.push({
           id: lid,
@@ -629,9 +786,13 @@ window.uploadRestoredStateToSupabase = async function(appState) {
           proposal_no: String(l.proposalNo || ''),
           branch_id: bCode,
           customer_no: cNo,
+          borrower_name: String(l.borrowerName || ''),
+          mobile: String(l.mobile || ''),
+          address: String(l.address || ''),
+          savings_account: String(l.savingsAc || ''),
           loan_date: l.date || new Date().toISOString().split('T')[0],
           loan_status: String(l.loanStatus || 'New'),
-          loan_type: String(l.loanType || l.productCode || 'GOLD_LOAN'),
+          loan_type: String(l.loanType || l.productCode || 'GW-3725'),
           packet_no: String(l.packetNo || ''),
           sanctioned_amount: parseFloat(l.sanctionedAmount || l.loanAmount || 0),
           valuation_amount: parseFloat(l.valuationAmount || l.marketValue || 0),
@@ -653,6 +814,8 @@ window.uploadRestoredStateToSupabase = async function(appState) {
           total_deductions: parseFloat(l.totalDeductions || l.totalCharges || 0),
           emi_amount: parseFloat(l.emiAmount || 0),
           installments: parseInt(l.installments || 36),
+          customer_photo_url: custPh,
+          ornament_photo_url: ornPh,
           created_by: 'RESTORE_ENGINE',
           updated_by: 'RESTORE_ENGINE'
         });
@@ -667,8 +830,8 @@ window.uploadRestoredStateToSupabase = async function(appState) {
               quantity: parseInt(orn.qty || orn.quantity || 1),
               gross_weight_grams: parseFloat(orn.grossWeight || orn.grossWt || 0),
               net_weight_grams: parseFloat(orn.netWeight || orn.netWt || 0),
-              purity_karat: parseInt(orn.purity || orn.karat || 22),
-              valuation_amount: parseFloat(orn.valuation || orn.amount || 0)
+              purity_karat: parseInt(String(orn.purity || orn.karat || 22).replace(/\D/g, '') || 22),
+              valuation_amount: parseFloat(orn.valuation || orn.amount || orn.itemValuation || 0)
             });
           });
         }

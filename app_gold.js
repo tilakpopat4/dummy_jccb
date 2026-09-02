@@ -915,10 +915,23 @@ document.addEventListener("DOMContentLoaded", () => {
             if (typeof window.FirebaseService.listenCustomers === "function") {
                 window.FirebaseService.listenCustomers((cloudCustomers) => {
                     if (Array.isArray(cloudCustomers) && cloudCustomers.length > 0) {
-                        state.customers = cloudCustomers;
+                        const custMap = new Map();
+                        (state.customers || []).forEach(c => {
+                            const k = (c.customerNo || c.id || '').trim();
+                            if (k) custMap.set(k, { ...c });
+                        });
+                        cloudCustomers.forEach(c => {
+                            const k = (c.customerNo || c.id || '').trim();
+                            if (k) {
+                                const existing = custMap.get(k) || {};
+                                custMap.set(k, { ...existing, ...c, photo: c.photo || existing.photo || '', customerPhoto: c.photo || existing.customerPhoto || '' });
+                            }
+                        });
+                        state.customers = Array.from(custMap.values());
                         saveState();
                         if (typeof renderCustomerMasterList === "function") renderCustomerMasterList();
-                        console.log("[Firebase] Realtime Customers synced across PCs.");
+                        if (typeof renderCustomerMasterTable === "function") renderCustomerMasterTable();
+                        console.log("[Supabase] Realtime Customers synced across PCs.");
                     }
                 });
             }
@@ -1105,6 +1118,34 @@ async function syncCloudData(isManual = false) {
             });
 
             state.loans = mergedLoans;
+        }
+
+        // 9. Sync Customers Directory
+        if (typeof window.FirebaseService.getCustomers === "function") {
+            const fbCusts = await window.FirebaseService.getCustomers();
+            if (Array.isArray(fbCusts) && fbCusts.length > 0) {
+                const custMap = new Map();
+                (state.customers || []).forEach(c => {
+                    const k = (c.customerNo || c.id || '').trim();
+                    if (k) custMap.set(k, { ...c });
+                });
+                fbCusts.forEach(c => {
+                    const k = (c.customerNo || c.id || '').trim();
+                    if (k) {
+                        const existing = custMap.get(k) || {};
+                        custMap.set(k, { ...existing, ...c, photo: c.photo || existing.photo || '', customerPhoto: c.photo || existing.customerPhoto || '' });
+                    }
+                });
+                state.customers = Array.from(custMap.values());
+                if (typeof renderCustomerMasterList === "function") renderCustomerMasterList();
+                if (typeof renderCustomerMasterTable === "function") renderCustomerMasterTable();
+            } else if (Array.isArray(state.customers) && state.customers.length > 0) {
+                state.customers.forEach(c => {
+                    if (typeof window.FirebaseService.saveCustomer === "function") {
+                        window.FirebaseService.saveCustomer(c).catch(() => { });
+                    }
+                });
+            }
         }
 
         saveState();
