@@ -749,45 +749,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             }
 
-            // 3. Listen for realtime loan records
+            // 3. Listen for realtime loan records (Pure Cloud-First Supabase Architecture)
             if (typeof window.FirebaseService.listenLoans === "function") {
                 window.FirebaseService.listenLoans(null, (cloudLoans) => {
                     if (Array.isArray(cloudLoans)) {
-                        if (!state.loans) state.loans = [];
-                        const deletedSet = new Set(state.deletedLoanIds || []);
-
-                        const validCloudLoans = cloudLoans.filter(cl => {
-                            const id = String(cl.id || cl.loanId || "").trim();
-                            return id && !deletedSet.has(id);
-                        });
-
-                        const updatedList = [];
-                        const seenIds = new Set();
-
-                        validCloudLoans.forEach(cl => {
-                            const id = String(cl.id || cl.loanId).trim();
-                            seenIds.add(id);
-                            const local = state.loans.find(x => String(x.id || x.loanId).trim() === id);
-                            if (local) {
-                                updatedList.push({ ...local, ...cl, id: id, loanId: id });
-                            } else {
-                                updatedList.push({ ...cl, id: id, loanId: id });
-                            }
-                        });
-
-                        state.loans.forEach(localLoan => {
-                            const id = String(localLoan.id || localLoan.loanId || "").trim();
-                            if (id && !seenIds.has(id) && !deletedSet.has(id)) {
-                                const createdTime = localLoan.createdAt ? new Date(localLoan.createdAt).getTime() : 0;
-                                const isRecent = createdTime > 0 && (Date.now() - createdTime < 3600000);
-                                if (isRecent) {
-                                    updatedList.unshift(localLoan);
-                                    seenIds.add(id);
-                                }
-                            }
-                        });
-
-                        state.loans = updatedList;
+                        state.loans = cloudLoans;
                         saveState();
                         renderDashboard();
                         renderRegisterTable();
@@ -1083,89 +1049,19 @@ async function syncCloudData(isManual = false) {
             }
         }
 
-        // 8. Sync Loans
+        // 8. Sync Loans (Pure Supabase Single Source of Truth)
         const fbLoans = await window.FirebaseService.getLoans();
-        const deletedSet = new Set(state.deletedLoanIds || []);
-
         if (Array.isArray(fbLoans)) {
-            const validFbLoans = fbLoans.filter(cl => {
-                const id = String(cl.id || cl.loanId || "").trim();
-                return id && !deletedSet.has(id);
-            });
-
-            const mergedLoans = [];
-            const seen = new Set();
-
-            validFbLoans.forEach(cl => {
-                const id = String(cl.id || cl.loanId).trim();
-                seen.add(id);
-                const local = (state.loans || []).find(x => String(x.id || x.loanId).trim() === id);
-                if (local) {
-                    const bName = cl.borrowerName || local.borrowerName || local.name || cl.name || '';
-                    const pktNo = cl.packetNo || local.packetNo || '';
-                    const cNo = cl.customerNo || local.customerNo || '';
-                    const cPhoto = cl.customerPhoto || local.customerPhoto || local.photo || '';
-                    const oPhoto = cl.ornamentPhoto || local.ornamentPhoto || local.goldPhoto || '';
-                    const orns = (Array.isArray(cl.ornamentsTable) && cl.ornamentsTable.length > 0) ? cl.ornamentsTable : (local.ornamentsTable || []);
-
-                    mergedLoans.push({
-                        ...local,
-                        ...cl,
-                        borrowerName: bName,
-                        name: bName,
-                        packetNo: pktNo,
-                        customerNo: cNo,
-                        customerPhoto: cPhoto,
-                        photo: cPhoto,
-                        ornamentPhoto: oPhoto,
-                        goldPhoto: oPhoto,
-                        ornamentsTable: orns,
-                        id: id,
-                        loanId: id
-                    });
-                } else {
-                    mergedLoans.push({ ...cl, id: id, loanId: id });
-                }
-            });
-
-            // Retain and upload all local loans (including restored backups)
-            (state.loans || []).forEach(localLoan => {
-                const id = String(localLoan.id || localLoan.loanId || "").trim();
-                if (id && !seen.has(id) && !deletedSet.has(id)) {
-                    mergedLoans.unshift(localLoan);
-                    seen.add(id);
-                    window.FirebaseService.saveLoan(localLoan).catch(() => { });
-                }
-            });
-
-            state.loans = mergedLoans;
+            state.loans = fbLoans;
         }
 
-        // 9. Sync Customers Directory
+        // 9. Sync Customers Directory (Pure Supabase Single Source of Truth)
         if (typeof window.FirebaseService.getCustomers === "function") {
             const fbCusts = await window.FirebaseService.getCustomers();
-            if (Array.isArray(fbCusts) && fbCusts.length > 0) {
-                const custMap = new Map();
-                (state.customers || []).forEach(c => {
-                    const k = (c.customerNo || c.id || '').trim();
-                    if (k) custMap.set(k, { ...c });
-                });
-                fbCusts.forEach(c => {
-                    const k = (c.customerNo || c.id || '').trim();
-                    if (k) {
-                        const existing = custMap.get(k) || {};
-                        custMap.set(k, { ...existing, ...c, photo: c.photo || existing.photo || '', customerPhoto: c.photo || existing.customerPhoto || '' });
-                    }
-                });
-                state.customers = Array.from(custMap.values());
+            if (Array.isArray(fbCusts)) {
+                state.customers = fbCusts;
                 if (typeof renderCustomerMasterList === "function") renderCustomerMasterList();
                 if (typeof renderCustomerMasterTable === "function") renderCustomerMasterTable();
-            } else if (Array.isArray(state.customers) && state.customers.length > 0) {
-                state.customers.forEach(c => {
-                    if (typeof window.FirebaseService.saveCustomer === "function") {
-                        window.FirebaseService.saveCustomer(c).catch(() => { });
-                    }
-                });
             }
         }
 
