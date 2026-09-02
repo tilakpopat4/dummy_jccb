@@ -339,84 +339,107 @@ window.FirebaseService = {
   async getLoans(branchCode = null) {
     if (!_supabase) return [];
     try {
-      let query = _supabase.from('loans').select('*, loan_ornaments(*), customers(*)');
+      let loanQuery = _supabase.from('loans').select('*');
       if (branchCode && branchCode !== '99') {
-        query = query.eq('branch_id', String(branchCode).padStart(2, '0'));
+        loanQuery = loanQuery.eq('branch_id', String(branchCode).padStart(2, '0'));
       }
-      const { data, error } = await query;
-      if (error || !Array.isArray(data)) return [];
+      const { data: loanRows, error: loanErr } = await loanQuery;
+      if (loanErr) {
+        console.error("❌ [Supabase] getLoans loans query error:", loanErr);
+        return [];
+      }
+      if (!Array.isArray(loanRows) || loanRows.length === 0) return [];
 
-      return data.map(l => {
-        const cust = l.customers || {};
-        const ornaments = (l.loan_ornaments || []).map(o => ({
-          itemType: o.item_type || 'Other',
-          name: o.item_name || 'Gold Ornament',
-          itemName: o.item_name || 'Gold Ornament',
-          qty: o.quantity || 1,
-          quantity: o.quantity || 1,
-          grossWeight: parseFloat(o.gross_weight_grams || 0),
-          grossWt: parseFloat(o.gross_weight_grams || 0),
-          netWeight: parseFloat(o.net_weight_grams || 0),
-          netWt: parseFloat(o.net_weight_grams || 0),
-          purity: o.purity_karat ? (String(o.purity_karat) + 'K') : '22K',
-          karat: o.purity_karat || 22,
-          valuationRate: parseFloat(o.valuation_rate || 0),
-          itemValuation: parseFloat(o.valuation_amount || 0),
-          valuation: parseFloat(o.valuation_amount || 0),
-          amount: parseFloat(o.valuation_amount || 0)
-        }));
+      // Fetch customers & ornaments in parallel
+      const [{ data: custRows }, { data: ornRows }] = await Promise.all([
+        _supabase.from('customers').select('*'),
+        _supabase.from('loan_ornaments').select('*')
+      ]);
 
-        const custPh = cust.photo_url || cust.photo || l.customer_photo_url || l.CustomerPhoto || l.customer_photo || l.customerPhoto || l.photo || '';
-        const ornPh = l.ornament_photo_url || l.OrnamentPhoto || l.ornament_photo || l.ornamentPhoto || l.goldPhoto || '';
+      const custMap = new Map();
+      if (Array.isArray(custRows)) {
+        custRows.forEach(c => {
+          if (c && c.customer_no) custMap.set(String(c.customer_no).trim(), c);
+        });
+      }
 
-        const borrowerName = String(cust.full_name || l.borrower_name || l.BorrowerName || l.name || '').trim();
-        const pktNo = String(l.packet_no || l.PacketNo || '').trim();
-        const cNo = String(l.customer_no || cust.customer_no || l.CustomerNo || '').trim();
+      const ornMap = new Map();
+      if (Array.isArray(ornRows)) {
+        ornRows.forEach(o => {
+          const lid = String(o.loan_id).trim();
+          if (!ornMap.has(lid)) ornMap.set(lid, []);
+          ornMap.get(lid).push({
+            itemType: o.item_type || 'Other',
+            name: o.item_name || 'Gold Ornament',
+            itemName: o.item_name || 'Gold Ornament',
+            qty: o.quantity || 1,
+            quantity: o.quantity || 1,
+            grossWeight: parseFloat(o.gross_weight_grams || 0),
+            grossWt: parseFloat(o.gross_weight_grams || 0),
+            netWeight: parseFloat(o.net_weight_grams || 0),
+            netWt: parseFloat(o.net_weight_grams || 0),
+            purity: o.purity_karat ? (String(o.purity_karat) + 'K') : '22K',
+            karat: o.purity_karat || 22,
+            valuationRate: parseFloat(o.valuation_rate || 0),
+            itemValuation: parseFloat(o.valuation_amount || 0),
+            valuation: parseFloat(o.valuation_amount || 0),
+            amount: parseFloat(o.valuation_amount || 0)
+          });
+        });
+      }
+
+      return loanRows.map(l => {
+        const cNo = String(l.customer_no || '').trim();
+        const cust = custMap.get(cNo) || {};
+        const ornaments = ornMap.get(String(l.id).trim()) || [];
+        const custPh = cust.photo_url || cust.photo || l.customer_photo_url || '';
+        const ornPh = l.ornament_photo_url || '';
+        const borrowerName = String(cust.full_name || l.borrower_name || l.name || 'Customer').trim();
 
         return {
-          id: String(l.id || l.loan_no || l.ID),
-          loanId: String(l.id || l.loan_no || l.ID),
-          loanNo: String(l.loan_no || l.ProposalNo || l.id),
-          accountNo: String(l.account_no || l.AccountNo || l.loan_no || l.id),
-          proposalNo: String(l.proposal_no || l.ProposalNo || ''),
-          branchCode: String(l.branch_id || l.BranchCode || '99'),
-          branchName: String(l.branch_name || l.BranchName || ''),
+          id: String(l.id || l.loan_no),
+          loanId: String(l.id || l.loan_no),
+          loanNo: String(l.loan_no || l.proposal_no || l.id),
+          accountNo: String(l.account_no || l.loan_no || l.id),
+          proposalNo: String(l.proposal_no || ''),
+          branchCode: String(l.branch_id || '99').padStart(2, '0'),
+          branchName: String(l.branch_name || ''),
           borrowerName: borrowerName,
           name: borrowerName,
-          mobile: String(cust.mobile || l.mobile || l.Mobile || ''),
-          address: String(cust.address || l.address || l.Address || ''),
-          savingsAc: String(cust.savings_account || l.savings_account || l.SavingsAc || ''),
+          mobile: String(cust.mobile || l.mobile || ''),
+          address: String(cust.address || l.address || ''),
+          savingsAc: String(cust.savings_account || l.savings_account || ''),
           customerNo: cNo,
           customerId: cNo,
-          date: l.loan_date || l.Date || '',
-          loanStatus: l.loan_status || l.LoanStatus || 'New',
-          loanType: l.loan_type || l.LoanType || 'GW-3725',
-          packetNo: pktNo,
-          isMember: !!(cust.is_member || l.is_member || l.IsMember || cust.member_no || l.member_no || l.MemberNo),
-          memberNo: String(cust.member_no || l.member_no || l.MemberNo || ''),
-          interestRate: parseFloat(l.interest_rate || l.InterestRate || 11.5),
-          sanctionedAmount: parseFloat(l.sanctioned_amount || l.SanctionedAmount || l.loanAmount || 0),
-          loanAmount: parseFloat(l.sanctioned_amount || l.SanctionedAmount || l.loanAmount || 0),
-          valuationAmount: parseFloat(l.valuation_amount || l.ValuationAmount || 0),
-          goldWeight: parseFloat(l.gold_weight || l.GoldWeight || 0),
-          grossWeight: parseFloat(l.gross_weight || l.GrossWeight || 0),
-          purpose: String(l.purpose || l.Purpose || ''),
-          shareA: parseFloat(l.share_a || l.ShareA || 0),
-          shareB: parseFloat(l.share_b || l.ShareB || 0),
-          memberFee: parseFloat(l.member_fee || l.MemberFee || 0),
-          valuerFee: parseFloat(l.valuer_fee || l.ValuerFee || 0),
-          stampDuty: parseFloat(l.stamp_duty || l.StampDuty || 0),
-          serviceCharge: parseFloat(l.service_charge || l.ServiceCharge || 0),
-          docCharges: parseFloat(l.doc_charges || l.DocCharges || 0),
-          insurance: parseFloat(l.insurance || l.Insurance || 0),
-          cgst: parseFloat(l.cgst || l.CGST || 0),
-          sgst: parseFloat(l.sgst || l.SGST || 0),
-          otherCharges: parseFloat(l.other_charges || l.OtherCharges || 0),
-          totalDeductions: parseFloat(l.total_deductions || l.TotalDeductions || 0),
-          emiAmount: parseFloat(l.emi_amount || l.EmiAmount || 0),
-          installments: parseInt(l.installments || l.Installments || 36),
-          valuerName: String(l.valuer_name || l.ValuerName || ''),
-          grievanceOfficer: String(l.grievance_officer || l.GrievanceOfficer || 'Amrutlal Valjibhai Chavda'),
+          date: l.loan_date || '',
+          loanStatus: l.loan_status || 'New',
+          loanType: l.loan_type || 'GW-3725',
+          packetNo: String(l.packet_no || '').trim(),
+          isMember: !!(cust.is_member || cust.member_no),
+          memberNo: String(cust.member_no || ''),
+          interestRate: parseFloat(l.interest_rate || 11.5),
+          sanctionedAmount: parseFloat(l.sanctioned_amount || 0),
+          loanAmount: parseFloat(l.sanctioned_amount || 0),
+          valuationAmount: parseFloat(l.valuation_amount || 0),
+          goldWeight: parseFloat(l.gold_weight || 0),
+          grossWeight: parseFloat(l.gross_weight || 0),
+          purpose: String(l.purpose || ''),
+          shareA: parseFloat(l.share_a || 0),
+          shareB: parseFloat(l.share_b || 0),
+          memberFee: parseFloat(l.member_fee || 0),
+          valuerFee: parseFloat(l.valuer_fee || 0),
+          stampDuty: parseFloat(l.stamp_duty || 0),
+          serviceCharge: parseFloat(l.service_charge || 0),
+          docCharges: parseFloat(l.doc_charges || 0),
+          insurance: parseFloat(l.insurance || 0),
+          cgst: parseFloat(l.cgst || 0),
+          sgst: parseFloat(l.sgst || 0),
+          otherCharges: parseFloat(l.other_charges || 0),
+          totalDeductions: parseFloat(l.total_deductions || 0),
+          emiAmount: parseFloat(l.emi_amount || 0),
+          installments: parseInt(l.installments || 36),
+          valuerName: String(l.valuer_name || ''),
+          grievanceOfficer: 'Amrutlal Valjibhai Chavda',
           ornamentsTable: ornaments,
           customerPhoto: custPh,
           photo: custPh,
