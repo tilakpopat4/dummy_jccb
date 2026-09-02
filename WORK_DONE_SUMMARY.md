@@ -62,11 +62,14 @@ An inventory of all 18 database mutation points (`setDoc`, `updateDoc`, `addDoc`
 
 ### C. 22K Valuation Benchmark vs. 24K Pure Gold Formula
 * The formula `(netWeight * purity) / 22` in `app_gold.js` represents **22K-Equivalent Converted Weight**, designed to multiply directly with the bank's **22K Daily Gold Rate**.
-* **Transformation Policy:** The transform script preserves and passes through existing stored `fineGoldGm` directly from source documents without modification. For legacy records where absent, it computes pure gold weight $\text{netWeight} \times \left(\frac{\text{purity}}{24}\right)$.
+* **Split Metric Standard:** `loan_ornaments` now stores two separate, unambiguous columns:
+  1. `fine_gold_22k_equivalent_gm NUMERIC(10, 3)`: $\text{net\_weight} \times \left(\frac{\text{purity\_karat}}{22}\right)$
+  2. `fine_gold_pure_gm NUMERIC(10, 3)`: $\text{net\_weight} \times \left(\frac{\text{purity\_karat}}{24}\right)$
+* **Transformation Policy:** Both metrics are recomputed consistently for **ALL records (current and legacy)** across all generations during Step 3 transformation.
 
 ### D. Strict Nullable Standard & Zero-Assumption Policy
-* Removed `NOT NULL DEFAULT 0` and `DEFAULT 22` from all weight, purity, and valuation columns in `loan_ornaments`.
-* If any metric cannot be parsed unambiguously, the row is routed to `_rejected_rows` with the exact unparsed value and failure reason — **no guessing or silent placeholders**.
+* Core financial columns on `loans` (`sanctioned_amount`, `valuation_amount`, `gold_weight`, `gross_weight`, `interest_rate`, `installments`, `emi_amount`) and all weight/purity/valuation columns on `loan_ornaments` are defined as **NULLABLE with NO DEFAULT PLACEHOLDERS**.
+* Missing or unparseable source data triggers an explicit rejection into `_rejected_rows` — **zero guessing or silent placeholders**.
 
 ---
 
@@ -75,17 +78,19 @@ An inventory of all 18 database mutation points (`setDoc`, `updateDoc`, `addDoc`
 ```mermaid
 graph TD
     HO[1. Head Office Financial Admin <br> role: head_office <br> branch: 99] -->|Full Financial CRUD across all 17 Branches| F1[Loans, Ornaments, Customers, Rates, Rules]
-    BE[2. Branch Employee <br> role: branch_employee <br> branch: 01-18] -->|Full CRUD restricted to own Branch| F2[Branch Loans, Customers, Vouchers, Draft Edits]
+    BE[2. Branch Employee <br> role: branch_employee <br> branch: 01-18] -->|Full CRUD restricted to own Branch| F2[Branch Loans, Customers, Vouchers, Loan Lifecycle]
     TA[3. Tech Admin / DevOps <br> role: tech_admin <br> branch: 99] -->|Security & Presence Only - ZERO Financial Access| F3[User Profiles, Killswitch, Audit Logs READ-ONLY]
 ```
 
 ### Key Security Decisions Implemented:
 1. **Instant Revocation Lookup Table (Zero-Millisecond Revocation):**  
    Eliminated the 1-hour JWT token revocation loophole by implementing a `public.user_profiles` table and a `SECURITY DEFINER` function `get_auth_profile()`. Every SQL query checks `is_active = TRUE`. If set to `FALSE`, access is revoked **on the very next SQL request (0 ms delay)**.
-2. **Draft-Scoped Loan Editing:**  
-   `branch_employee` is permitted to `UPDATE` and `DELETE` loans belonging to their `branch_id` **ONLY IF `loan_status IN ('New', 'Draft')`**. Once sanctioned or disbursed, only `head_office` can alter the record.
-3. **100% Immutable Server-Side Audit Logging:**  
-   `public.audit_logs` has **ZERO client INSERT/UPDATE/DELETE permissions**. All log entries are written automatically by server-side PostgreSQL triggers (`process_audit_log_trigger()`) attached to `loans`, `rates`, `rules_master`, `valuers`, `active_sessions`, and `user_profiles`.
+2. **Lifecycle-Aware Loan Editing:**  
+   `branch_employee` is permitted to update and progress loans in their branch (`New` $\rightarrow$ `Draft` $\rightarrow$ `Sanctioned` $\rightarrow$ `Disbursed` $\rightarrow$ `Closed`) **as long as the loan was NOT already finalized (`'Closed'` or `'Foreclosed'`)**.
+3. **Zero 'FOR ALL' RLS Policies:**  
+   Every table uses strictly explicit `FOR SELECT`, `FOR INSERT`, `FOR UPDATE`, and `FOR DELETE` policies, eliminating any permissive policy union overlaps or bypasses.
+4. **100% Immutable Server-Side Audit Logging:**  
+   `public.audit_logs` has **ZERO client INSERT/UPDATE/DELETE permissions**. All log entries are written automatically by server-side PostgreSQL triggers (`process_audit_log_trigger()`) attached to `loans`, `rates`, `rules_master`, `products`, `valuers`, `active_sessions`, and `user_profiles`.
 
 ---
 
@@ -93,21 +98,21 @@ graph TD
 
 | File Name | File Type | Description |
 | :--- | :---: | :--- |
-| **[`schema_and_rls_policies.sql`](file:///d:/JCCBGold-main%2021082026-20260829T025201Z-1-001/JCCBGold-main%2021082026/schema_and_rls_policies.sql)** | SQL DDL & RLS | Production PostgreSQL schema for all 10 tables, instant-revocation lookup helper, RLS policies, and automated audit triggers. |
-| **[`JCCB_ROLES_AND_PRIVILEGES_MATRIX.md`](file:///d:/JCCBGold-main%2021082026-20260829T025201Z-1-001/JCCBGold-main%2021082026/JCCB_ROLES_AND_PRIVILEGES_MATRIX.md)** | Markdown | Master RBAC & Privileges Matrix detailing the 3-role model, draft editing rules, and security boundaries. |
+| **[`schema_and_rls_policies.sql`](file:///d:/JCCBGold-main%2021082026-20260829T025201Z-1-001/JCCBGold-main%2021082026/schema_and_rls_policies.sql)** | SQL DDL & RLS | All-in-one production PostgreSQL schema for all 10 tables, instant-revocation lookup helper, explicit RLS policies, automated audit triggers, and branch seed data. |
+| **[`JCCB_ROLES_AND_PRIVILEGES_MATRIX.md`](file:///d:/JCCBGold-main%2021082026-20260829T025201Z-1-001/JCCBGold-main%2021082026/JCCB_ROLES_AND_PRIVILEGES_MATRIX.md)** | Markdown | Master RBAC & Privileges Matrix detailing the 3-role model, lifecycle progression rules, and security boundaries. |
 | **[`FIREBASE_AUDIT_AND_MIGRATION_SUMMARY.md`](file:///d:/JCCBGold-main%2021082026-20260829T025201Z-1-001/JCCBGold-main%2021082026/FIREBASE_AUDIT_AND_MIGRATION_SUMMARY.md)** | Markdown | Central migration plan, collection inventory, managed export commands, and Step 1-6 roadmap. |
+| **[`WORK_DONE_SUMMARY.md`](file:///d:/JCCBGold-main%2021082026-20260829T025201Z-1-001/JCCBGold-main%2021082026/WORK_DONE_SUMMARY.md)** | Markdown | Master architectural summary of all audit phases, forensic discoveries, and deployment procedures. |
 | **[`PHASE_1_FIREBASE_AUDIT_REPORT.pdf`](file:///d:/JCCBGold-main%2021082026-20260829T025201Z-1-001/JCCBGold-main%2021082026/PHASE_1_FIREBASE_AUDIT_REPORT.pdf)** | PDF Report | Formal executive & technical report on Firestore 123,000+ read surge forensic audit. |
 | **[`PHASE_1B_WRITE_OPERATIONS_AUDIT_REPORT.pdf`](file:///d:/JCCBGold-main%2021082026-20260829T025201Z-1-001/JCCBGold-main%2021082026/PHASE_1B_WRITE_OPERATIONS_AUDIT_REPORT.pdf)** | PDF Report | Formal write operations inventory, master overwrite vulnerability analysis, and security risks. |
-| **[`phase1_audit_report.html`](file:///d:/JCCBGold-main%2021082026-20260829T025201Z-1-001/JCCBGold-main%2021082026/phase1_audit_report.html)** | HTML Template | Source template for Phase 1 audit report. |
-| **[`phase1b_audit_report.html`](file:///d:/JCCBGold-main%2021082026-20260829T025201Z-1-001/JCCBGold-main%2021082026/phase1b_audit_report.html)** | HTML Template | Source template for Phase 1B audit report. |
+| **GitHub Deployment Repository** | Git Remote | **[https://github.com/tilakpopat4/dummy_jccb.git](https://github.com/tilakpopat4/dummy_jccb.git)** — Staging/testing codebase and SQL schema. |
 
 ---
 
 ## 6. Next Steps for Phase 4 (Data Migration)
 
-1. **Complete Step 1 (Export):** Execute the official export against Firestore (either via `gcloud firestore export` after enabling GCP billing or via streaming script).
+1. **Complete Step 1 (Managed Export):** Enable GCP billing on project `jccbgold` and execute `gcloud firestore export` in Google Cloud Shell.
 2. **Execute Step 2 (Staging Tables):** Load raw JSON documents into PostgreSQL `_staging_*` tables unmodified.
 3. **Execute Step 3 (Dry-Run Transform):** Run transformation script with `--dry-run` and inspect `_rejected_rows`.
-4. **Execute Step 4 (Transactional Import):** Run transactional SQL import respecting foreign keys.
+4. **Execute Step 4 (Transactional Import):** Run transactional SQL import respecting foreign keys (`branches` $\rightarrow$ `user_profiles` $\rightarrow$ `customers` $\rightarrow$ `loans` $\rightarrow$ `loan_ornaments`).
 5. **Execute Step 5 (Reconciliation Check):** Verify exact row counts, financial checksums ($\sum \text{sanctioned\_amount}$ by branch), and ornament valuation integrity ($\sum \text{ornaments} == \text{loan valuation} \pm ₹1.00$).
 6. **Execute Step 6 (Cutover & Rollback):** Execute cutover plan during scheduled maintenance window.
