@@ -331,54 +331,96 @@ window.FirebaseService = {
     } catch (e) {}
   },
 
-  // Realtime Listeners
+  // Realtime Listeners (Active Live WebSockets across PCs)
   listenDailyRates(cb) {
     if (!_supabase || typeof cb !== 'function') return;
-    _supabase.from('rates').select('*').order('rate_date', { ascending: false }).limit(1).single().then(({ data }) => {
-      if (data) cb({ rate22K: data.rate_22k, rate24K: data.rate_24k, isLocked: data.is_locked, date: data.rate_date });
-    });
+    const fetchLatest = () => {
+      _supabase.from('rates').select('*').order('rate_date', { ascending: false }).limit(1).single().then(({ data }) => {
+        if (data) cb({ rate22K: data.rate_22k, rate24K: data.rate_24k, isLocked: data.is_locked, date: data.rate_date });
+      });
+    };
+    fetchLatest();
+    _supabase.channel('public:rates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rates' }, fetchLatest)
+      .subscribe();
   },
 
   listenRules(cb) {
     if (!_supabase || typeof cb !== 'function') return;
-    _supabase.from('rules_master').select('rules_json').eq('id', 'rulesMaster').single().then(({ data }) => {
-      if (data && data.rules_json) cb(data.rules_json);
-    });
+    const fetchRules = () => {
+      _supabase.from('rules_master').select('rules_json').eq('id', 'rulesMaster').single().then(({ data }) => {
+        if (data && data.rules_json) cb(data.rules_json);
+      });
+    };
+    fetchRules();
+    _supabase.channel('public:rules_master')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rules_master' }, fetchRules)
+      .subscribe();
   },
 
   listenLoans(branchCode, cb) {
     if (!_supabase || typeof cb !== 'function') return;
-    let q = _supabase.from('loans').select('*');
-    if (branchCode && branchCode !== '99') q = q.eq('branch_id', branchCode);
-    q.then(({ data }) => { if (Array.isArray(data)) cb(data); });
+    const fetchLoans = () => {
+      let q = _supabase.from('loans').select('*');
+      if (branchCode && branchCode !== '99') q = q.eq('branch_id', branchCode);
+      q.then(({ data }) => { if (Array.isArray(data)) cb(data); });
+    };
+    fetchLoans();
+    _supabase.channel('public:loans')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'loans' }, fetchLoans)
+      .subscribe();
   },
 
   listenBranches(cb) {
     if (!_supabase || typeof cb !== 'function') return;
-    _supabase.from('branches').select('*').order('branch_code').then(({ data }) => {
-      if (Array.isArray(data)) cb(data.map(b => ({ code: b.branch_code, name: b.branch_name, nameGuj: b.branch_name_guj })));
-    });
+    const fetchBranches = () => {
+      _supabase.from('branches').select('*').order('branch_code').then(({ data }) => {
+        if (Array.isArray(data)) cb(data.map(b => ({ code: b.branch_code, name: b.branch_name, nameGuj: b.branch_name_guj })));
+      });
+    };
+    fetchBranches();
+    _supabase.channel('public:branches')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'branches' }, fetchBranches)
+      .subscribe();
   },
 
   listenValuers(cb) {
     if (!_supabase || typeof cb !== 'function') return;
-    _supabase.from('valuers').select('*').then(({ data }) => {
-      if (Array.isArray(data)) cb(data.map(v => ({ id: v.id, name: v.name, phone: v.phone, branchCode: v.branch_id })), []);
-    });
+    const fetchValuers = () => {
+      _supabase.from('valuers').select('*').then(({ data }) => {
+        if (Array.isArray(data)) cb(data.map(v => ({ id: v.id, name: v.name, phone: v.phone, branchCode: v.branch_id })), []);
+      });
+    };
+    fetchValuers();
+    _supabase.channel('public:valuers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'valuers' }, fetchValuers)
+      .subscribe();
   },
 
   listenProducts(cb) {
     if (!_supabase || typeof cb !== 'function') return;
-    _supabase.from('products').select('*').then(({ data }) => {
-      if (Array.isArray(data)) cb(data);
-    });
+    const fetchProducts = () => {
+      _supabase.from('products').select('*').then(({ data }) => {
+        if (Array.isArray(data)) cb(data);
+      });
+    };
+    fetchProducts();
+    _supabase.channel('public:products')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchProducts)
+      .subscribe();
   },
 
   listenCustomers(cb) {
     if (!_supabase || typeof cb !== 'function') return;
-    _supabase.from('customers').select('*').then(({ data }) => {
-      if (Array.isArray(data)) cb(data);
-    });
+    const fetchCusts = () => {
+      _supabase.from('customers').select('*').then(({ data }) => {
+        if (Array.isArray(data)) cb(data);
+      });
+    };
+    fetchCusts();
+    _supabase.channel('public:customers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, fetchCusts)
+      .subscribe();
   },
 
   listenDeletedLoans(cb) {},
