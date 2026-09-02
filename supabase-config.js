@@ -746,20 +746,20 @@ window.uploadRestoredStateToSupabase = async function(appState) {
       const custPayload = appState.customers.map(c => ({
         customer_no: String(c.customerNo || c.id || ('CUST_' + Date.now())),
         branch_id: String(c.branchCode || '99').replace(/\D/g, '') || '99',
-        full_name: c.name || 'Customer',
-        mobile: c.mobile || '',
-        address: c.address || '',
-        savings_account: c.savingsAc || '',
+        full_name: String(c.name || c.borrowerName || c.full_name || c.BorrowerName || 'Customer'),
+        mobile: String(c.mobile || ''),
+        address: String(c.address || ''),
+        savings_account: String(c.savingsAc || c.savings_account || ''),
         dob: c.dob && c.dob.length === 10 ? c.dob : null,
         age: parseInt(c.age || 0) || null,
-        occupation: c.occupation || '',
-        religion: c.religion || '',
-        caste: c.caste || '',
-        nominee_name: c.nomineeName || '',
-        nominee_relation: c.nomineeRelation || '',
-        is_member: !!c.isMember,
-        member_no: c.memberNo || '',
-        photo_url: c.photo || c.customerPhoto || ''
+        occupation: String(c.occupation || ''),
+        religion: String(c.religion || ''),
+        caste: String(c.caste || ''),
+        nominee_name: String(c.nomineeName || c.nominee_name || ''),
+        nominee_relation: String(c.nomineeRelation || c.nominee_relation || ''),
+        is_member: !!(c.isMember || c.is_member || c.memberNo || c.member_no),
+        member_no: String(c.memberNo || c.member_no || ''),
+        photo_url: String(c.photo || c.customerPhoto || c.photo_url || '')
       }));
 
       for (let i = 0; i < custPayload.length; i += 50) {
