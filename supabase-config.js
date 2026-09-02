@@ -1,47 +1,24 @@
+// supabase-config.js
+const SUPABASE_URL = "https://qsfsmomphgotmfcpfhkd.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_2FO68n0R0yCmB_PyUyVOFQ_2oIUZEQA";
+
+const _supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+window.db = _supabase;
+window.supabaseClient = _supabase;
+
 /**
  * =============================================================================
  * THE JUNAGADH COMMERCIAL CO-OPERATIVE BANK LTD. (JCCB)
- * Supabase Client Configuration & Database Service Layer
- * Project URL: https://qsfsmomphgotmfcpfhkd.supabase.co
- * Model: 3-Role Standard with Instant Revocation via get_auth_profile()
+ * Supabase Client Database & Auth Service Layer
  * =============================================================================
  */
-
-const SUPABASE_CONFIG = {
-    url: "https://qsfsmomphgotmfcpfhkd.supabase.co",
-    anonKey: "YOUR_SUPABASE_ANON_KEY_HERE" // Paste your Supabase Project Settings -> API -> 'anon' 'public' key here
-};
-
-// Initialize Supabase Client (Requires @supabase/supabase-js loaded via CDN or bundle)
-let supabaseClient = null;
-
-if (typeof supabase !== 'undefined' && supabase.createClient) {
-    supabaseClient = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
-        auth: {
-            persistSession: true,
-            autoRefreshToken: true,
-            detectSessionInUrl: true
-        }
-    });
-} else {
-    console.warn("[Supabase] Supabase JS SDK not detected yet. Make sure to include @supabase/supabase-js in index.html.");
-}
-
-/**
- * Supabase Data & Auth Service Layer
- */
 const SupabaseService = {
-    client: supabaseClient,
+    client: _supabase,
 
-    // -------------------------------------------------------------------------
-    // 1. AUTHENTICATION & SESSION PROFILE
-    // -------------------------------------------------------------------------
     async login(email, password) {
         if (!this.client) throw new Error("Supabase client not initialized");
         const { data, error } = await this.client.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        
-        // Fetch User Profile
         const profile = await this.getCurrentUserProfile(data.user.id);
         return { user: data.user, profile };
     },
@@ -66,17 +43,11 @@ const SupabaseService = {
         return data;
     },
 
-    // -------------------------------------------------------------------------
-    // 2. LOANS & ORNAMENTS CRUD
-    // -------------------------------------------------------------------------
     async getLoansByBranch(branchId) {
         if (!this.client) return [];
         let query = this.client
             .from('loans')
-            .select(`
-                *,
-                loan_ornaments (*)
-            `)
+            .select(`*, loan_ornaments (*)`)
             .order('created_at', { ascending: false });
 
         if (branchId && branchId !== '99') {
@@ -84,14 +55,16 @@ const SupabaseService = {
         }
 
         const { data, error } = await query;
-        if (error) throw error;
+        if (error) {
+            console.error("[Supabase] Error loading loans:", error);
+            return [];
+        }
         return data || [];
     },
 
     async saveLoanWithOrnaments(loanData, ornamentsList) {
         if (!this.client) throw new Error("Supabase client not initialized");
 
-        // 1. Upsert Loan Header
         const { data: savedLoan, error: loanErr } = await this.client
             .from('loans')
             .upsert(loanData, { onConflict: 'id' })
@@ -100,9 +73,7 @@ const SupabaseService = {
 
         if (loanErr) throw loanErr;
 
-        // 2. Upsert / Sync Normalized Ornaments
         if (ornamentsList && ornamentsList.length > 0) {
-            // Remove existing ornaments for this loan to handle additions/deletions cleanly
             await this.client
                 .from('loan_ornaments')
                 .delete()
@@ -140,9 +111,6 @@ const SupabaseService = {
         if (error) throw error;
     },
 
-    // -------------------------------------------------------------------------
-    // 3. MASTER DATA (RATES, RULES, VALUERS, BRANCHES)
-    // -------------------------------------------------------------------------
     async getLatestRates() {
         if (!this.client) return null;
         const { data, error } = await this.client
@@ -189,6 +157,4 @@ const SupabaseService = {
     }
 };
 
-// Expose globally
-window.SUPABASE_CONFIG = SUPABASE_CONFIG;
 window.SupabaseService = SupabaseService;
