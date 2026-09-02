@@ -1080,17 +1080,13 @@ async function syncCloudData(isManual = false) {
                 }
             });
 
-            // Retain and upload only recently created offline loans
+            // Retain and upload all local loans (including restored backups)
             (state.loans || []).forEach(localLoan => {
                 const id = String(localLoan.id || localLoan.loanId || "").trim();
                 if (id && !seen.has(id) && !deletedSet.has(id)) {
-                    const createdTime = localLoan.createdAt ? new Date(localLoan.createdAt).getTime() : 0;
-                    const isRecent = createdTime > 0 && (Date.now() - createdTime < 3600000);
-                    if (isRecent) {
-                        mergedLoans.unshift(localLoan);
-                        seen.add(id);
-                        window.FirebaseService.saveLoan(localLoan).catch(() => { });
-                    }
+                    mergedLoans.unshift(localLoan);
+                    seen.add(id);
+                    window.FirebaseService.saveLoan(localLoan).catch(() => { });
                 }
             });
 
