@@ -8451,6 +8451,10 @@ function importSecureVaultBackup() {
 
         alert(successMsg);
         showToast("સિક્યોર વૉલ્ટ ડેટાબેઝ ૧૦૦% સચોટતા સાથે રીસ્ટોર થઈ ગયો!");
+
+        if (typeof window.uploadRestoredStateToSupabase === "function") {
+            window.uploadRestoredStateToSupabase(state);
+        }
     } catch (err) {
         console.error("Secure Vault Restore Error:", err);
         alert("સિક્યોર વૉલ્ટ રીસ્ટોર કરતી વખતે ક્ષતિ આવી: " + err.message);
@@ -9412,9 +9416,15 @@ function importCompleteRestoreExcel(file) {
                 `• રૂલ્સ માસ્ટર & કસ્ટમ ચાર્જીસ: ${restoredSummary.rules ? "હા (સંપૂર્ણ સેટ)" : "સાચવેલ"}\n` +
                 `• એકાઉન્ટ સેટિંગ્સ & શાખા સીડ્સ: ${restoredSummary.settings ? "હા (તમામ શાખાઓ)" : "સાચવેલ"}\n` +
                 `• ગ્રાહક અને દાગીનાના ફોટા: ${restoredSummary.photosCount} પુનઃસ્થાપિત\n\n` +
-                `પોર્ટલ તમામ નવા ડેટા સાથે તાત્કાલિક રીલોડ થઈ રહ્યું છે...`);
+                `ડેટાબેઝ ક્લાઉડ સાથે સિંક થઈ રહ્યું છે...`);
 
-            window.location.reload();
+            if (typeof window.uploadRestoredStateToSupabase === "function") {
+                window.uploadRestoredStateToSupabase(state).finally(() => {
+                    window.location.reload();
+                });
+            } else {
+                window.location.reload();
+            }
         } catch (err) {
             console.error("Restore error:", err);
             alert("એક્સેલ ફાઈલ રીસ્ટોર કરતી વખતે ક્ષતિ આવી: " + err.message);

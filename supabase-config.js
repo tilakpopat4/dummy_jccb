@@ -423,8 +423,181 @@ window.FirebaseService = {
       .subscribe();
   },
 
-  listenDeletedLoans(cb) {},
-  listenSettings(cb) {}
+};
+
+/**
+ * Universal Batch Uploader: Saves complete restored backup to Supabase
+ */
+window.uploadRestoredStateToSupabase = async function(appState) {
+  if (!_supabase || !appState) return { success: false };
+  console.log("⏳ Uploading restored data to Supabase in background...");
+
+  try {
+    // 1. Upload Rules Master
+    if (appState.rules) {
+      await _supabase.from('rules_master').upsert({
+        id: 'rulesMaster',
+        rules_json: appState.rules,
+        updated_by: 'RESTORE_ENGINE'
+      }, { onConflict: 'id' });
+    }
+
+    // 2. Upload Rates
+    if (Array.isArray(appState.rateHistory) && appState.rateHistory.length > 0) {
+      const ratesPayload = appState.rateHistory.map(r => ({
+        rate_date: r.date || new Date().toISOString().split('T')[0],
+        rate_22k: parseFloat(r.rate22K || r.rate || 0),
+        rate_24k: parseFloat(r.rate24K || 0),
+        is_locked: false,
+        updated_by: r.updatedBy || 'RESTORE'
+      })).filter(r => r.rate_date && r.rate_22k > 0);
+
+      if (ratesPayload.length > 0) {
+        await _supabase.from('rates').upsert(ratesPayload, { onConflict: 'rate_date' });
+      }
+    }
+
+    // 3. Upload Valuers
+    if (Array.isArray(appState.valuers) && appState.valuers.length > 0) {
+      const valuerPayload = appState.valuers.map(v => ({
+        id: v.id || ('val_' + Date.now()),
+        name: v.name || 'Valuer',
+        phone: v.phone || '',
+        address: v.address || '',
+        savings_account: v.savingsAc || '',
+        branch_id: String(v.branch || v.branchCode || '99').replace(/\D/g, '') || '99'
+      }));
+      await _supabase.from('valuers').upsert(valuerPayload, { onConflict: 'id' });
+    }
+
+    // 4. Upload Products
+    if (Array.isArray(appState.products) && appState.products.length > 0) {
+      const prodPayload = appState.products.map(p => ({
+        id: p.id || p.code || ('prod_' + Date.now()),
+        code: p.code || 'GL',
+        name: p.name || 'Product Scheme',
+        min_amount: parseFloat(p.minAmt || 0),
+        max_amount: parseFloat(p.maxAmt || 999999999),
+        interest_rate: parseFloat(p.rate || 11.5),
+        scheme_type: p.type || 'bullet'
+      }));
+      await _supabase.from('products').upsert(prodPayload, { onConflict: 'id' });
+    }
+
+    // 5. Upload Customers in Chunks of 50
+    if (Array.isArray(appState.customers) && appState.customers.length > 0) {
+      const custPayload = appState.customers.map(c => ({
+        customer_no: String(c.customerNo || c.id || ('CUST_' + Date.now())),
+        branch_id: String(c.branchCode || '99').replace(/\D/g, '') || '99',
+        full_name: c.name || 'Customer',
+        mobile: c.mobile || '',
+        address: c.address || '',
+        savings_account: c.savingsAc || '',
+        dob: c.dob && c.dob.length === 10 ? c.dob : null,
+        age: parseInt(c.age || 0) || null,
+        occupation: c.occupation || '',
+        religion: c.religion || '',
+        caste: c.caste || '',
+        nominee_name: c.nomineeName || '',
+        nominee_relation: c.nomineeRelation || '',
+        is_member: !!c.isMember,
+        member_no: c.memberNo || '',
+        photo_url: c.photo || ''
+      }));
+
+      for (let i = 0; i < custPayload.length; i += 50) {
+        const chunk = custPayload.slice(i, i + 50);
+        await _supabase.from('customers').upsert(chunk, { onConflict: 'customer_no' });
+      }
+    }
+
+    // 6. Upload Loans in Chunks of 50
+    if (Array.isArray(appState.loans) && appState.loans.length > 0) {
+      const loanPayload = [];
+      const ornamentsPayload = [];
+
+      appState.loans.forEach(l => {
+        const lid = String(l.id || l.loanId || ('loan_' + Date.now())).trim();
+        const bCode = String(l.branchCode || '99').replace(/\D/g, '') || '99';
+        const cNo = String(l.customerNo || l.customerId || ('CUST_' + lid));
+
+        loanPayload.push({
+          id: lid,
+          loan_no: String(l.loanNo || l.proposalNo || lid),
+          account_no: String(l.accountNo || lid),
+          proposal_no: String(l.proposalNo || ''),
+          branch_id: bCode,
+          customer_no: cNo,
+          loan_date: l.date || new Date().toISOString().split('T')[0],
+          loan_status: String(l.loanStatus || 'New'),
+          loan_type: String(l.loanType || l.productCode || 'GOLD_LOAN'),
+          packet_no: String(l.packetNo || ''),
+          sanctioned_amount: parseFloat(l.sanctionedAmount || l.loanAmount || 0),
+          valuation_amount: parseFloat(l.valuationAmount || l.marketValue || 0),
+          gold_weight: parseFloat(l.goldWeight || 0),
+          gross_weight: parseFloat(l.grossWeight || 0),
+          interest_rate: parseFloat(l.interestRate || 11.5),
+          valuer_name: l.valuerName || '',
+          valuer_fee: parseFloat(l.valuerFee || l.valuationCharge || 0),
+          doc_charges: parseFloat(l.docCharges || l.docCharge || 0),
+          service_charge: parseFloat(l.serviceCharge || 0),
+          cgst: parseFloat(l.cgst || 0),
+          sgst: parseFloat(l.sgst || 0),
+          stamp_duty: parseFloat(l.stampDuty || 0),
+          insurance: parseFloat(l.insurance || 0),
+          share_a: parseFloat(l.shareA || 0),
+          share_b: parseFloat(l.shareB || 0),
+          member_fee: parseFloat(l.memberFee || 0),
+          other_charges: parseFloat(l.otherCharges || 0),
+          total_deductions: parseFloat(l.totalDeductions || l.totalCharges || 0),
+          emi_amount: parseFloat(l.emiAmount || 0),
+          installments: parseInt(l.installments || 36),
+          created_by: 'RESTORE_ENGINE',
+          updated_by: 'RESTORE_ENGINE'
+        });
+
+        // Ornaments extraction
+        if (Array.isArray(l.ornamentsTable)) {
+          l.ornamentsTable.forEach((orn, idx) => {
+            ornamentsPayload.push({
+              loan_id: lid,
+              item_index: idx + 1,
+              item_name: orn.name || orn.itemName || orn.desc || 'Gold Ornament',
+              quantity: parseInt(orn.qty || orn.quantity || 1),
+              gross_weight_grams: parseFloat(orn.grossWeight || orn.grossWt || 0),
+              net_weight_grams: parseFloat(orn.netWeight || orn.netWt || 0),
+              purity_karat: parseInt(orn.purity || orn.karat || 22),
+              valuation_amount: parseFloat(orn.valuation || orn.amount || 0)
+            });
+          });
+        }
+      });
+
+      for (let i = 0; i < loanPayload.length; i += 50) {
+        const chunk = loanPayload.slice(i, i + 50);
+        await _supabase.from('loans').upsert(chunk, { onConflict: 'id' });
+      }
+
+      if (ornamentsPayload.length > 0) {
+        for (let i = 0; i < ornamentsPayload.length; i += 50) {
+          const ornChunk = ornamentsPayload.slice(i, i + 50);
+          await _supabase.from('loan_ornaments').insert(ornChunk);
+        }
+      }
+    }
+
+    // 7. Log Audit Event
+    await window.logAuditEvent("RESTORE_COMPLETED", `Restored ${appState.loans ? appState.loans.length : 0} loans and ${appState.customers ? appState.customers.length : 0} customers into database`, {
+      branchCode: '99',
+      operator: 'ADMIN'
+    });
+
+    console.log("✅ [Supabase] Full Restored State successfully synced to Supabase tables!");
+    return { success: true };
+  } catch (err) {
+    console.error("❌ [Supabase] Restore sync error:", err);
+    return { success: false, error: err };
+  }
 };
 
 // Auto Health Check & Live Sync Trigger
