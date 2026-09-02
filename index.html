@@ -65,11 +65,9 @@
                     <img src="jccb-logo.png" alt="JCCB Logo" class="bank-login-logo">
                 </div>
                 <h2>The Junagadh Commercial Co-operative Bank Ltd.</h2>
-                <p class="subtitle">Head Office: Junagadh</p>
                 <div class="gold-badge">Gold Loan Portal</div>
             </div>
-            
-            <form id="login-form">
+            <form id="login-form" action="javascript:void(0);" onsubmit="event.preventDefault(); if(window.handleLoginSubmit) window.handleLoginSubmit(event);">
                 <div class="form-group">
                     <label for="login-branch" class="required-label"><i class="fa-solid fa-code-branch"></i> Select Branch</label>
                     <select id="login-branch" required>
