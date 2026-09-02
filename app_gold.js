@@ -428,10 +428,15 @@ function loadState() {
             if (!rules || !rules.membership || !rules.valuation) {
                 rules = JSON.parse(JSON.stringify(DEFAULT_RULES));
             }
-            if (!Array.isArray(rules.customCharges)) {
-                rules.customCharges = [];
+            let loans = parsed.loans || [];
+            if (Array.isArray(loans)) {
+                loans = loans.map(l => ({
+                    ...l,
+                    accountNo: formatLoanAccountNo(l.accountNo, l.branchCode, l.loanType)
+                }));
+            } else {
+                loans = [];
             }
-            let loans = [];
 
             let rateHist = Array.isArray(parsed.rateHistory) ? parsed.rateHistory : [...DEFAULT_STATE.rateHistory];
 
