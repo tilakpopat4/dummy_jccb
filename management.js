@@ -28,16 +28,11 @@ document.addEventListener("DOMContentLoaded", () => {
     initFilters();
     initExportButtons();
 
-    // Initialize Firebase and start listeners
-    if (window.FirebaseService) {
-        window.FirebaseService.init().then(() => {
-            console.log("[Management] Firebase Central initialized.");
-            startRealtimeListeners();
-            loadAllData();
-        }).catch(err => {
-            console.warn("[Management] Firebase init error:", err);
-            loadLocalFallbackData();
-        });
+    // Initialize Supabase data loading & Realtime listeners
+    if (window.db) {
+        console.log("[Management] Supabase Central connected.");
+        loadAllData();
+        startRealtimeListeners();
     } else {
         loadLocalFallbackData();
     }
@@ -69,7 +64,7 @@ function initAuth() {
     }
 
     if (form) {
-        form.addEventListener("submit", (e) => {
+        form.addEventListener("submit", async (e) => {
             e.preventDefault();
             const val = passInput ? passInput.value.trim() : "";
             if (val === "Rahul#80810" || val === "Admin@123") {
@@ -77,13 +72,16 @@ function initAuth() {
                 mgmtState.isAuthenticated = true;
                 if (overlay) overlay.classList.add("hidden");
                 if (errorEl) errorEl.classList.add("hidden");
-                if (window.FirebaseService && typeof window.FirebaseService.logAuditEvent === "function") {
-                    window.FirebaseService.logAuditEvent("MANAGEMENT_LOGIN", "Administrator accessed the Management & Audit Console", {
+                
+                // Write Audit Log to Supabase
+                if (typeof window.logAuditEvent === "function") {
+                    await window.logAuditEvent("MANAGEMENT_LOGIN", "Administrator accessed the Management & Audit Console", {
                         branchCode: "99",
                         branchName: "HEAD OFFICE",
                         operator: "ADMIN"
                     });
                 }
+                loadAllData();
             } else {
                 if (errorEl) errorEl.classList.remove("hidden");
             }
@@ -102,131 +100,131 @@ function initAuth() {
     }
 }
 
-// ==================== CLOCK ====================
-function initClock() {
-    const timeEl = document.getElementById("mgmt-current-time");
-    const updateTime = () => {
-        if (timeEl) {
-            const now = new Date();
-            timeEl.textContent = now.toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric"
-            }) + " " + now.toLocaleTimeString("en-IN", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: true
-            });
-        }
-    };
-    updateTime();
-    setInterval(updateTime, 1000);
-}
-
-// ==================== TABS ====================
-function initTabs() {
-    const tabBtns = document.querySelectorAll(".tab-btn");
-    const tabPanels = document.querySelectorAll(".tab-panel");
-
-    tabBtns.forEach(btn => {
-        btn.addEventListener("click", () => {
-            const targetId = btn.getAttribute("data-tab");
-            tabBtns.forEach(b => b.classList.remove("active"));
-            tabPanels.forEach(p => p.classList.remove("active"));
-
-            btn.classList.add("active");
-            const targetPanel = document.getElementById(targetId);
-            if (targetPanel) targetPanel.classList.add("active");
-        });
-    });
-}
-
-// ==================== REALTIME LISTENERS ====================
+// ==================== REALTIME LISTENERS & DATA LOADING ====================
 function startRealtimeListeners() {
-    if (!window.FirebaseService) return;
+    if (!window.db) return;
 
-    // 1. Listen for active connected sessions
-    if (typeof window.FirebaseService.listenActiveSessions === "function") {
-        window.FirebaseService.listenActiveSessions((sessions) => {
-            if (Array.isArray(sessions)) {
-                mgmtState.activeSessions = sessions;
-                renderActiveSessions();
-                updateTopMetadata();
-            }
-        });
+    try {
+        window.db.channel('mgmt-realtime-channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'audit_logs' }, () => {
+                loadAuditLogs();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'active_sessions' }, () => {
+                loadActiveSessions();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'loans' }, () => {
+                loadLoans();
+            })
+            .subscribe();
+    } catch (e) {
+        console.warn("[Management] Realtime subscription error:", e);
     }
 
-    // 2. Listen for audit logs
-    if (typeof window.FirebaseService.listenAuditLogs === "function") {
-        window.FirebaseService.listenAuditLogs((logs) => {
-            if (Array.isArray(logs)) {
-                mgmtState.auditLogs = logs;
-                renderAuditLogs();
-                updateTopMetadata();
-            }
-        });
-    }
+    // Refresh every 10 seconds
+    setInterval(() => loadAllData(false), 10000);
+}
 
-    // 3. Listen for loans
-    if (typeof window.FirebaseService.listenLoans === "function") {
-        window.FirebaseService.listenLoans(null, (loans) => {
-            if (Array.isArray(loans)) {
-                mgmtState.loans = loans;
-                updateTopMetadata();
-            }
-        });
-    }
+async function loadAuditLogs() {
+    if (!window.db) return;
+    try {
+        const { data, error } = await window.db
+            .from('audit_logs')
+            .select('*')
+            .order('event_timestamp', { ascending: false })
+            .limit(300);
 
-    // 4. Listen for branches
-    if (typeof window.FirebaseService.listenBranches === "function") {
-        window.FirebaseService.listenBranches((branches) => {
-            if (Array.isArray(branches)) {
-                mgmtState.branches = branches;
-                populateBranchFilters();
-            }
-        });
+        if (!error && Array.isArray(data)) {
+            mgmtState.auditLogs = data.map(l => ({
+                id: l.id,
+                timestamp: l.event_timestamp,
+                action: l.event_action,
+                branchCode: l.branch_id || '99',
+                branchName: l.branch_id ? (l.branch_id === '99' ? 'HEAD OFFICE' : 'Branch ' + l.branch_id) : 'HEAD OFFICE',
+                operator: l.actor_name || 'SYSTEM',
+                details: l.details || l.event_action,
+                ip: (l.metadata && l.metadata.ip) || 'Office IP',
+                metadata: l.metadata || {}
+            }));
+            renderAuditLogs();
+            updateTopMetadata();
+        }
+    } catch (e) {
+        console.warn("[Management] Audit log fetch error:", e);
     }
+}
 
-    // 5. Listen for customers
-    if (typeof window.FirebaseService.listenCustomers === "function") {
-        window.FirebaseService.listenCustomers((customers) => {
-            if (Array.isArray(customers)) {
-                mgmtState.customers = customers;
-                updateTopMetadata();
-            }
-        });
+async function loadActiveSessions() {
+    if (!window.db) return;
+    try {
+        const { data, error } = await window.db
+            .from('active_sessions')
+            .select('*')
+            .order('last_heartbeat', { ascending: false });
+
+        if (!error && Array.isArray(data)) {
+            mgmtState.activeSessions = data.map(s => ({
+                sessionId: s.id,
+                id: s.id,
+                branchCode: s.branch_id,
+                branchName: s.branch_id === '99' ? 'HEAD OFFICE' : 'Branch ' + s.branch_id,
+                operator: s.operator_name,
+                ip: s.ip_address || 'Office IP',
+                userAgent: s.user_agent,
+                status: s.status,
+                lastPing: s.last_heartbeat,
+                lastPingMs: new Date(s.last_heartbeat).getTime(),
+                loginTime: s.created_at
+            }));
+            renderActiveSessions();
+            updateTopMetadata();
+        }
+    } catch (e) {
+        console.warn("[Management] Active sessions fetch error:", e);
     }
+}
 
-    // Continuous 5-second polling fallback
-    setInterval(() => loadAllData(false), 5000);
+async function loadLoans() {
+    if (!window.db) return;
+    try {
+        const { data } = await window.db.from('loans').select('id, sanctioned_amount, branch_id, loan_status, customer_no');
+        if (Array.isArray(data)) {
+            mgmtState.loans = data;
+            updateTopMetadata();
+        }
+    } catch (e) {}
 }
 
 async function loadAllData(showSpinner = true) {
-    if (!window.FirebaseService) return;
+    if (!window.db) {
+        loadLocalFallbackData();
+        return;
+    }
 
     try {
-        const [loans, customers, branches, valuers, products, logs] = await Promise.all([
-            window.FirebaseService.getLoans ? window.FirebaseService.getLoans() : [],
-            window.FirebaseService.getCustomers ? window.FirebaseService.getCustomers() : [],
-            window.FirebaseService.getBranchesList ? window.FirebaseService.getBranchesList() : [],
-            window.FirebaseService.getValuersList ? window.FirebaseService.getValuersList() : [],
-            window.FirebaseService.getProductsList ? window.FirebaseService.getProductsList() : [],
-            window.FirebaseService.getAuditLogs ? window.FirebaseService.getAuditLogs(300) : []
+        await Promise.all([
+            loadAuditLogs(),
+            loadActiveSessions(),
+            loadLoans(),
+            (async () => {
+                const { data: cust } = await window.db.from('customers').select('customer_no');
+                if (Array.isArray(cust)) mgmtState.customers = cust;
+            })(),
+            (async () => {
+                const { data: br } = await window.db.from('branches').select('*').order('branch_code');
+                if (Array.isArray(br) && br.length > 0) {
+                    mgmtState.branches = br.map(b => ({ code: b.branch_code, name: b.branch_name }));
+                    populateBranchFilters();
+                }
+            })(),
+            (async () => {
+                const { data: val } = await window.db.from('valuers').select('*');
+                if (Array.isArray(val)) mgmtState.valuers = val;
+            })(),
+            (async () => {
+                const { data: prod } = await window.db.from('products').select('*');
+                if (Array.isArray(prod)) mgmtState.products = prod;
+            })()
         ]);
-
-        if (Array.isArray(loans) && loans.length > 0) mgmtState.loans = loans;
-        if (Array.isArray(customers) && customers.length > 0) mgmtState.customers = customers;
-        if (Array.isArray(branches) && branches.length > 0) {
-            mgmtState.branches = branches;
-            populateBranchFilters();
-        }
-        if (Array.isArray(valuers) && valuers.length > 0) mgmtState.valuers = valuers;
-        if (Array.isArray(products) && products.length > 0) mgmtState.products = products;
-        if (Array.isArray(logs) && logs.length > 0 && mgmtState.auditLogs.length === 0) {
-            mgmtState.auditLogs = logs;
-            renderAuditLogs();
-        }
 
         updateTopMetadata();
     } catch (e) {
@@ -362,46 +360,47 @@ function renderActiveSessions() {
     });
 
     tbody.querySelectorAll(".terminate-session-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
+        btn.addEventListener("click", async () => {
             const sid = btn.getAttribute("data-session-id");
             const branchTitle = btn.getAttribute("data-branch") || "this branch";
             if (sid && confirm(`શું તમે ખરેખર ${branchTitle} નું સેશન ડિસ્કનેક્ટ કરવા માંગો છો?\n(Are you sure you want to forcefully disconnect ${branchTitle}? The operator will be instantly logged out.)`)) {
-                if (window.FirebaseService && typeof window.FirebaseService.terminateActiveSession === "function") {
-                    btn.disabled = true;
-                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Disconnecting...';
-                    window.FirebaseService.terminateActiveSession(sid).then(() => {
-                        if (typeof window.FirebaseService.logAuditEvent === "function") {
-                            window.FirebaseService.logAuditEvent("KILLSWITCH_DISCONNECT", `Branch session (${branchTitle}) was forcefully terminated by Central Management`, {
-                                branchCode: "99",
-                                operator: "Management Admin",
-                                targetSession: sid
-                            });
-                        }
-                        const target = mgmtState.activeSessions.find(x => (x.sessionId || x.id) === sid);
-                        if (target) {
-                            target.terminated = true;
-                            target.status = "terminated";
-                            target.isOnline = false;
-                        }
-                        renderActiveSessions();
-                        updateTopMetadata();
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Disconnecting...';
+
+                if (window.db) {
+                    await window.db.from('active_sessions').update({ status: 'terminated' }).eq('id', sid);
+                }
+
+                if (typeof window.logAuditEvent === "function") {
+                    await window.logAuditEvent("KILLSWITCH_DISCONNECT", `Branch session (${branchTitle}) was forcefully terminated by Central Management`, {
+                        branchCode: "99",
+                        operator: "Management Admin",
+                        targetSession: sid
                     });
                 }
+
+                const target = mgmtState.activeSessions.find(x => (x.sessionId || x.id) === sid);
+                if (target) {
+                    target.terminated = true;
+                    target.status = "terminated";
+                    target.isOnline = false;
+                }
+                renderActiveSessions();
+                updateTopMetadata();
             }
         });
     });
 
     tbody.querySelectorAll(".remove-session-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
+        btn.addEventListener("click", async () => {
             const sid = btn.getAttribute("data-session-id");
             if (sid && confirm("Remove this disconnected session record from list?")) {
-                if (window.FirebaseService && typeof window.FirebaseService.deleteActiveSession === "function") {
-                    window.FirebaseService.deleteActiveSession(sid).then(() => {
-                        mgmtState.activeSessions = mgmtState.activeSessions.filter(x => (x.sessionId || x.id) !== sid);
-                        renderActiveSessions();
-                        updateTopMetadata();
-                    });
+                if (window.db) {
+                    await window.db.from('active_sessions').delete().eq('id', sid);
                 }
+                mgmtState.activeSessions = mgmtState.activeSessions.filter(x => (x.sessionId || x.id) !== sid);
+                renderActiveSessions();
+                updateTopMetadata();
             }
         });
     });

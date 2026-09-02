@@ -30,6 +30,34 @@ window.getCurrentUserProfile = async function() {
   }
 };
 
+// Helper: Global Audit Logging to Supabase audit_logs table
+window.logAuditEvent = async function(action, details, meta = {}) {
+  try {
+    if (!_supabase) return;
+    const branchCode = meta.branchCode || meta.branch_id || (window.currentSession ? window.currentSession.code : '99');
+    const operator = meta.operator || (window.currentSession ? window.currentSession.operator : 'ADMIN');
+
+    await _supabase.from('audit_logs').insert([{
+      event_action: action,
+      entity_name: meta.entityName || 'system',
+      entity_id: meta.entityId || String(Date.now()),
+      branch_id: String(branchCode),
+      actor_name: String(operator),
+      details: String(details || action),
+      metadata: meta
+    }]);
+  } catch (err) {
+    console.warn("[Supabase] Audit log insert warning:", err);
+  }
+};
+
+// Expose on window for backwards compatibility with legacy call sites
+window.FirebaseService = {
+  logAuditEvent: window.logAuditEvent,
+  async init() { return true; },
+  async updatePresence() { return true; }
+};
+
 // Health Check
 (async () => {
   if (!_supabase) return;
